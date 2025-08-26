@@ -24,6 +24,8 @@ export interface Case {
   status: string
   court: string
   case_number: string
+  defendant: string
+  notes: string
   start_date: string
   next_hearing_date?: string
   created_at: string
@@ -38,6 +40,8 @@ export interface CaseCreate {
   status: string
   court: string
   case_number: string
+  defendant: string
+  notes: string
   start_date: string
   next_hearing_date?: string
 }
@@ -49,6 +53,8 @@ export interface CaseUpdate {
   status?: string
   court?: string
   case_number?: string
+  defendant?: string
+  notes?: string
   start_date?: string
   next_hearing_date?: string
 }
@@ -60,6 +66,7 @@ export interface DashboardData {
   upcoming_hearings: Array<{
     case_id: string
     case_title: string
+    case_number: string
     client_name: string
     hearing_date: string
     court: string

@@ -9,10 +9,12 @@ export class ApiError extends Error {
 
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_URL}${endpoint}`
+  const token = localStorage.getItem('auth_token')
   
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
     ...options,
@@ -20,6 +22,10 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
   if (!response.ok) {
     const errorText = await response.text()
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token')
+      window.location.reload()
+    }
     throw new ApiError(response.status, errorText || response.statusText)
   }
 
@@ -64,6 +70,22 @@ export const api = {
   
   dashboard: {
     getData: () => apiRequest<DashboardData>('/api/dashboard'),
+  },
+  
+  auth: {
+    changePassword: (currentPassword: string, newPassword: string) => 
+      apiRequest<{ message: string }>('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      }),
+  },
+  
+  backup: {
+    export: () => apiRequest<any>('/api/backup'),
+    import: (data: any) => apiRequest<{ message: string }>('/api/restore', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   },
 }
 

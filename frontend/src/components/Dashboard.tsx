@@ -49,7 +49,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">LexCloud Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Anasayfa</h1>
         <div className="flex space-x-3">
           <Button asChild>
             <Link to="/cases/new">Yeni Dava</Link>
@@ -134,8 +134,9 @@ export default function Dashboard() {
             <div className="space-y-3">
               {data.upcoming_hearings.slice(0, 5).map((hearing) => (
                 <div key={hearing.case_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium">{hearing.case_title}</p>
+                    <p className="text-xs text-blue-600 font-medium">Dava No: {hearing.case_number}</p>
                     <p className="text-xs text-gray-500">{hearing.client_name}</p>
                     <p className="text-xs text-gray-500">{hearing.court}</p>
                   </div>

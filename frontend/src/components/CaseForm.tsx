@@ -26,6 +26,8 @@ export default function CaseForm() {
     status: 'Devam Ediyor',
     court: '',
     case_number: '',
+    defendant: '',
+    notes: '',
     start_date: '',
     next_hearing_date: '',
   })
@@ -61,6 +63,8 @@ export default function CaseForm() {
         status: caseData.status,
         court: caseData.court,
         case_number: caseData.case_number,
+        defendant: caseData.defendant,
+        notes: caseData.notes,
         start_date: caseData.start_date,
         next_hearing_date: caseData.next_hearing_date || '',
       })
@@ -89,6 +93,8 @@ export default function CaseForm() {
       status: formDataObj.get('status') as string,
       court: formDataObj.get('court') as string,
       case_number: formDataObj.get('case_number') as string,
+      defendant: formDataObj.get('defendant') as string,
+      notes: formDataObj.get('notes') as string,
       start_date: formDataObj.get('start_date') as string,
       next_hearing_date: formDataObj.get('next_hearing_date') as string,
     }
@@ -245,6 +251,18 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="defendant">Borçlu / Davalı *</Label>
+                <Input
+                  id="defendant"
+                  name="defendant"
+                  value={formData.defendant}
+                  onChange={(e) => handleChange('defendant', e.target.value)}
+                  placeholder="Borçlu/Davalı adını girin"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="start_date">Başlangıç Tarihi *</Label>
                 <Input
                   id="start_date"
@@ -278,6 +296,18 @@ export default function CaseForm() {
                 placeholder="Dava hakkında detaylı açıklama girin"
                 rows={4}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notlar</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder="Dava ile ilgili özel notlarınızı buraya yazabilirsiniz"
+                rows={3}
               />
             </div>
 

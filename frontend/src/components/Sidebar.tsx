@@ -5,7 +5,8 @@ import {
   Users, 
   Menu, 
   X,
-  Scale
+  Scale,
+  Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,9 +16,10 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Anasayfa', href: '/', icon: Home },
   { name: 'Davalar', href: '/cases', icon: FileText },
   { name: 'Müvekkiller', href: '/clients', icon: Users },
+  { name: 'Ayarlar', href: '/settings', icon: Settings },
 ]
 
 export default function Sidebar({ open, setOpen }: SidebarProps) {

@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, date
 import uuid
+import json
+import os
 
 app = FastAPI(title="Dava Takip Sistemi", description="Legal Case Tracking System")
 
@@ -40,6 +43,8 @@ class Case(BaseModel):
     status: str
     court: str
     case_number: str
+    defendant: str
+    notes: str
     start_date: date
     next_hearing_date: Optional[date]
     created_at: datetime
@@ -53,6 +58,8 @@ class CaseCreate(BaseModel):
     status: str
     court: str
     case_number: str
+    defendant: str
+    notes: str
     start_date: date
     next_hearing_date: Optional[date]
 
@@ -63,18 +70,94 @@ class CaseUpdate(BaseModel):
     status: Optional[str] = None
     court: Optional[str] = None
     case_number: Optional[str] = None
+    defendant: Optional[str] = None
+    notes: Optional[str] = None
     start_date: Optional[date] = None
     next_hearing_date: Optional[date] = None
 
 clients_db: dict[str, Client] = {}
 cases_db: dict[str, Case] = {}
 
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+active_sessions: set[str] = set()
+
+security = HTTPBearer(auto_error=False)
+
+class LoginRequest(BaseModel):
+    password: str
+
+class LoginResponse(BaseModel):
+    success: bool
+    token: str
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not credentials or credentials.credentials not in active_sessions:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return credentials.credentials
+
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
 
+@app.post("/api/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    if request.password == ADMIN_PASSWORD:
+        token = str(uuid.uuid4())
+        active_sessions.add(token)
+        return LoginResponse(success=True, token=token)
+    else:
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+@app.post("/api/auth/logout")
+async def logout(token: str = Depends(verify_token)):
+    active_sessions.discard(token)
+    return {"message": "Logged out successfully"}
+
+@app.post("/api/auth/change-password")
+async def change_password(request: PasswordChangeRequest, token: str = Depends(verify_token)):
+    global ADMIN_PASSWORD
+    if request.current_password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    ADMIN_PASSWORD = request.new_password
+    return {"message": "Password changed successfully"}
+
+@app.get("/api/backup")
+async def backup_data(token: str = Depends(verify_token)):
+    backup_data = {
+        "clients": {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()},
+        "cases": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None} for k, v in cases_db.items()},
+        "backup_date": datetime.now().isoformat()
+    }
+    return backup_data
+
+@app.post("/api/restore")
+async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
+    global clients_db, cases_db
+    try:
+        clients_db = {}
+        for client_id, client_data in backup_data.get("clients", {}).items():
+            client_data["created_at"] = datetime.fromisoformat(client_data["created_at"])
+            clients_db[client_id] = Client(**client_data)
+        
+        cases_db = {}
+        for case_id, case_data in backup_data.get("cases", {}).items():
+            case_data["created_at"] = datetime.fromisoformat(case_data["created_at"])
+            case_data["updated_at"] = datetime.fromisoformat(case_data["updated_at"])
+            case_data["start_date"] = date.fromisoformat(case_data["start_date"])
+            if case_data["next_hearing_date"]:
+                case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
+            cases_db[case_id] = Case(**case_data)
+        
+        return {"message": "Data restored successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Restore failed: {str(e)}")
+
 @app.post("/api/clients", response_model=Client)
-async def create_client(client: ClientCreate):
+async def create_client(client: ClientCreate, token: str = Depends(verify_token)):
     client_id = str(uuid.uuid4())
     new_client = Client(
         id=client_id,
@@ -88,17 +171,17 @@ async def create_client(client: ClientCreate):
     return new_client
 
 @app.get("/api/clients", response_model=List[Client])
-async def get_clients():
+async def get_clients(token: str = Depends(verify_token)):
     return list(clients_db.values())
 
 @app.get("/api/clients/{client_id}", response_model=Client)
-async def get_client(client_id: str):
+async def get_client(client_id: str, token: str = Depends(verify_token)):
     if client_id not in clients_db:
         raise HTTPException(status_code=404, detail="Client not found")
     return clients_db[client_id]
 
 @app.delete("/api/clients/{client_id}")
-async def delete_client(client_id: str):
+async def delete_client(client_id: str, token: str = Depends(verify_token)):
     if client_id not in clients_db:
         raise HTTPException(status_code=404, detail="Client not found")
     
@@ -110,7 +193,7 @@ async def delete_client(client_id: str):
     return {"message": "Client deleted successfully"}
 
 @app.post("/api/cases", response_model=Case)
-async def create_case(case: CaseCreate):
+async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
     if case.client_id not in clients_db:
         raise HTTPException(status_code=404, detail="Client not found")
     
@@ -128,6 +211,8 @@ async def create_case(case: CaseCreate):
         status=case.status,
         court=case.court,
         case_number=case.case_number,
+        defendant=case.defendant,
+        notes=case.notes,
         start_date=case.start_date,
         next_hearing_date=case.next_hearing_date,
         created_at=now,
@@ -137,7 +222,7 @@ async def create_case(case: CaseCreate):
     return new_case
 
 @app.get("/api/cases", response_model=List[Case])
-async def get_cases(status: Optional[str] = None, client_id: Optional[str] = None):
+async def get_cases(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
     cases = list(cases_db.values())
     
     if status:
@@ -150,13 +235,13 @@ async def get_cases(status: Optional[str] = None, client_id: Optional[str] = Non
     return cases
 
 @app.get("/api/cases/{case_id}", response_model=Case)
-async def get_case(case_id: str):
+async def get_case(case_id: str, token: str = Depends(verify_token)):
     if case_id not in cases_db:
         raise HTTPException(status_code=404, detail="Case not found")
     return cases_db[case_id]
 
 @app.put("/api/cases/{case_id}", response_model=Case)
-async def update_case(case_id: str, case_update: CaseUpdate):
+async def update_case(case_id: str, case_update: CaseUpdate, token: str = Depends(verify_token)):
     if case_id not in cases_db:
         raise HTTPException(status_code=404, detail="Case not found")
     
@@ -171,7 +256,7 @@ async def update_case(case_id: str, case_update: CaseUpdate):
     return case
 
 @app.delete("/api/cases/{case_id}")
-async def delete_case(case_id: str):
+async def delete_case(case_id: str, token: str = Depends(verify_token)):
     if case_id not in cases_db:
         raise HTTPException(status_code=404, detail="Case not found")
     
@@ -179,7 +264,7 @@ async def delete_case(case_id: str):
     return {"message": "Case deleted successfully"}
 
 @app.get("/api/dashboard")
-async def get_dashboard():
+async def get_dashboard(token: str = Depends(verify_token)):
     total_cases = len(cases_db)
     total_clients = len(clients_db)
     
@@ -198,6 +283,7 @@ async def get_dashboard():
             upcoming_hearings.append({
                 "case_id": case.id,
                 "case_title": case.title,
+                "case_number": case.case_number,
                 "client_name": case.client_name,
                 "hearing_date": case.next_hearing_date,
                 "court": case.court
