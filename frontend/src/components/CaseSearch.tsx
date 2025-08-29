@@ -81,113 +81,234 @@ export default function CaseSearch() {
     }
 
     const doc = new jsPDF('l', 'mm', 'a4')
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 15
     
-    doc.setFont('helvetica')
+    doc.setFillColor(41, 128, 185) // Blue background
+    doc.rect(0, 0, pageWidth, 35, 'F')
     
-    doc.setFontSize(16)
-    doc.text('LexCloud - Dava Sorgulama Sonuçları', 20, 20)
+    doc.setTextColor(255, 255, 255) // White text
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(20)
+    doc.text('LexCloud', margin, 15)
     
-    doc.setFontSize(12)
-    doc.text(`Tarih: ${new Date().toLocaleDateString('tr-TR')}`, 20, 30)
-    doc.text(`Toplam Dava Sayısı: ${searchResults.length}`, 20, 40)
+    doc.setFontSize(14)
+    doc.text('Dava Sorgulama Sonuçları', margin, 25)
+    
+    doc.setTextColor(0, 0, 0) // Black text
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })}`, margin, 45)
+    doc.text(`Toplam Dava Sayısı: ${searchResults.length}`, margin, 52)
     
     const headers = [
-      'Dava Başlığı',
       'Dava No',
       'Müvekkil',
-      'Karşı Taraf',
+      'Karşı Taraf', 
       'Mahkeme/İcra',
       'Dava Türü',
       'Durum',
       'Açılış Tarihi',
       'Duruşma Tarihi',
-      'Hatırlatma Tarihi',
-      'Ofis Arşiv No'
+      'Hatırlatma Tarihi'
     ]
     
     const tableData = searchResults.map(case_ => [
-      case_.title || '',
-      case_.case_number || '',
-      case_.client_name || '',
-      case_.defendant || '',
-      case_.court || '',
-      case_.case_type || '',
-      case_.status || '',
-      case_.start_date ? new Date(case_.start_date).toLocaleDateString('tr-TR') : '',
-      case_.next_hearing_date ? new Date(case_.next_hearing_date).toLocaleDateString('tr-TR') : '',
-      case_.reminder_date ? new Date(case_.reminder_date).toLocaleDateString('tr-TR') : '',
-      case_.office_archive_no || ''
+      case_.case_number || '-',
+      case_.client_name || '-',
+      case_.defendant || '-',
+      case_.court || '-',
+      case_.case_type || '-',
+      case_.status || '-',
+      case_.start_date ? new Date(case_.start_date).toLocaleDateString('tr-TR') : '-',
+      case_.next_hearing_date ? new Date(case_.next_hearing_date).toLocaleDateString('tr-TR') : '-',
+      case_.reminder_date ? new Date(case_.reminder_date).toLocaleDateString('tr-TR') : '-'
     ])
     
-    let yPosition = 55
-    const rowHeight = 8
-    const colWidths = [25, 20, 25, 25, 30, 20, 20, 25, 25, 25, 20]
-    let xPosition = 20
+    const tableWidth = pageWidth - (margin * 2)
+    const colWidths = [25, 35, 35, 40, 25, 25, 25, 25, 25] // Adjusted for better fit
+    const rowHeight = 12
+    let yPosition = 65
     
-    doc.setFontSize(10)
+    const wrapText = (text: string, maxWidth: number) => {
+      const words = text.split(' ')
+      const lines = []
+      let currentLine = ''
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word
+        const textWidth = doc.getTextWidth(testLine)
+        
+        if (textWidth > maxWidth && currentLine) {
+          lines.push(currentLine)
+          currentLine = word
+        } else {
+          currentLine = testLine
+        }
+      }
+      
+      if (currentLine) {
+        lines.push(currentLine)
+      }
+      
+      return lines
+    }
+    
+    doc.setFillColor(52, 73, 94) // Dark blue-gray
+    doc.rect(margin, yPosition - 8, tableWidth, rowHeight, 'F')
+    
+    doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    
+    let xPosition = margin + 2
     headers.forEach((header, index) => {
-      doc.text(header, xPosition, yPosition)
+      const lines = wrapText(header, colWidths[index] - 4)
+      lines.forEach((line, lineIndex) => {
+        doc.text(line, xPosition, yPosition - 2 + (lineIndex * 4))
+      })
       xPosition += colWidths[index]
     })
     
     yPosition += rowHeight
-    doc.setFont('helvetica', 'normal')
     
-    tableData.forEach((row) => {
-      if (yPosition > 180) {
+    doc.setTextColor(0, 0, 0)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    
+    tableData.forEach((row, rowIndex) => {
+      if (yPosition > pageHeight - 30) {
         doc.addPage()
         yPosition = 20
+        
+        doc.setFillColor(52, 73, 94)
+        doc.rect(margin, yPosition - 8, tableWidth, rowHeight, 'F')
+        
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        
+        xPosition = margin + 2
+        headers.forEach((header, index) => {
+          const lines = wrapText(header, colWidths[index] - 4)
+          lines.forEach((line, lineIndex) => {
+            doc.text(line, xPosition, yPosition - 2 + (lineIndex * 4))
+          })
+          xPosition += colWidths[index]
+        })
+        
+        yPosition += rowHeight
+        doc.setTextColor(0, 0, 0)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
       }
       
-      xPosition = 20
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(248, 249, 250) // Light gray
+        doc.rect(margin, yPosition - 8, tableWidth, rowHeight, 'F')
+      }
+      
+      doc.setDrawColor(200, 200, 200)
+      doc.rect(margin, yPosition - 8, tableWidth, rowHeight, 'S')
+      
+      xPosition = margin + 2
+      let maxLinesInRow = 1
+      
       row.forEach((cell, colIndex) => {
-        const cellText = String(cell).substring(0, 15)
-        doc.text(cellText, xPosition, yPosition)
+        const cellText = String(cell)
+        const lines = wrapText(cellText, colWidths[colIndex] - 4)
+        maxLinesInRow = Math.max(maxLinesInRow, lines.length)
+        
+        lines.forEach((line, lineIndex) => {
+          doc.text(line, xPosition, yPosition - 2 + (lineIndex * 4))
+        })
+        
+        doc.line(xPosition + colWidths[colIndex] - 2, yPosition - 8, xPosition + colWidths[colIndex] - 2, yPosition + 4)
         xPosition += colWidths[colIndex]
       })
-      yPosition += rowHeight
+      
+      yPosition += Math.max(rowHeight, maxLinesInRow * 4 + 4)
     })
     
     const casesWithNotes = searchResults.filter(c => c.notes || c.description)
     if (casesWithNotes.length > 0) {
       doc.addPage()
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Açıklamalar ve Notlar', 20, 20)
       
-      let notesY = 35
-      doc.setFontSize(10)
+      doc.setFillColor(41, 128, 185)
+      doc.rect(0, 0, pageWidth, 25, 'F')
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      doc.text('Açıklamalar ve Notlar', margin, 15)
+      
+      let notesY = 40
+      doc.setTextColor(0, 0, 0)
       doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
       
       casesWithNotes.forEach((case_) => {
-        if (notesY > 250) {
+        if (notesY > pageHeight - 50) {
           doc.addPage()
           notesY = 20
         }
         
         doc.setFont('helvetica', 'bold')
-        doc.text(`${case_.case_number} - ${case_.title}`, 20, notesY)
+        doc.setFontSize(12)
+        doc.text(`${case_.case_number} - ${case_.title || 'Başlıksız Dava'}`, margin, notesY)
         notesY += 8
         
         doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        
         if (case_.description) {
-          doc.text(`Açıklama: ${case_.description}`, 20, notesY)
-          notesY += 8
+          doc.text('Açıklama:', margin, notesY)
+          notesY += 6
+          const descLines = wrapText(case_.description, pageWidth - (margin * 2) - 10)
+          descLines.forEach(line => {
+            doc.text(line, margin + 10, notesY)
+            notesY += 5
+          })
+          notesY += 3
         }
+        
         if (case_.notes) {
-          doc.text(`Notlar: ${case_.notes}`, 20, notesY)
-          notesY += 8
+          doc.text('Notlar:', margin, notesY)
+          notesY += 6
+          const noteLines = wrapText(case_.notes, pageWidth - (margin * 2) - 10)
+          noteLines.forEach(line => {
+            doc.text(line, margin + 10, notesY)
+            notesY += 5
+          })
+          notesY += 3
         }
-        notesY += 5
+        
+        doc.setDrawColor(200, 200, 200)
+        doc.line(margin, notesY, pageWidth - margin, notesY)
+        notesY += 10
       })
+    }
+    
+    const totalPages = doc.internal.pages.length - 1
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setTextColor(128, 128, 128)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.text(`Sayfa ${i} / ${totalPages}`, pageWidth - margin - 20, pageHeight - 10)
+      doc.text('LexCloud Dava Takip Sistemi', margin, pageHeight - 10)
     }
     
     doc.save(`dava_sorgulama_${new Date().toISOString().split('T')[0]}.pdf`)
     
     toast({
       title: "Başarılı",
-      description: `${searchResults.length} dava PDF formatında dışa aktarıldı.`,
+      description: `${searchResults.length} dava profesyonel PDF formatında dışa aktarıldı.`,
     })
   }
 
