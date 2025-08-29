@@ -28,6 +28,8 @@ export interface Case {
   notes: string
   start_date: string
   next_hearing_date?: string
+  reminder_date?: string
+  office_archive_no: string
   created_at: string
   updated_at: string
 }
@@ -44,6 +46,8 @@ export interface CaseCreate {
   notes: string
   start_date: string
   next_hearing_date?: string
+  reminder_date?: string
+  office_archive_no: string
 }
 
 export interface CaseUpdate {
@@ -57,6 +61,17 @@ export interface CaseUpdate {
   notes?: string
   start_date?: string
   next_hearing_date?: string
+  reminder_date?: string
+  office_archive_no?: string
+}
+
+export interface CaseSearchParams {
+  case_type?: string
+  status?: string
+  court?: string
+  client_id?: string
+  start_date_from?: string
+  start_date_to?: string
 }
 
 export interface DashboardData {
@@ -70,5 +85,14 @@ export interface DashboardData {
     client_name: string
     hearing_date: string
     court: string
+  }>
+  upcoming_reminders: Array<{
+    case_id: string
+    case_title: string
+    case_number: string
+    client_name: string
+    reminder_date: string
+    court: string
+    status: string
   }>
 }

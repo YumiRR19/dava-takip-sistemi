@@ -6,7 +6,8 @@ import {
   Menu, 
   X,
   Scale,
-  Settings
+  Settings,
+  Search
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Anasayfa', href: '/', icon: Home },
   { name: 'Davalar', href: '/cases', icon: FileText },
   { name: 'Müvekkiller', href: '/clients', icon: Users },
+  { name: 'Dava Sorgulama', href: '/case-search', icon: Search },
   { name: 'Ayarlar', href: '/settings', icon: Settings },
 ]
 

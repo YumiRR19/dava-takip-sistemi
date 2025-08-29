@@ -7,6 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { api, Client, CaseCreate, CaseUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
@@ -18,18 +22,21 @@ export default function CaseForm() {
 
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
+  const [courtOpen, setCourtOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     client_id: '',
     case_type: '',
-    status: 'Devam Ediyor',
+    status: 'Derdest',
     court: '',
     case_number: '',
     defendant: '',
     notes: '',
     start_date: '',
     next_hearing_date: '',
+    reminder_date: '',
+    office_archive_no: '',
   })
 
   useEffect(() => {
@@ -67,6 +74,8 @@ export default function CaseForm() {
         notes: caseData.notes,
         start_date: caseData.start_date,
         next_hearing_date: caseData.next_hearing_date || '',
+        reminder_date: caseData.reminder_date || '',
+        office_archive_no: caseData.office_archive_no || '',
       })
     } catch (error) {
       toast({
@@ -97,6 +106,8 @@ export default function CaseForm() {
       notes: formDataObj.get('notes') as string,
       start_date: formDataObj.get('start_date') as string,
       next_hearing_date: formDataObj.get('next_hearing_date') as string,
+      reminder_date: formDataObj.get('reminder_date') as string,
+      office_archive_no: formDataObj.get('office_archive_no') as string,
     }
 
     console.log('Form data before submission:', submissionData)
@@ -117,6 +128,7 @@ export default function CaseForm() {
         const createData: CaseCreate = {
           ...submissionData,
           next_hearing_date: submissionData.next_hearing_date || undefined,
+          reminder_date: submissionData.reminder_date || undefined,
         }
         console.log('Create data:', createData)
         await api.cases.create(createData)
@@ -165,30 +177,6 @@ export default function CaseForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Dava Başlığı *</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
-                  placeholder="Dava başlığını girin"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="case_number">Dava Numarası *</Label>
-                <Input
-                  id="case_number"
-                  name="case_number"
-                  value={formData.case_number}
-                  onChange={(e) => handleChange('case_number', e.target.value)}
-                  placeholder="Dava numarasını girin"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="client_id">Müvekkil *</Label>
                 <Select value={formData.client_id} onValueChange={(value) => handleChange('client_id', value)} name="client_id">
                   <SelectTrigger>
@@ -205,21 +193,84 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="case_type">Dava Türü *</Label>
-                <Select value={formData.case_type} onValueChange={(value) => handleChange('case_type', value)} name="case_type">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Dava türü seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Hukuk">Hukuk</SelectItem>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="İdare">İdare</SelectItem>
-                    <SelectItem value="İş Hukuku">İş Hukuku</SelectItem>
-                    <SelectItem value="Aile Hukuku">Aile Hukuku</SelectItem>
-                    <SelectItem value="Ticaret">Ticaret</SelectItem>
-                    <SelectItem value="İcra">İcra</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="defendant">Karşı Taraf *</Label>
+                <Input
+                  id="defendant"
+                  name="defendant"
+                  value={formData.defendant}
+                  onChange={(e) => handleChange('defendant', e.target.value)}
+                  placeholder="Karşı taraf adını girin"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="court">Mahkeme / İcra *</Label>
+                <Popover open={courtOpen} onOpenChange={setCourtOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={courtOpen}
+                      className="w-full justify-between"
+                    >
+                      {formData.court || "Mahkeme seçin veya yazın..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Mahkeme ara veya yaz..." 
+                        value={formData.court}
+                        onValueChange={(value) => handleChange('court', value)}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
+                        <CommandGroup>
+                          {[
+                            "ADANA BANKA ALACAKLARI",
+                            "GAYRİMENKUL SATIŞ İCRA DAİRESİ",
+                            "ADANA 1.GENEL İCRA DAİRESİ",
+                            "ADANA 2.GENEL İCRA DAİRESİ",
+                            "ADANA 3.GENEL İCRA DAİRESİ",
+                            "GAZİANTEP İCRA DAİRESİ"
+                          ].map((court) => (
+                            <CommandItem
+                              key={court}
+                              value={court}
+                              onSelect={(currentValue) => {
+                                handleChange('court', currentValue)
+                                setCourtOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.court === court ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {court}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <input type="hidden" name="court" value={formData.court} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="case_number">Dava No *</Label>
+                <Input
+                  id="case_number"
+                  name="case_number"
+                  value={formData.case_number}
+                  onChange={(e) => handleChange('case_number', e.target.value)}
+                  placeholder="Dava numarasını girin"
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -229,41 +280,42 @@ export default function CaseForm() {
                     <SelectValue placeholder="Durum seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
-                    <SelectItem value="Kazanıldı">Kazanıldı</SelectItem>
-                    <SelectItem value="Kaybedildi">Kaybedildi</SelectItem>
-                    <SelectItem value="Beklemede">Beklemede</SelectItem>
-                    <SelectItem value="İptal Edildi">İptal Edildi</SelectItem>
+                    <SelectItem value="Beraat">Beraat</SelectItem>
+                    <SelectItem value="Ceza">Ceza</SelectItem>
+                    <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
+                    <SelectItem value="Kabul">Kabul</SelectItem>
+                    <SelectItem value="Red">Red</SelectItem>
+                    <SelectItem value="İnfaz">İnfaz</SelectItem>
+                    <SelectItem value="Temyiz">Temyiz</SelectItem>
+                    <SelectItem value="İstinaf">İstinaf</SelectItem>
+                    <SelectItem value="İtirazlı">İtirazlı</SelectItem>
+                    <SelectItem value="Derdest">Derdest</SelectItem>
+                    <SelectItem value="Protokollü">Protokollü</SelectItem>
+                    <SelectItem value="Sözlü Taahütlü">Sözlü Taahütlü</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="court">Mahkeme *</Label>
-                <Input
-                  id="court"
-                  name="court"
-                  value={formData.court}
-                  onChange={(e) => handleChange('court', e.target.value)}
-                  placeholder="Mahkeme adını girin"
-                  required
-                />
+                <Label htmlFor="case_type">Dava Türü *</Label>
+                <Select value={formData.case_type} onValueChange={(value) => handleChange('case_type', value)} name="case_type">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Dava türü seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ceza">Ceza</SelectItem>
+                    <SelectItem value="Hukuk">Hukuk</SelectItem>
+                    <SelectItem value="İcra">İcra</SelectItem>
+                    <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
+                    <SelectItem value="Satış Memuru">Satış Memuru</SelectItem>
+                    <SelectItem value="Ara Buluculuk">Ara Buluculuk</SelectItem>
+                    <SelectItem value="Tazminat Komisyonu Başkanlığı">Tazminat Komisyonu Başkanlığı</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="defendant">Borçlu / Davalı *</Label>
-                <Input
-                  id="defendant"
-                  name="defendant"
-                  value={formData.defendant}
-                  onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Borçlu/Davalı adını girin"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="start_date">Başlangıç Tarihi *</Label>
+                <Label htmlFor="start_date">Açılış Tarihi *</Label>
                 <Input
                   id="start_date"
                   name="start_date"
@@ -275,7 +327,7 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="next_hearing_date">Sonraki Duruşma Tarihi</Label>
+                <Label htmlFor="next_hearing_date">Duruşma Tarihi</Label>
                 <Input
                   id="next_hearing_date"
                   name="next_hearing_date"
@@ -284,6 +336,40 @@ export default function CaseForm() {
                   onChange={(e) => handleChange('next_hearing_date', e.target.value)}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reminder_date">Hatırlatma Tarihi</Label>
+                <Input
+                  id="reminder_date"
+                  name="reminder_date"
+                  type="date"
+                  value={formData.reminder_date}
+                  onChange={(e) => handleChange('reminder_date', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="office_archive_no">Ofis Arşiv NO</Label>
+                <Input
+                  id="office_archive_no"
+                  name="office_archive_no"
+                  value={formData.office_archive_no}
+                  onChange={(e) => handleChange('office_archive_no', e.target.value)}
+                  placeholder="Ofis arşiv numarasını girin"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Dava Başlığı *</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                placeholder="Dava başlığını girin"
+                required
+              />
             </div>
 
             <div className="space-y-2">

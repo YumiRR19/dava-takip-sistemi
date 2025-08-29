@@ -66,6 +66,10 @@ export const api = {
     delete: (id: string) => apiRequest<{ message: string }>(`/api/cases/${id}`, {
       method: 'DELETE',
     }),
+    search: (searchParams: CaseSearchParams) => apiRequest<Case[]>('/api/cases/search', {
+      method: 'POST',
+      body: JSON.stringify(searchParams),
+    }),
   },
   
   dashboard: {
@@ -89,6 +93,6 @@ export const api = {
   },
 }
 
-import type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData } from '../types'
+import type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams } from '../types'
 
-export type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData }
+export type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams }

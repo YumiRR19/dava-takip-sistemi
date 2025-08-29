@@ -87,19 +87,17 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.upcoming_hearings.length}</div>
+            <div className="text-2xl font-bold">{data.upcoming_hearings?.length || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktif Davalar</CardTitle>
+            <CardTitle className="text-sm font-medium">Hatırlatmalar</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {data.status_counts['Devam Ediyor'] || 0}
-            </div>
+            <div className="text-2xl font-bold">{data.upcoming_reminders?.length || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -107,19 +105,34 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Dava Durumları</CardTitle>
-            <CardDescription>Mevcut davaların durum dağılımı</CardDescription>
+            <CardTitle>Hatırlatmalar</CardTitle>
+            <CardDescription>Önümüzdeki 30 gün içindeki hatırlatmalar</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(data.status_counts).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{status}</span>
-                  <span className="text-sm text-gray-500">{count}</span>
+              {(data.upcoming_reminders || []).slice(0, 5).map((reminder) => (
+                <div 
+                  key={reminder.case_id} 
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                  onDoubleClick={() => window.location.href = `/cases/${reminder.case_id}/edit`}
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{reminder.case_title}</p>
+                    <p className="text-xs text-blue-600 font-medium">Dava No: {reminder.case_number}</p>
+                    <p className="text-xs text-gray-500">{reminder.client_name}</p>
+                    <p className="text-xs text-gray-500">{reminder.court}</p>
+                    <p className="text-xs text-orange-600 font-medium">Durum: {reminder.status}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-red-600">
+                      {new Date(reminder.reminder_date).toLocaleDateString('tr-TR')}
+                    </p>
+                    <p className="text-xs text-gray-500">Hatırlatma</p>
+                  </div>
                 </div>
               ))}
-              {Object.keys(data.status_counts).length === 0 && (
-                <p className="text-sm text-gray-500">Henüz dava bulunmuyor.</p>
+              {(data.upcoming_reminders?.length || 0) === 0 && (
+                <p className="text-sm text-gray-500">Yaklaşan hatırlatma bulunmuyor.</p>
               )}
             </div>
           </CardContent>
@@ -132,7 +145,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.upcoming_hearings.slice(0, 5).map((hearing) => (
+              {(data.upcoming_hearings || []).slice(0, 5).map((hearing) => (
                 <div key={hearing.case_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="text-sm font-medium">{hearing.case_title}</p>
@@ -147,7 +160,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {data.upcoming_hearings.length === 0 && (
+              {(data.upcoming_hearings?.length || 0) === 0 && (
                 <p className="text-sm text-gray-500">Yaklaşan duruşma bulunmuyor.</p>
               )}
             </div>

@@ -8,6 +8,7 @@ import Cases from './components/Cases'
 import Clients from './components/Clients'
 import CaseForm from './components/CaseForm'
 import ClientForm from './components/ClientForm'
+import CaseSearch from './components/CaseSearch'
 import Login from './components/Login'
 import Settings from './components/Settings'
 import './App.css'
@@ -34,6 +35,7 @@ function AppContent() {
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/edit/:id" element={<ClientForm />} />
+            <Route path="/case-search" element={<CaseSearch />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>

@@ -117,14 +117,12 @@ export default function ClientForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">E-posta *</Label>
+                <Label htmlFor="email">Vekalet Bilgileri</Label>
                 <Input
                   id="email"
-                  type="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="E-posta adresini girin"
-                  required
+                  placeholder="Vekalet bilgilerini girin"
                 />
               </div>
 

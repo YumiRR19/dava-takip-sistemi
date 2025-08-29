@@ -47,6 +47,8 @@ class Case(BaseModel):
     notes: str
     start_date: date
     next_hearing_date: Optional[date]
+    reminder_date: Optional[date]
+    office_archive_no: str
     created_at: datetime
     updated_at: datetime
 
@@ -62,6 +64,8 @@ class CaseCreate(BaseModel):
     notes: str
     start_date: date
     next_hearing_date: Optional[date]
+    reminder_date: Optional[date]
+    office_archive_no: str
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -74,11 +78,13 @@ class CaseUpdate(BaseModel):
     notes: Optional[str] = None
     start_date: Optional[date] = None
     next_hearing_date: Optional[date] = None
+    reminder_date: Optional[date] = None
+    office_archive_no: Optional[str] = None
 
 clients_db: dict[str, Client] = {}
 cases_db: dict[str, Case] = {}
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "Msghukuk0714."
 active_sessions: set[str] = set()
 
 security = HTTPBearer(auto_error=False)
@@ -129,7 +135,7 @@ async def change_password(request: PasswordChangeRequest, token: str = Depends(v
 async def backup_data(token: str = Depends(verify_token)):
     backup_data = {
         "clients": {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()},
-        "cases": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None} for k, v in cases_db.items()},
+        "cases": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()},
         "backup_date": datetime.now().isoformat()
     }
     return backup_data
@@ -150,6 +156,10 @@ async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
             case_data["start_date"] = date.fromisoformat(case_data["start_date"])
             if case_data["next_hearing_date"]:
                 case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
+            if case_data.get("reminder_date"):
+                case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
+            if "office_archive_no" not in case_data:
+                case_data["office_archive_no"] = ""
             cases_db[case_id] = Case(**case_data)
         
         return {"message": "Data restored successfully"}
@@ -215,6 +225,8 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
         notes=case.notes,
         start_date=case.start_date,
         next_hearing_date=case.next_hearing_date,
+        reminder_date=case.reminder_date,
+        office_archive_no=case.office_archive_no,
         created_at=now,
         updated_at=now
     )
@@ -263,6 +275,39 @@ async def delete_case(case_id: str, token: str = Depends(verify_token)):
     del cases_db[case_id]
     return {"message": "Case deleted successfully"}
 
+class CaseSearchParams(BaseModel):
+    case_type: Optional[str] = None
+    status: Optional[str] = None
+    court: Optional[str] = None
+    client_id: Optional[str] = None
+    start_date_from: Optional[date] = None
+    start_date_to: Optional[date] = None
+
+@app.post("/api/cases/search", response_model=List[Case])
+async def search_cases(search_params: CaseSearchParams, token: str = Depends(verify_token)):
+    cases = list(cases_db.values())
+    
+    if search_params.case_type:
+        cases = [case for case in cases if case.case_type.lower() == search_params.case_type.lower()]
+    
+    if search_params.status:
+        cases = [case for case in cases if case.status.lower() == search_params.status.lower()]
+    
+    if search_params.court:
+        cases = [case for case in cases if search_params.court.lower() in case.court.lower()]
+    
+    if search_params.client_id:
+        cases = [case for case in cases if case.client_id == search_params.client_id]
+    
+    if search_params.start_date_from:
+        cases = [case for case in cases if case.start_date >= search_params.start_date_from]
+    
+    if search_params.start_date_to:
+        cases = [case for case in cases if case.start_date <= search_params.start_date_to]
+    
+    cases.sort(key=lambda x: x.updated_at, reverse=True)
+    return cases
+
 @app.get("/api/dashboard")
 async def get_dashboard(token: str = Depends(verify_token)):
     total_cases = len(cases_db)
@@ -291,9 +336,25 @@ async def get_dashboard(token: str = Depends(verify_token)):
     
     upcoming_hearings.sort(key=lambda x: x["hearing_date"])
     
+    upcoming_reminders = []
+    for case in cases_db.values():
+        if case.reminder_date and today <= case.reminder_date <= upcoming_deadline:
+            upcoming_reminders.append({
+                "case_id": case.id,
+                "case_title": case.title,
+                "case_number": case.case_number,
+                "client_name": case.client_name,
+                "reminder_date": case.reminder_date,
+                "court": case.court,
+                "status": case.status
+            })
+    
+    upcoming_reminders.sort(key=lambda x: x["reminder_date"])
+    
     return {
         "total_cases": total_cases,
         "total_clients": total_clients,
         "status_counts": status_counts,
-        "upcoming_hearings": upcoming_hearings
+        "upcoming_hearings": upcoming_hearings,
+        "upcoming_reminders": upcoming_reminders
     }
