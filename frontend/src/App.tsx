@@ -31,7 +31,7 @@ function AppContent() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/cases" element={<Cases />} />
             <Route path="/cases/new" element={<CaseForm />} />
-            <Route path="/cases/edit/:id" element={<CaseForm />} />
+            <Route path="/cases/:id/edit" element={<CaseForm />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/edit/:id" element={<ClientForm />} />
