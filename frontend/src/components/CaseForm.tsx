@@ -24,7 +24,6 @@ export default function CaseForm() {
   const [clients, setClients] = useState<Client[]>([])
   const [courtOpen, setCourtOpen] = useState(false)
   const [formData, setFormData] = useState({
-    title: '',
     description: '',
     client_id: '',
     case_type: '',
@@ -63,7 +62,6 @@ export default function CaseForm() {
     try {
       const caseData = await api.cases.getById(caseId)
       setFormData({
-        title: caseData.title,
         description: caseData.description,
         client_id: caseData.client_id,
         case_type: caseData.case_type,
@@ -95,7 +93,7 @@ export default function CaseForm() {
     const formDataObj = new FormData(formElement)
     
     const submissionData = {
-      title: formDataObj.get('title') as string,
+      title: formDataObj.get('case_number') as string,
       description: formDataObj.get('description') as string,
       client_id: formDataObj.get('client_id') as string,
       case_type: formDataObj.get('case_type') as string,
@@ -360,17 +358,6 @@ export default function CaseForm() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="title">Dava Başlığı *</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                placeholder="Dava başlığını girin"
-                required
-              />
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="description">Açıklama *</Label>

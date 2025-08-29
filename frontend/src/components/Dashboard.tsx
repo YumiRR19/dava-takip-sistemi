@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FileText, Users, Calendar, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadDashboardData()
@@ -114,7 +115,7 @@ export default function Dashboard() {
                 <div 
                   key={reminder.case_id} 
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                  onDoubleClick={() => window.location.href = `/cases/${reminder.case_id}/edit`}
+                  onDoubleClick={() => navigate(`/cases/${reminder.case_id}/edit`)}
                 >
                   <div className="flex-1">
                     <p className="text-sm font-medium">{reminder.case_title}</p>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +70,7 @@ export default function CaseSearch() {
     }
   }
 
-  const handleExportCSV = () => {
+  const handleExportPDF = () => {
     if (searchResults.length === 0) {
       toast({
         title: "Uyarı",
@@ -79,6 +80,17 @@ export default function CaseSearch() {
       return
     }
 
+    const doc = new jsPDF('l', 'mm', 'a4')
+    
+    doc.setFont('helvetica')
+    
+    doc.setFontSize(16)
+    doc.text('LexCloud - Dava Sorgulama Sonuçları', 20, 20)
+    
+    doc.setFontSize(12)
+    doc.text(`Tarih: ${new Date().toLocaleDateString('tr-TR')}`, 20, 30)
+    doc.text(`Toplam Dava Sayısı: ${searchResults.length}`, 20, 40)
+    
     const headers = [
       'Dava Başlığı',
       'Dava No',
@@ -90,43 +102,92 @@ export default function CaseSearch() {
       'Açılış Tarihi',
       'Duruşma Tarihi',
       'Hatırlatma Tarihi',
-      'Ofis Arşiv No',
-      'Açıklama',
-      'Notlar'
+      'Ofis Arşiv No'
     ]
-
-    const csvContent = [
-      headers.join(','),
-      ...searchResults.map(case_ => [
-        `"${case_.title}"`,
-        `"${case_.case_number}"`,
-        `"${case_.client_name}"`,
-        `"${case_.defendant}"`,
-        `"${case_.court}"`,
-        `"${case_.case_type}"`,
-        `"${case_.status}"`,
-        `"${case_.start_date}"`,
-        `"${case_.next_hearing_date || ''}"`,
-        `"${case_.reminder_date || ''}"`,
-        `"${case_.office_archive_no || ''}"`,
-        `"${case_.description}"`,
-        `"${case_.notes}"`
-      ].join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `dava-sorgulama-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
+    
+    const tableData = searchResults.map(case_ => [
+      case_.title || '',
+      case_.case_number || '',
+      case_.client_name || '',
+      case_.defendant || '',
+      case_.court || '',
+      case_.case_type || '',
+      case_.status || '',
+      case_.start_date ? new Date(case_.start_date).toLocaleDateString('tr-TR') : '',
+      case_.next_hearing_date ? new Date(case_.next_hearing_date).toLocaleDateString('tr-TR') : '',
+      case_.reminder_date ? new Date(case_.reminder_date).toLocaleDateString('tr-TR') : '',
+      case_.office_archive_no || ''
+    ])
+    
+    let yPosition = 55
+    const rowHeight = 8
+    const colWidths = [25, 20, 25, 25, 30, 20, 20, 25, 25, 25, 20]
+    let xPosition = 20
+    
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    headers.forEach((header, index) => {
+      doc.text(header, xPosition, yPosition)
+      xPosition += colWidths[index]
+    })
+    
+    yPosition += rowHeight
+    doc.setFont('helvetica', 'normal')
+    
+    tableData.forEach((row) => {
+      if (yPosition > 180) {
+        doc.addPage()
+        yPosition = 20
+      }
+      
+      xPosition = 20
+      row.forEach((cell, colIndex) => {
+        const cellText = String(cell).substring(0, 15)
+        doc.text(cellText, xPosition, yPosition)
+        xPosition += colWidths[colIndex]
+      })
+      yPosition += rowHeight
+    })
+    
+    const casesWithNotes = searchResults.filter(c => c.notes || c.description)
+    if (casesWithNotes.length > 0) {
+      doc.addPage()
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Açıklamalar ve Notlar', 20, 20)
+      
+      let notesY = 35
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      casesWithNotes.forEach((case_) => {
+        if (notesY > 250) {
+          doc.addPage()
+          notesY = 20
+        }
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${case_.case_number} - ${case_.title}`, 20, notesY)
+        notesY += 8
+        
+        doc.setFont('helvetica', 'normal')
+        if (case_.description) {
+          doc.text(`Açıklama: ${case_.description}`, 20, notesY)
+          notesY += 8
+        }
+        if (case_.notes) {
+          doc.text(`Notlar: ${case_.notes}`, 20, notesY)
+          notesY += 8
+        }
+        notesY += 5
+      })
+    }
+    
+    doc.save(`dava_sorgulama_${new Date().toISOString().split('T')[0]}.pdf`)
+    
     toast({
       title: "Başarılı",
-      description: "Dava listesi CSV formatında indirildi.",
+      description: `${searchResults.length} dava PDF formatında dışa aktarıldı.`,
     })
   }
 
@@ -262,9 +323,9 @@ export default function CaseSearch() {
                   {searchResults.length} dava bulundu
                 </CardDescription>
               </div>
-              <Button onClick={handleExportCSV} variant="outline">
+              <Button onClick={handleExportPDF} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                CSV İndir
+                PDF İndir
               </Button>
             </div>
           </CardHeader>
