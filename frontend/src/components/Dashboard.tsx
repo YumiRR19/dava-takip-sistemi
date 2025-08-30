@@ -122,6 +122,7 @@ export default function Dashboard() {
                     <p className="text-xs text-blue-600 font-medium">Dava No: {reminder.case_number}</p>
                     <p className="text-xs text-gray-500">{reminder.client_name}</p>
                     <p className="text-xs text-gray-500">{reminder.court}</p>
+                    <p className="text-xs text-gray-500">Karşı Taraf: {reminder.defendant}</p>
                     <p className="text-xs text-orange-600 font-medium">Durum: {reminder.status}</p>
                   </div>
                   <div className="text-right">
@@ -153,6 +154,7 @@ export default function Dashboard() {
                     <p className="text-xs text-blue-600 font-medium">Dava No: {hearing.case_number}</p>
                     <p className="text-xs text-gray-500">{hearing.client_name}</p>
                     <p className="text-xs text-gray-500">{hearing.court}</p>
+                    <p className="text-xs text-gray-500">Karşı Taraf: {hearing.defendant}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">

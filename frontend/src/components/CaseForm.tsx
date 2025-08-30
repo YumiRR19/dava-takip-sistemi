@@ -32,7 +32,7 @@ export default function CaseForm() {
     case_number: '',
     defendant: '',
     notes: '',
-    start_date: '',
+    start_date: new Date().toISOString().split('T')[0],
     next_hearing_date: '',
     reminder_date: '',
     office_archive_no: '',
@@ -49,6 +49,9 @@ export default function CaseForm() {
     try {
       const clientsData = await api.clients.getAll()
       setClients(clientsData)
+      if (clientsData.length > 0 && !formData.client_id) {
+        setFormData(prev => ({ ...prev, client_id: clientsData[0].id }))
+      }
     } catch (error) {
       toast({
         title: "Hata",
@@ -62,17 +65,17 @@ export default function CaseForm() {
     try {
       const caseData = await api.cases.getById(caseId)
       setFormData({
-        description: caseData.description,
+        description: caseData.description || '',
         client_id: caseData.client_id,
         case_type: caseData.case_type,
         status: caseData.status,
         court: caseData.court,
         case_number: caseData.case_number,
         defendant: caseData.defendant,
-        notes: caseData.notes,
-        start_date: caseData.start_date,
-        next_hearing_date: caseData.next_hearing_date || '',
-        reminder_date: caseData.reminder_date || '',
+        notes: caseData.notes || '',
+        start_date: caseData.start_date ? new Date(caseData.start_date).toISOString().split('T')[0] : '',
+        next_hearing_date: caseData.next_hearing_date ? new Date(caseData.next_hearing_date).toISOString().split('T')[0] : '',
+        reminder_date: caseData.reminder_date ? new Date(caseData.reminder_date).toISOString().split('T')[0] : '',
         office_archive_no: caseData.office_archive_no || '',
       })
     } catch (error) {
@@ -89,23 +92,20 @@ export default function CaseForm() {
     e.preventDefault()
     setLoading(true)
 
-    const formElement = e.target as HTMLFormElement
-    const formDataObj = new FormData(formElement)
-    
     const submissionData = {
-      title: formDataObj.get('case_number') as string,
-      description: formDataObj.get('description') as string,
-      client_id: formDataObj.get('client_id') as string,
-      case_type: formDataObj.get('case_type') as string,
-      status: formDataObj.get('status') as string,
-      court: formDataObj.get('court') as string,
-      case_number: formDataObj.get('case_number') as string,
-      defendant: formDataObj.get('defendant') as string,
-      notes: formDataObj.get('notes') as string,
-      start_date: formDataObj.get('start_date') as string,
-      next_hearing_date: formDataObj.get('next_hearing_date') as string,
-      reminder_date: formDataObj.get('reminder_date') as string,
-      office_archive_no: formDataObj.get('office_archive_no') as string,
+      title: formData.case_number,
+      description: formData.description,
+      client_id: formData.client_id,
+      case_type: formData.case_type,
+      status: formData.status,
+      court: formData.court,
+      case_number: formData.case_number,
+      defendant: formData.defendant,
+      notes: formData.notes,
+      start_date: formData.start_date,
+      next_hearing_date: formData.next_hearing_date,
+      reminder_date: formData.reminder_date,
+      office_archive_no: formData.office_archive_no,
     }
 
     console.log('Form data before submission:', submissionData)
@@ -125,6 +125,8 @@ export default function CaseForm() {
       } else {
         const createData: CaseCreate = {
           ...submissionData,
+          description: submissionData.description || undefined,
+          notes: submissionData.notes || undefined,
           next_hearing_date: submissionData.next_hearing_date || undefined,
           reminder_date: submissionData.reminder_date || undefined,
         }
@@ -227,111 +229,12 @@ export default function CaseForm() {
                         <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
                         <CommandGroup>
                           {[
-                            "ADANA 1. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 2. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 3. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 4. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 5. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 1. AİLE MAHKEMESİ",
-                            "ADANA 2. AİLE MAHKEMESİ",
-                            "ADANA 3. AİLE MAHKEMESİ",
-                            "ADANA 1. TİCARET MAHKEMESİ",
-                            "ADANA 2. TİCARET MAHKEMESİ",
-                            "ADANA 1. İŞ MAHKEMESİ",
-                            "ADANA 2. İŞ MAHKEMESİ",
-                            "ADANA 1. SULH HUKUK MAHKEMESİ",
-                            "ADANA 2. SULH HUKUK MAHKEMESİ",
-                            "ADANA 3. SULH HUKUK MAHKEMESİ",
-                            "ADANA 4. SULH HUKUK MAHKEMESİ",
-                            "ADANA 5. SULH HUKUK MAHKEMESİ",
-                            "ADANA BÖLGE ADLİYE MAHKEMESİ",
+                            "ADANA BANKA ALACAKLARI",
+                            "GAYRİMENKUL SATIŞ İCRA DAİRESİ",
                             "ADANA 1. GENEL İCRA DAİRESİ",
                             "ADANA 2. GENEL İCRA DAİRESİ",
                             "ADANA 3. GENEL İCRA DAİRESİ",
-                            "ADANA 4. GENEL İCRA DAİRESİ",
-                            "ADANA 5. GENEL İCRA DAİRESİ",
-                            "ADANA BANKA ALACAKLARI İCRA DAİRESİ",
-                            "ADANA GAYRİMENKUL SATIŞ İCRA DAİRESİ",
-                            "ANKARA 1. ASLIYE HUKUK MAHKEMESİ",
-                            "ANKARA 2. ASLIYE HUKUK MAHKEMESİ",
-                            "ANKARA 3. ASLIYE HUKUK MAHKEMESİ",
-                            "ANKARA 4. ASLIYE HUKUK MAHKEMESİ",
-                            "ANKARA 5. ASLIYE HUKUK MAHKEMESİ",
-                            "ANKARA 1. AİLE MAHKEMESİ",
-                            "ANKARA 2. AİLE MAHKEMESİ",
-                            "ANKARA 3. AİLE MAHKEMESİ",
-                            "ANKARA 4. AİLE MAHKEMESİ",
-                            "ANKARA 1. TİCARET MAHKEMESİ",
-                            "ANKARA 2. TİCARET MAHKEMESİ",
-                            "ANKARA 3. TİCARET MAHKEMESİ",
-                            "ANKARA 1. İŞ MAHKEMESİ",
-                            "ANKARA 2. İŞ MAHKEMESİ",
-                            "ANKARA 3. İŞ MAHKEMESİ",
-                            "ANKARA BÖLGE ADLİYE MAHKEMESİ",
-                            "ANKARA 1. GENEL İCRA DAİRESİ",
-                            "ANKARA 2. GENEL İCRA DAİRESİ",
-                            "ANKARA 3. GENEL İCRA DAİRESİ",
-                            "ANKARA 4. GENEL İCRA DAİRESİ",
-                            "ANKARA 5. GENEL İCRA DAİRESİ",
-                            "ANKARA BANKA ALACAKLARI İCRA DAİRESİ",
-                            "İSTANBUL 1. ASLIYE HUKUK MAHKEMESİ",
-                            "İSTANBUL 2. ASLIYE HUKUK MAHKEMESİ",
-                            "İSTANBUL 3. ASLIYE HUKUK MAHKEMESİ",
-                            "İSTANBUL 4. ASLIYE HUKUK MAHKEMESİ",
-                            "İSTANBUL 5. ASLIYE HUKUK MAHKEMESİ",
-                            "İSTANBUL 1. AİLE MAHKEMESİ",
-                            "İSTANBUL 2. AİLE MAHKEMESİ",
-                            "İSTANBUL 3. AİLE MAHKEMESİ",
-                            "İSTANBUL 1. TİCARET MAHKEMESİ",
-                            "İSTANBUL 2. TİCARET MAHKEMESİ",
-                            "İSTANBUL 3. TİCARET MAHKEMESİ",
-                            "İSTANBUL 1. İŞ MAHKEMESİ",
-                            "İSTANBUL 2. İŞ MAHKEMESİ",
-                            "İSTANBUL 3. İŞ MAHKEMESİ",
-                            "İSTANBUL BÖLGE ADLİYE MAHKEMESİ",
-                            "İSTANBUL 1. GENEL İCRA DAİRESİ",
-                            "İSTANBUL 2. GENEL İCRA DAİRESİ",
-                            "İSTANBUL 3. GENEL İCRA DAİRESİ",
-                            "İSTANBUL 4. GENEL İCRA DAİRESİ",
-                            "İSTANBUL 5. GENEL İCRA DAİRESİ",
-                            "İSTANBUL BANKA ALACAKLARI İCRA DAİRESİ",
-                            "İZMİR 1. ASLIYE HUKUK MAHKEMESİ",
-                            "İZMİR 2. ASLIYE HUKUK MAHKEMESİ",
-                            "İZMİR 3. ASLIYE HUKUK MAHKEMESİ",
-                            "İZMİR 1. AİLE MAHKEMESİ",
-                            "İZMİR 2. AİLE MAHKEMESİ",
-                            "İZMİR 1. TİCARET MAHKEMESİ",
-                            "İZMİR 2. TİCARET MAHKEMESİ",
-                            "İZMİR 1. İŞ MAHKEMESİ",
-                            "İZMİR 2. İŞ MAHKEMESİ",
-                            "İZMİR BÖLGE ADLİYE MAHKEMESİ",
-                            "İZMİR 1. GENEL İCRA DAİRESİ",
-                            "İZMİR 2. GENEL İCRA DAİRESİ",
-                            "İZMİR 3. GENEL İCRA DAİRESİ",
-                            "GAZİANTEP 1. ASLIYE HUKUK MAHKEMESİ",
-                            "GAZİANTEP 2. ASLIYE HUKUK MAHKEMESİ",
-                            "GAZİANTEP 1. AİLE MAHKEMESİ",
-                            "GAZİANTEP 1. TİCARET MAHKEMESİ",
-                            "GAZİANTEP 1. İŞ MAHKEMESİ",
-                            "GAZİANTEP BÖLGE ADLİYE MAHKEMESİ",
-                            "GAZİANTEP 1. GENEL İCRA DAİRESİ",
-                            "GAZİANTEP 2. GENEL İCRA DAİRESİ",
-                            "BURSA 1. ASLIYE HUKUK MAHKEMESİ",
-                            "BURSA 2. ASLIYE HUKUK MAHKEMESİ",
-                            "BURSA 1. AİLE MAHKEMESİ",
-                            "BURSA 1. TİCARET MAHKEMESİ",
-                            "BURSA 1. İŞ MAHKEMESİ",
-                            "BURSA BÖLGE ADLİYE MAHKEMESİ",
-                            "BURSA 1. GENEL İCRA DAİRESİ",
-                            "BURSA 2. GENEL İCRA DAİRESİ",
-                            "ANTALYA 1. ASLIYE HUKUK MAHKEMESİ",
-                            "ANTALYA 2. ASLIYE HUKUK MAHKEMESİ",
-                            "ANTALYA 1. AİLE MAHKEMESİ",
-                            "ANTALYA 1. TİCARET MAHKEMESİ",
-                            "ANTALYA 1. İŞ MAHKEMESİ",
-                            "ANTALYA BÖLGE ADLİYE MAHKEMESİ",
-                            "ANTALYA 1. GENEL İCRA DAİRESİ",
-                            "ANTALYA 2. GENEL İCRA DAİRESİ"
+                            "GAZİANTEP İCRA DAİRESİ"
                           ].map((court) => (
                             <CommandItem
                               key={court}

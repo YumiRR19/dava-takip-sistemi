@@ -27,7 +27,7 @@ export interface ClientUpdate {
 export interface Case {
   id: string
   title: string
-  description: string
+  description?: string
   client_id: string
   client_name: string
   case_type: string
@@ -35,7 +35,7 @@ export interface Case {
   court: string
   case_number: string
   defendant: string
-  notes: string
+  notes?: string
   start_date: string
   next_hearing_date?: string
   reminder_date?: string
@@ -46,14 +46,14 @@ export interface Case {
 
 export interface CaseCreate {
   title: string
-  description: string
+  description?: string
   client_id: string
   case_type: string
   status: string
   court: string
   case_number: string
   defendant: string
-  notes: string
+  notes?: string
   start_date: string
   next_hearing_date?: string
   reminder_date?: string
@@ -95,6 +95,7 @@ export interface DashboardData {
     client_name: string
     hearing_date: string
     court: string
+    defendant: string
   }>
   upcoming_reminders: Array<{
     case_id: string
@@ -104,5 +105,6 @@ export interface DashboardData {
     reminder_date: string
     court: string
     status: string
+    defendant: string
   }>
 }

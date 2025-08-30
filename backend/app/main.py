@@ -355,7 +355,8 @@ async def get_dashboard(token: str = Depends(verify_token)):
                 "case_number": case.case_number,
                 "client_name": case.client_name,
                 "hearing_date": case.next_hearing_date,
-                "court": case.court
+                "court": case.court,
+                "defendant": case.defendant
             })
     
     upcoming_hearings.sort(key=lambda x: x["hearing_date"])
@@ -370,7 +371,8 @@ async def get_dashboard(token: str = Depends(verify_token)):
                 "client_name": case.client_name,
                 "reminder_date": case.reminder_date,
                 "court": case.court,
-                "status": case.status
+                "status": case.status,
+                "defendant": case.defendant
             })
     
     upcoming_reminders.sort(key=lambda x: x["reminder_date"])
