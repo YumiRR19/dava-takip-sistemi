@@ -108,3 +108,42 @@ export interface DashboardData {
     defendant: string
   }>
 }
+
+export interface CompensationLetter {
+  id: string
+  title: string
+  client_id: string
+  client_name: string
+  letter_number: string
+  bank: string
+  customer_number: string
+  customer: string
+  court: string
+  case_number: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CompensationLetterCreate {
+  title: string
+  client_id: string
+  letter_number: string
+  bank: string
+  customer_number: string
+  customer: string
+  court: string
+  case_number: string
+  status: string
+}
+
+export interface CompensationLetterUpdate {
+  title?: string
+  letter_number?: string
+  bank?: string
+  customer_number?: string
+  customer?: string
+  court?: string
+  case_number?: string
+  status?: string
+}

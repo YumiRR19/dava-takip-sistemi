@@ -93,6 +93,44 @@ class CaseUpdate(BaseModel):
 clients_db: dict[str, Client] = {}
 cases_db: dict[str, Case] = {}
 
+class CompensationLetter(BaseModel):
+    id: str
+    title: str
+    client_id: str
+    client_name: str
+    letter_number: str
+    bank: str
+    customer_number: str
+    customer: str
+    court: str
+    case_number: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+class CompensationLetterCreate(BaseModel):
+    title: str
+    client_id: str
+    letter_number: str
+    bank: str
+    customer_number: str
+    customer: str
+    court: str
+    case_number: str
+    status: str
+
+class CompensationLetterUpdate(BaseModel):
+    title: Optional[str] = None
+    letter_number: Optional[str] = None
+    bank: Optional[str] = None
+    customer_number: Optional[str] = None
+    customer: Optional[str] = None
+    court: Optional[str] = None
+    case_number: Optional[str] = None
+    status: Optional[str] = None
+
+compensation_letters_db: dict[str, CompensationLetter] = {}
+
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "Msghukuk0714."
 active_sessions: set[str] = set()
 
@@ -384,3 +422,72 @@ async def get_dashboard(token: str = Depends(verify_token)):
         "upcoming_hearings": upcoming_hearings,
         "upcoming_reminders": upcoming_reminders
     }
+
+@app.post("/api/compensation-letters", response_model=CompensationLetter)
+async def create_compensation_letter(letter: CompensationLetterCreate, token: str = Depends(verify_token)):
+    if letter.client_id not in clients_db:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    letter_id = str(uuid.uuid4())
+    client = clients_db[letter.client_id]
+    now = datetime.now()
+    
+    new_letter = CompensationLetter(
+        id=letter_id,
+        title=letter.title,
+        client_id=letter.client_id,
+        client_name=client.name,
+        letter_number=letter.letter_number,
+        bank=letter.bank,
+        customer_number=letter.customer_number,
+        customer=letter.customer,
+        court=letter.court,
+        case_number=letter.case_number,
+        status=letter.status,
+        created_at=now,
+        updated_at=now
+    )
+    compensation_letters_db[letter_id] = new_letter
+    return new_letter
+
+@app.get("/api/compensation-letters", response_model=List[CompensationLetter])
+async def get_compensation_letters(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
+    letters = list(compensation_letters_db.values())
+    
+    if status:
+        letters = [letter for letter in letters if letter.status.lower() == status.lower()]
+    
+    if client_id:
+        letters = [letter for letter in letters if letter.client_id == client_id]
+    
+    letters.sort(key=lambda x: x.updated_at, reverse=True)
+    return letters
+
+@app.get("/api/compensation-letters/{letter_id}", response_model=CompensationLetter)
+async def get_compensation_letter(letter_id: str, token: str = Depends(verify_token)):
+    if letter_id not in compensation_letters_db:
+        raise HTTPException(status_code=404, detail="Compensation letter not found")
+    return compensation_letters_db[letter_id]
+
+@app.put("/api/compensation-letters/{letter_id}", response_model=CompensationLetter)
+async def update_compensation_letter(letter_id: str, letter_update: CompensationLetterUpdate, token: str = Depends(verify_token)):
+    if letter_id not in compensation_letters_db:
+        raise HTTPException(status_code=404, detail="Compensation letter not found")
+    
+    letter = compensation_letters_db[letter_id]
+    update_data = letter_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(letter, field, value)
+    
+    letter.updated_at = datetime.now()
+    compensation_letters_db[letter_id] = letter
+    return letter
+
+@app.delete("/api/compensation-letters/{letter_id}")
+async def delete_compensation_letter(letter_id: str, token: str = Depends(verify_token)):
+    if letter_id not in compensation_letters_db:
+        raise HTTPException(status_code=404, detail="Compensation letter not found")
+    
+    del compensation_letters_db[letter_id]
+    return {"message": "Compensation letter deleted successfully"}
