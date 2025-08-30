@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { api, Client, CompensationLetterCreate, CompensationLetterUpdate } from '@/lib/api'
+import { api, CompensationLetterCreate, CompensationLetterUpdate } from '@/lib/api'
 
 export default function CompensationLetterForm() {
   const { id } = useParams()
@@ -15,11 +15,8 @@ export default function CompensationLetterForm() {
   const { toast } = useToast()
   const isEdit = Boolean(id)
 
-  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    title: '',
-    client_id: '',
     letter_number: '',
     bank: '',
     customer_number: '',
@@ -30,31 +27,16 @@ export default function CompensationLetterForm() {
   })
 
   useEffect(() => {
-    loadClients()
     if (isEdit && id) {
       loadLetter(id)
     }
   }, [id, isEdit])
 
-  const loadClients = async () => {
-    try {
-      const clientsData = await api.clients.getAll()
-      setClients(clientsData)
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Müvekkiller yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      })
-    }
-  }
 
   const loadLetter = async (letterId: string) => {
     try {
       const letter = await api.compensationLetters.getById(letterId)
       setFormData({
-        title: letter.title,
-        client_id: letter.client_id,
         letter_number: letter.letter_number,
         bank: letter.bank,
         customer_number: letter.customer_number,
@@ -66,7 +48,7 @@ export default function CompensationLetterForm() {
     } catch (error) {
       toast({
         title: "Hata",
-        description: "Tezminat mektubu yüklenirken bir hata oluştu.",
+        description: "Teminat mektubu yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
       navigate('/compensation-letters')
@@ -80,7 +62,6 @@ export default function CompensationLetterForm() {
     try {
       if (isEdit && id) {
         const updateData: CompensationLetterUpdate = {
-          title: formData.title,
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -92,12 +73,10 @@ export default function CompensationLetterForm() {
         await api.compensationLetters.update(id, updateData)
         toast({
           title: "Başarılı",
-          description: "Tezminat mektubu başarıyla güncellendi.",
+          description: "Teminat mektubu başarıyla güncellendi.",
         })
       } else {
         const createData: CompensationLetterCreate = {
-          title: formData.title,
-          client_id: formData.client_id,
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -109,14 +88,14 @@ export default function CompensationLetterForm() {
         await api.compensationLetters.create(createData)
         toast({
           title: "Başarılı",
-          description: "Tezminat mektubu başarıyla oluşturuldu.",
+          description: "Teminat mektubu başarıyla oluşturuldu.",
         })
       }
       navigate('/compensation-letters')
     } catch (error) {
       toast({
         title: "Hata",
-        description: isEdit ? "Tezminat mektubu güncellenirken bir hata oluştu." : "Tezminat mektubu oluşturulurken bir hata oluştu.",
+        description: isEdit ? "Teminat mektubu güncellenirken bir hata oluştu." : "Teminat mektubu oluşturulurken bir hata oluştu.",
         variant: "destructive",
       })
     } finally {
@@ -132,47 +111,17 @@ export default function CompensationLetterForm() {
           Geri
         </Button>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isEdit ? 'Tezminat Mektubu Düzenle' : 'Yeni Tezminat Mektubu'}
+          {isEdit ? 'Teminat Mektubu Düzenle' : 'Yeni Teminat Mektubu'}
         </h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEdit ? 'Tezminat Mektubu Bilgilerini Düzenle' : 'Tezminat Mektubu Bilgileri'}</CardTitle>
+          <CardTitle>{isEdit ? 'Teminat Mektubu Bilgilerini Düzenle' : 'Teminat Mektubu Bilgileri'}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Başlık *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client_id">Müvekkil *</Label>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Müvekkil seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="letter_number">Mektup No *</Label>
                 <Input

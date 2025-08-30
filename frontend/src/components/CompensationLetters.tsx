@@ -28,7 +28,7 @@ export default function CompensationLetters() {
     } catch (error) {
       toast({
         title: "Hata",
-        description: "Tezminat mektupları yüklenirken bir hata oluştu.",
+        description: "Teminat mektupları yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
     } finally {
@@ -37,7 +37,7 @@ export default function CompensationLetters() {
   }
 
   const handleDelete = async (letterId: string) => {
-    if (!confirm('Bu tezminat mektubunu silmek istediğinizden emin misiniz?')) {
+    if (!confirm('Bu teminat mektubunu silmek istediğinizden emin misiniz?')) {
       return
     }
 
@@ -46,12 +46,12 @@ export default function CompensationLetters() {
       setLetters(letters.filter(l => l.id !== letterId))
       toast({
         title: "Başarılı",
-        description: "Tezminat mektubu başarıyla silindi.",
+        description: "Teminat mektubu başarıyla silindi.",
       })
     } catch (error) {
       toast({
         title: "Hata",
-        description: "Tezminat mektubu silinirken bir hata oluştu.",
+        description: "Teminat mektubu silinirken bir hata oluştu.",
         variant: "destructive",
       })
     }
@@ -75,11 +75,11 @@ export default function CompensationLetters() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Tezminat Mektupları</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Teminat Mektupları</h1>
         <Button asChild>
           <Link to="/compensation-letters/new">
             <Plus className="h-4 w-4 mr-2" />
-            Yeni Tezminat Mektubu
+            Yeni Teminat Mektubu
           </Link>
         </Button>
       </div>
@@ -88,7 +88,7 @@ export default function CompensationLetters() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Mektup başlığı, müvekkil adı, mektup numarası veya müşteri ile ara..."
+            placeholder="Mektup numarası, müşteri adı, banka veya mahkeme ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -112,11 +112,11 @@ export default function CompensationLetters() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm || (statusFilter && statusFilter !== 'all') ? 'Arama kriterlerinize uygun tezminat mektubu bulunamadı.' : 'Henüz tezminat mektubu bulunmuyor.'}
+              {searchTerm || (statusFilter && statusFilter !== 'all') ? 'Arama kriterlerinize uygun teminat mektubu bulunamadı.' : 'Henüz teminat mektubu bulunmuyor.'}
             </p>
             {!searchTerm && (!statusFilter || statusFilter === 'all') && (
               <Button asChild className="mt-4">
-                <Link to="/compensation-letters/new">İlk Tezminat Mektubunu Oluştur</Link>
+                <Link to="/compensation-letters/new">İlk Teminat Mektubunu Oluştur</Link>
               </Button>
             )}
           </CardContent>

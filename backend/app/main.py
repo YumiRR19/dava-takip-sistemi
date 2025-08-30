@@ -109,8 +109,6 @@ class CompensationLetter(BaseModel):
     updated_at: datetime
 
 class CompensationLetterCreate(BaseModel):
-    title: str
-    client_id: str
     letter_number: str
     bank: str
     customer_number: str
@@ -120,7 +118,6 @@ class CompensationLetterCreate(BaseModel):
     status: str
 
 class CompensationLetterUpdate(BaseModel):
-    title: Optional[str] = None
     letter_number: Optional[str] = None
     bank: Optional[str] = None
     customer_number: Optional[str] = None
@@ -183,13 +180,14 @@ async def backup_data(token: str = Depends(verify_token)):
     backup_data = {
         "clients": {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()},
         "cases": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()},
+        "compensation_letters": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in compensation_letters_db.items()},
         "backup_date": datetime.now().isoformat()
     }
     return backup_data
 
 @app.post("/api/restore")
 async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
-    global clients_db, cases_db
+    global clients_db, cases_db, compensation_letters_db
     try:
         clients_db = {}
         for client_id, client_data in backup_data.get("clients", {}).items():
@@ -208,6 +206,12 @@ async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
             if "office_archive_no" not in case_data:
                 case_data["office_archive_no"] = ""
             cases_db[case_id] = Case(**case_data)
+        
+        compensation_letters_db = {}
+        for letter_id, letter_data in backup_data.get("compensation_letters", {}).items():
+            letter_data["created_at"] = datetime.fromisoformat(letter_data["created_at"])
+            letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
+            compensation_letters_db[letter_id] = CompensationLetter(**letter_data)
         
         return {"message": "Data restored successfully"}
     except Exception as e:
@@ -425,18 +429,14 @@ async def get_dashboard(token: str = Depends(verify_token)):
 
 @app.post("/api/compensation-letters", response_model=CompensationLetter)
 async def create_compensation_letter(letter: CompensationLetterCreate, token: str = Depends(verify_token)):
-    if letter.client_id not in clients_db:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
     letter_id = str(uuid.uuid4())
-    client = clients_db[letter.client_id]
     now = datetime.now()
     
     new_letter = CompensationLetter(
         id=letter_id,
-        title=letter.title,
-        client_id=letter.client_id,
-        client_name=client.name,
+        title="",
+        client_id="",
+        client_name="",
         letter_number=letter.letter_number,
         bank=letter.bank,
         customer_number=letter.customer_number,
