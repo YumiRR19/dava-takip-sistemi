@@ -72,8 +72,8 @@ class CaseCreate(BaseModel):
     defendant: str
     notes: Optional[str] = None
     start_date: date
-    next_hearing_date: Optional[date]
-    reminder_date: Optional[date]
+    next_hearing_date: Optional[date] = None
+    reminder_date: Optional[date] = None
     office_archive_no: str
 
 class CaseUpdate(BaseModel):
