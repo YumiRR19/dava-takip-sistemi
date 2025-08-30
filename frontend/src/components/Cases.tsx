@@ -1,21 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Filter, Edit, Trash2, Calendar, User } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Search, Filter, Edit, Trash2 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { api, Case } from '@/lib/api'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-
-const statusColors = {
-  'Devam Ediyor': 'bg-blue-100 text-blue-800',
-  'Kazanıldı': 'bg-green-100 text-green-800',
-  'Kaybedildi': 'bg-red-100 text-red-800',
-  'Beklemede': 'bg-yellow-100 text-yellow-800',
-  'İptal Edildi': 'bg-gray-100 text-gray-800',
-}
+import { api, Case } from '@/lib/api'
 
 export default function Cases() {
   const [cases, setCases] = useState<Case[]>([])
@@ -131,66 +123,57 @@ export default function Cases() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCases.map((caseItem) => (
-            <Card key={caseItem.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{caseItem.title}</CardTitle>
-                    <CardDescription className="mt-1">
-                      Dava No: {caseItem.case_number}
-                    </CardDescription>
-                  </div>
-                  <Badge className={statusColors[caseItem.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}>
-                    {caseItem.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <User className="h-4 w-4 mr-2" />
-                    {caseItem.client_name}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Başlangıç: {new Date(caseItem.start_date).toLocaleDateString('tr-TR')}
-                  </div>
-                  {caseItem.next_hearing_date && (
-                    <div className="flex items-center text-sm text-orange-600">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Duruşma: {new Date(caseItem.next_hearing_date).toLocaleDateString('tr-TR')}
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {caseItem.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-3">
-                    <span className="text-xs text-gray-500">
-                      {caseItem.case_type} • {caseItem.court}
-                    </span>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/cases/edit/${caseItem.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(caseItem.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mahkeme/İcra</TableHead>
+                  <TableHead>Dosya No</TableHead>
+                  <TableHead>Müvekkil</TableHead>
+                  <TableHead>Karşı Taraf</TableHead>
+                  <TableHead>Hatırlatma Tarihi</TableHead>
+                  <TableHead>Hatırlatma Metni</TableHead>
+                  <TableHead>İşlemler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCases.map((caseItem) => (
+                  <TableRow key={caseItem.id}>
+                    <TableCell className="font-medium">{caseItem.court}</TableCell>
+                    <TableCell>{caseItem.case_number}</TableCell>
+                    <TableCell>{caseItem.client_name}</TableCell>
+                    <TableCell>{caseItem.defendant}</TableCell>
+                    <TableCell>
+                      {caseItem.reminder_date 
+                        ? new Date(caseItem.reminder_date).toLocaleDateString('tr-TR')
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{caseItem.description || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/cases/${caseItem.id}/edit`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(caseItem.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

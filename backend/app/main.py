@@ -25,6 +25,7 @@ class Client(BaseModel):
     email: str
     phone: str
     address: str
+    tax_id: Optional[str] = None
     created_at: datetime
 
 class ClientCreate(BaseModel):
@@ -32,6 +33,14 @@ class ClientCreate(BaseModel):
     email: str
     phone: str
     address: str
+    tax_id: Optional[str] = None
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_id: Optional[str] = None
 
 class Case(BaseModel):
     id: str
@@ -175,6 +184,7 @@ async def create_client(client: ClientCreate, token: str = Depends(verify_token)
         email=client.email,
         phone=client.phone,
         address=client.address,
+        tax_id=client.tax_id,
         created_at=datetime.now()
     )
     clients_db[client_id] = new_client
@@ -189,6 +199,20 @@ async def get_client(client_id: str, token: str = Depends(verify_token)):
     if client_id not in clients_db:
         raise HTTPException(status_code=404, detail="Client not found")
     return clients_db[client_id]
+
+@app.put("/api/clients/{client_id}", response_model=Client)
+async def update_client(client_id: str, client_update: ClientUpdate, token: str = Depends(verify_token)):
+    if client_id not in clients_db:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    client = clients_db[client_id]
+    update_data = client_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(client, field, value)
+    
+    clients_db[client_id] = client
+    return client
 
 @app.delete("/api/clients/{client_id}")
 async def delete_client(client_id: str, token: str = Depends(verify_token)):

@@ -40,6 +40,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+    update: (id: string, data: ClientUpdate) => apiRequest<Client>(`/api/clients/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
     delete: (id: string) => apiRequest<{ message: string }>(`/api/clients/${id}`, {
       method: 'DELETE',
     }),
@@ -93,6 +97,6 @@ export const api = {
   },
 }
 
-import type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams } from '../types'
+import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams } from '../types'
 
-export type { Client, ClientCreate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams }
+export type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams }

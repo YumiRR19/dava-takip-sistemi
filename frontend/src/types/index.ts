@@ -4,6 +4,7 @@ export interface Client {
   email: string
   phone: string
   address: string
+  tax_id?: string
   created_at: string
 }
 
@@ -12,6 +13,15 @@ export interface ClientCreate {
   email: string
   phone: string
   address: string
+  tax_id?: string
+}
+
+export interface ClientUpdate {
+  name?: string
+  email?: string
+  phone?: string
+  address?: string
+  tax_id?: string
 }
 
 export interface Case {

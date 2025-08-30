@@ -360,7 +360,7 @@ export default function CaseForm() {
 
 
             <div className="space-y-2">
-              <Label htmlFor="description">Açıklama *</Label>
+              <Label htmlFor="description">Hatırlatma Metni *</Label>
               <Textarea
                 id="description"
                 name="description"
@@ -368,12 +368,11 @@ export default function CaseForm() {
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Dava hakkında detaylı açıklama girin"
                 rows={4}
-                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notlar</Label>
+              <Label htmlFor="notes">Özel Not</Label>
               <Textarea
                 id="notes"
                 name="notes"

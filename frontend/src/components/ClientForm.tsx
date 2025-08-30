@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { api, ClientCreate } from '@/lib/api'
+import { api, ClientCreate, ClientUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ClientForm() {
@@ -21,6 +21,7 @@ export default function ClientForm() {
     email: '',
     phone: '',
     address: '',
+    tax_id: '',
   })
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function ClientForm() {
         email: clientData.email,
         phone: clientData.phone,
         address: clientData.address,
+        tax_id: clientData.tax_id || '',
       })
     } catch (error) {
       toast({
@@ -54,11 +56,13 @@ export default function ClientForm() {
 
     try {
       if (isEdit && id) {
+        const updateData: ClientUpdate = formData
+        await api.clients.update(id, updateData)
         toast({
-          title: "Bilgi",
-          description: "Müvekkil düzenleme özelliği henüz mevcut değil.",
-          variant: "destructive",
+          title: "Başarılı",
+          description: "Müvekkil başarıyla güncellendi.",
         })
+        navigate('/clients')
       } else {
         const createData: ClientCreate = formData
         await api.clients.create(createData)
@@ -139,6 +143,16 @@ export default function ClientForm() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="tax_id">Müvekkil T.C veya Vergi No</Label>
+              <Input
+                id="tax_id"
+                value={formData.tax_id}
+                onChange={(e) => handleChange('tax_id', e.target.value)}
+                placeholder="T.C. Kimlik No veya Vergi No girin"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="address">Adres *</Label>
               <Textarea
                 id="address"
@@ -154,9 +168,9 @@ export default function ClientForm() {
               <Button type="button" variant="outline" onClick={() => navigate('/clients')}>
                 İptal
               </Button>
-              <Button type="submit" disabled={loading || isEdit}>
+              <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle (Yakında)' : 'Oluştur')}
+                {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
             </div>
           </form>

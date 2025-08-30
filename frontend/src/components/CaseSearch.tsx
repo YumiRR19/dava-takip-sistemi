@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, Client, Case, CaseSearchParams } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
@@ -107,31 +109,37 @@ export default function CaseSearch() {
     doc.text(`Toplam Dava Sayısı: ${searchResults.length}`, margin, 52)
     
     const headers = [
-      'Dava No',
-      'Müvekkil',
-      'Karşı Taraf', 
       'Mahkeme/İcra',
-      'Dava Türü',
+      'Dosya No',
+      'Müvekkil',
+      'Karşı Taraf',
+      'Hatırlatma Tarihi',
+      'Hatırlatma Metni',
       'Durum',
+      'Dava Türü',
       'Açılış Tarihi',
       'Duruşma Tarihi',
-      'Hatırlatma Tarihi'
+      'Ofis Arşiv No',
+      'Özel Not'
     ]
     
     const tableData = searchResults.map(case_ => [
+      case_.court || '-',
       case_.case_number || '-',
       case_.client_name || '-',
       case_.defendant || '-',
-      case_.court || '-',
-      case_.case_type || '-',
+      case_.reminder_date ? new Date(case_.reminder_date).toLocaleDateString('tr-TR') : '-',
+      case_.description || '-',
       case_.status || '-',
+      case_.case_type || '-',
       case_.start_date ? new Date(case_.start_date).toLocaleDateString('tr-TR') : '-',
       case_.next_hearing_date ? new Date(case_.next_hearing_date).toLocaleDateString('tr-TR') : '-',
-      case_.reminder_date ? new Date(case_.reminder_date).toLocaleDateString('tr-TR') : '-'
+      case_.office_archive_no || '-',
+      case_.notes || '-'
     ])
     
     const tableWidth = pageWidth - (margin * 2)
-    const colWidths = [25, 35, 35, 40, 25, 25, 25, 25, 25] // Adjusted for better fit
+    const colWidths = [35, 20, 25, 25, 20, 35, 15, 20, 20, 20, 20, 30] // Adjusted for better fit
     const rowHeight = 12
     let yPosition = 65
     
@@ -451,35 +459,62 @@ export default function CaseSearch() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {searchResults.map((case_) => (
-                <Card key={case_.id} className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{case_.title}</p>
-                      <p className="text-xs text-blue-600 font-medium">Dava No: {case_.case_number}</p>
-                      <p className="text-xs text-gray-500">Müvekkil: {case_.client_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Karşı Taraf: {case_.defendant}</p>
-                      <p className="text-xs text-gray-500">Mahkeme: {case_.court}</p>
-                      <p className="text-xs text-orange-600 font-medium">Durum: {case_.status}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Tür: {case_.case_type}</p>
-                      <p className="text-xs text-gray-500">Açılış: {new Date(case_.start_date).toLocaleDateString('tr-TR')}</p>
-                      {case_.next_hearing_date && (
-                        <p className="text-xs text-red-600">Duruşma: {new Date(case_.next_hearing_date).toLocaleDateString('tr-TR')}</p>
-                      )}
-                    </div>
-                  </div>
-                  {case_.description && (
-                    <div className="mt-2 pt-2 border-t">
-                      <p className="text-xs text-gray-600">{case_.description}</p>
-                    </div>
-                  )}
-                </Card>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Mahkeme/İcra</TableHead>
+                    <TableHead className="w-[120px]">Dosya No</TableHead>
+                    <TableHead className="w-[150px]">Müvekkil</TableHead>
+                    <TableHead className="w-[150px]">Karşı Taraf</TableHead>
+                    <TableHead className="w-[120px]">Hatırlatma Tarihi</TableHead>
+                    <TableHead className="w-[200px]">Hatırlatma Metni</TableHead>
+                    <TableHead className="w-[100px]">Durum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((case_) => (
+                    <TableRow key={case_.id}>
+                      <TableCell className="font-medium">
+                        <div className="max-w-[180px] truncate" title={case_.court}>
+                          {case_.court}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[100px] truncate" title={case_.case_number}>
+                          {case_.case_number}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[130px] truncate" title={case_.client_name}>
+                          {case_.client_name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[130px] truncate" title={case_.defendant}>
+                          {case_.defendant}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {case_.reminder_date 
+                          ? new Date(case_.reminder_date).toLocaleDateString('tr-TR')
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[180px] truncate" title={case_.description}>
+                          {case_.description || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="text-xs">
+                          {case_.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
