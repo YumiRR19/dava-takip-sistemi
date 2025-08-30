@@ -46,6 +46,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "jspdf": "^3.0.2",
+    "jspdf-customfonts": "^0.0.4-rc.4",
     "lucide-react": "^0.364.0",
     "next-themes": "^0.4.6",
     "react": "^18.3.1",

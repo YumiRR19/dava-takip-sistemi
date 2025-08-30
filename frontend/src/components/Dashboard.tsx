@@ -107,7 +107,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Hatırlatmalar</CardTitle>
-            <CardDescription>Önümüzdeki 30 gün içindeki hatırlatmalar</CardDescription>
+            <CardDescription>Önümüzdeki 7 gün içindeki hatırlatmalar</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -142,7 +142,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Yaklaşan Duruşmalar</CardTitle>
-            <CardDescription>Önümüzdeki 30 gün içindeki duruşmalar</CardDescription>
+            <CardDescription>Önümüzdeki 7 gün içindeki duruşmalar</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

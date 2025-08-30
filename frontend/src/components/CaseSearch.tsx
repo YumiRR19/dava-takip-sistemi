@@ -139,7 +139,7 @@ export default function CaseSearch() {
     ])
     
     const tableWidth = pageWidth - (margin * 2)
-    const colWidths = [35, 20, 25, 25, 20, 35, 15, 20, 20, 20, 20, 30] // Adjusted for better fit
+    const colWidths = [40, 25, 30, 30, 25, 45, 20, 25, 25, 25, 25, 35] // Optimized for Turkish text and better readability
     const rowHeight = 12
     let yPosition = 65
     

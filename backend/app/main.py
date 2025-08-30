@@ -344,7 +344,7 @@ async def get_dashboard(token: str = Depends(verify_token)):
     
     from datetime import timedelta
     today = date.today()
-    upcoming_deadline = today + timedelta(days=30)
+    upcoming_deadline = today + timedelta(days=7)
     
     upcoming_hearings = []
     for case in cases_db.values():
