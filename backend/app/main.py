@@ -45,7 +45,7 @@ class ClientUpdate(BaseModel):
 class Case(BaseModel):
     id: str
     title: str
-    description: str
+    description: Optional[str] = None
     client_id: str
     client_name: str
     case_type: str
@@ -53,7 +53,7 @@ class Case(BaseModel):
     court: str
     case_number: str
     defendant: str
-    notes: str
+    notes: Optional[str] = None
     start_date: date
     next_hearing_date: Optional[date]
     reminder_date: Optional[date]
@@ -63,14 +63,14 @@ class Case(BaseModel):
 
 class CaseCreate(BaseModel):
     title: str
-    description: str
+    description: Optional[str] = None
     client_id: str
     case_type: str
     status: str
     court: str
     case_number: str
     defendant: str
-    notes: str
+    notes: Optional[str] = None
     start_date: date
     next_hearing_date: Optional[date]
     reminder_date: Optional[date]
@@ -238,7 +238,7 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
     new_case = Case(
         id=case_id,
         title=case.title,
-        description=case.description,
+        description=case.description or "",
         client_id=case.client_id,
         client_name=client.name,
         case_type=case.case_type,
@@ -246,7 +246,7 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
         court=case.court,
         case_number=case.case_number,
         defendant=case.defendant,
-        notes=case.notes,
+        notes=case.notes or "",
         start_date=case.start_date,
         next_hearing_date=case.next_hearing_date,
         reminder_date=case.reminder_date,

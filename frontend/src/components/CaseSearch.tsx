@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Download } from 'lucide-react'
+import { Search, Download, Check, ChevronsUpDown } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,13 +8,17 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { api, Client, Case, CaseSearchParams } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { cn } from '@/lib/utils'
 
 export default function CaseSearch() {
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [searchResults, setSearchResults] = useState<Case[]>([])
+  const [courtOpen, setCourtOpen] = useState(false)
   const [searchParams, setSearchParams] = useState<CaseSearchParams>({
     case_type: '',
     status: '',
@@ -384,12 +388,157 @@ export default function CaseSearch() {
 
             <div className="space-y-2">
               <Label htmlFor="court">Mahkeme/İcra</Label>
-              <Input
-                id="court"
-                value={searchParams.court || ''}
-                onChange={(e) => handleParamChange('court', e.target.value)}
-                placeholder="Mahkeme adı girin"
-              />
+              <Popover open={courtOpen} onOpenChange={setCourtOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={courtOpen}
+                    className="w-full justify-between"
+                  >
+                    {searchParams.court || "Mahkeme seçin veya yazın..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Mahkeme ara veya yaz..." 
+                      value={searchParams.court}
+                      onValueChange={(value) => handleParamChange('court', value)}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
+                      <CommandGroup>
+                        {[
+                          "ADANA 1. ASLIYE HUKUK MAHKEMESİ",
+                          "ADANA 2. ASLIYE HUKUK MAHKEMESİ",
+                          "ADANA 3. ASLIYE HUKUK MAHKEMESİ",
+                          "ADANA 4. ASLIYE HUKUK MAHKEMESİ",
+                          "ADANA 5. ASLIYE HUKUK MAHKEMESİ",
+                          "ADANA 1. AİLE MAHKEMESİ",
+                          "ADANA 2. AİLE MAHKEMESİ",
+                          "ADANA 3. AİLE MAHKEMESİ",
+                          "ADANA 1. TİCARET MAHKEMESİ",
+                          "ADANA 2. TİCARET MAHKEMESİ",
+                          "ADANA 1. İŞ MAHKEMESİ",
+                          "ADANA 2. İŞ MAHKEMESİ",
+                          "ADANA 1. SULH HUKUK MAHKEMESİ",
+                          "ADANA 2. SULH HUKUK MAHKEMESİ",
+                          "ADANA 3. SULH HUKUK MAHKEMESİ",
+                          "ADANA 4. SULH HUKUK MAHKEMESİ",
+                          "ADANA 5. SULH HUKUK MAHKEMESİ",
+                          "ADANA BÖLGE ADLİYE MAHKEMESİ",
+                          "ADANA 1. GENEL İCRA DAİRESİ",
+                          "ADANA 2. GENEL İCRA DAİRESİ",
+                          "ADANA 3. GENEL İCRA DAİRESİ",
+                          "ADANA 4. GENEL İCRA DAİRESİ",
+                          "ADANA 5. GENEL İCRA DAİRESİ",
+                          "ADANA BANKA ALACAKLARI İCRA DAİRESİ",
+                          "ADANA GAYRİMENKUL SATIŞ İCRA DAİRESİ",
+                          "ANKARA 1. ASLIYE HUKUK MAHKEMESİ",
+                          "ANKARA 2. ASLIYE HUKUK MAHKEMESİ",
+                          "ANKARA 3. ASLIYE HUKUK MAHKEMESİ",
+                          "ANKARA 4. ASLIYE HUKUK MAHKEMESİ",
+                          "ANKARA 5. ASLIYE HUKUK MAHKEMESİ",
+                          "ANKARA 1. AİLE MAHKEMESİ",
+                          "ANKARA 2. AİLE MAHKEMESİ",
+                          "ANKARA 3. AİLE MAHKEMESİ",
+                          "ANKARA 4. AİLE MAHKEMESİ",
+                          "ANKARA 1. TİCARET MAHKEMESİ",
+                          "ANKARA 2. TİCARET MAHKEMESİ",
+                          "ANKARA 3. TİCARET MAHKEMESİ",
+                          "ANKARA 1. İŞ MAHKEMESİ",
+                          "ANKARA 2. İŞ MAHKEMESİ",
+                          "ANKARA 3. İŞ MAHKEMESİ",
+                          "ANKARA BÖLGE ADLİYE MAHKEMESİ",
+                          "ANKARA 1. GENEL İCRA DAİRESİ",
+                          "ANKARA 2. GENEL İCRA DAİRESİ",
+                          "ANKARA 3. GENEL İCRA DAİRESİ",
+                          "ANKARA 4. GENEL İCRA DAİRESİ",
+                          "ANKARA 5. GENEL İCRA DAİRESİ",
+                          "ANKARA BANKA ALACAKLARI İCRA DAİRESİ",
+                          "İSTANBUL 1. ASLIYE HUKUK MAHKEMESİ",
+                          "İSTANBUL 2. ASLIYE HUKUK MAHKEMESİ",
+                          "İSTANBUL 3. ASLIYE HUKUK MAHKEMESİ",
+                          "İSTANBUL 4. ASLIYE HUKUK MAHKEMESİ",
+                          "İSTANBUL 5. ASLIYE HUKUK MAHKEMESİ",
+                          "İSTANBUL 1. AİLE MAHKEMESİ",
+                          "İSTANBUL 2. AİLE MAHKEMESİ",
+                          "İSTANBUL 3. AİLE MAHKEMESİ",
+                          "İSTANBUL 1. TİCARET MAHKEMESİ",
+                          "İSTANBUL 2. TİCARET MAHKEMESİ",
+                          "İSTANBUL 3. TİCARET MAHKEMESİ",
+                          "İSTANBUL 1. İŞ MAHKEMESİ",
+                          "İSTANBUL 2. İŞ MAHKEMESİ",
+                          "İSTANBUL 3. İŞ MAHKEMESİ",
+                          "İSTANBUL BÖLGE ADLİYE MAHKEMESİ",
+                          "İSTANBUL 1. GENEL İCRA DAİRESİ",
+                          "İSTANBUL 2. GENEL İCRA DAİRESİ",
+                          "İSTANBUL 3. GENEL İCRA DAİRESİ",
+                          "İSTANBUL 4. GENEL İCRA DAİRESİ",
+                          "İSTANBUL 5. GENEL İCRA DAİRESİ",
+                          "İSTANBUL BANKA ALACAKLARI İCRA DAİRESİ",
+                          "İZMİR 1. ASLIYE HUKUK MAHKEMESİ",
+                          "İZMİR 2. ASLIYE HUKUK MAHKEMESİ",
+                          "İZMİR 3. ASLIYE HUKUK MAHKEMESİ",
+                          "İZMİR 1. AİLE MAHKEMESİ",
+                          "İZMİR 2. AİLE MAHKEMESİ",
+                          "İZMİR 1. TİCARET MAHKEMESİ",
+                          "İZMİR 2. TİCARET MAHKEMESİ",
+                          "İZMİR 1. İŞ MAHKEMESİ",
+                          "İZMİR 2. İŞ MAHKEMESİ",
+                          "İZMİR BÖLGE ADLİYE MAHKEMESİ",
+                          "İZMİR 1. GENEL İCRA DAİRESİ",
+                          "İZMİR 2. GENEL İCRA DAİRESİ",
+                          "İZMİR 3. GENEL İCRA DAİRESİ",
+                          "GAZİANTEP 1. ASLIYE HUKUK MAHKEMESİ",
+                          "GAZİANTEP 2. ASLIYE HUKUK MAHKEMESİ",
+                          "GAZİANTEP 1. AİLE MAHKEMESİ",
+                          "GAZİANTEP 1. TİCARET MAHKEMESİ",
+                          "GAZİANTEP 1. İŞ MAHKEMESİ",
+                          "GAZİANTEP BÖLGE ADLİYE MAHKEMESİ",
+                          "GAZİANTEP 1. GENEL İCRA DAİRESİ",
+                          "GAZİANTEP 2. GENEL İCRA DAİRESİ",
+                          "BURSA 1. ASLIYE HUKUK MAHKEMESİ",
+                          "BURSA 2. ASLIYE HUKUK MAHKEMESİ",
+                          "BURSA 1. AİLE MAHKEMESİ",
+                          "BURSA 1. TİCARET MAHKEMESİ",
+                          "BURSA 1. İŞ MAHKEMESİ",
+                          "BURSA BÖLGE ADLİYE MAHKEMESİ",
+                          "BURSA 1. GENEL İCRA DAİRESİ",
+                          "BURSA 2. GENEL İCRA DAİRESİ",
+                          "ANTALYA 1. ASLIYE HUKUK MAHKEMESİ",
+                          "ANTALYA 2. ASLIYE HUKUK MAHKEMESİ",
+                          "ANTALYA 1. AİLE MAHKEMESİ",
+                          "ANTALYA 1. TİCARET MAHKEMESİ",
+                          "ANTALYA 1. İŞ MAHKEMESİ",
+                          "ANTALYA BÖLGE ADLİYE MAHKEMESİ",
+                          "ANTALYA 1. GENEL İCRA DAİRESİ",
+                          "ANTALYA 2. GENEL İCRA DAİRESİ"
+                        ].map((court) => (
+                          <CommandItem
+                            key={court}
+                            value={court}
+                            onSelect={(currentValue) => {
+                              handleParamChange('court', currentValue)
+                              setCourtOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                searchParams.court === court ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {court}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
