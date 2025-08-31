@@ -24,9 +24,16 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     const errorText = await response.text()
     if (response.status === 401) {
       localStorage.removeItem('auth_token')
-      window.location.reload()
+      window.location.href = '/login'
     }
-    throw new ApiError(response.status, errorText || response.statusText)
+    let errorMessage = response.statusText
+    try {
+      const errorData = JSON.parse(errorText)
+      errorMessage = errorData.detail || errorMessage
+    } catch {
+      errorMessage = errorText || errorMessage
+    }
+    throw new ApiError(response.status, errorMessage)
   }
 
   return response.json()

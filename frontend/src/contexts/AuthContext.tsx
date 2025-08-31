@@ -18,6 +18,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!token
 
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const currentTime = Date.now() / 1000
+      return payload.exp < currentTime
+    } catch {
+      return true
+    }
+  }
+
+  React.useEffect(() => {
+    if (token && isTokenExpired(token)) {
+      logout()
+    }
+  }, [token])
+
   const login = async (password: string): Promise<boolean> => {
     setLoading(true)
     try {

@@ -138,11 +138,12 @@ export default function CaseForm() {
         })
       }
       navigate('/cases')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submission error:', error)
+      const errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
       toast({
         title: "Hata",
-        description: isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

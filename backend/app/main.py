@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import uuid
 import json
 import os
+import jwt
+import fcntl
+from pathlib import Path
 
 app = FastAPI(title="Dava Takip Sistemi", description="Legal Case Tracking System")
 
@@ -129,7 +132,90 @@ class CompensationLetterUpdate(BaseModel):
 compensation_letters_db: dict[str, CompensationLetter] = {}
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "Msghukuk0714."
-active_sessions: set[str] = set()
+JWT_SECRET = os.getenv("JWT_SECRET") or "lexcloud-jwt-secret-key-2025"
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = 24
+
+DATA_DIR = Path("/tmp/lexcloud_data")
+DATA_DIR.mkdir(exist_ok=True)
+
+def load_data():
+    global clients_db, cases_db, compensation_letters_db
+    
+    try:
+        clients_file = DATA_DIR / "clients.json"
+        if clients_file.exists():
+            with open(clients_file, 'r', encoding='utf-8') as f:
+                clients_data = json.load(f)
+                for client_id, client_data in clients_data.items():
+                    client_data["created_at"] = datetime.fromisoformat(client_data["created_at"])
+                    clients_db[client_id] = Client(**client_data)
+    except Exception as e:
+        print(f"Error loading clients: {e}")
+    
+    try:
+        cases_file = DATA_DIR / "cases.json"
+        if cases_file.exists():
+            with open(cases_file, 'r', encoding='utf-8') as f:
+                cases_data = json.load(f)
+                for case_id, case_data in cases_data.items():
+                    case_data["created_at"] = datetime.fromisoformat(case_data["created_at"])
+                    case_data["updated_at"] = datetime.fromisoformat(case_data["updated_at"])
+                    case_data["start_date"] = date.fromisoformat(case_data["start_date"])
+                    if case_data["next_hearing_date"]:
+                        case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
+                    if case_data.get("reminder_date"):
+                        case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
+                    cases_db[case_id] = Case(**case_data)
+    except Exception as e:
+        print(f"Error loading cases: {e}")
+    
+    try:
+        letters_file = DATA_DIR / "compensation_letters.json"
+        if letters_file.exists():
+            with open(letters_file, 'r', encoding='utf-8') as f:
+                letters_data = json.load(f)
+                for letter_id, letter_data in letters_data.items():
+                    letter_data["created_at"] = datetime.fromisoformat(letter_data["created_at"])
+                    letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
+                    compensation_letters_db[letter_id] = CompensationLetter(**letter_data)
+    except Exception as e:
+        print(f"Error loading compensation letters: {e}")
+
+def save_clients():
+    try:
+        clients_file = DATA_DIR / "clients.json"
+        clients_data = {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()}
+        with open(clients_file, 'w', encoding='utf-8') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            json.dump(clients_data, f, ensure_ascii=False, indent=2)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception as e:
+        print(f"Error saving clients: {e}")
+
+def save_cases():
+    try:
+        cases_file = DATA_DIR / "cases.json"
+        cases_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()}
+        with open(cases_file, 'w', encoding='utf-8') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            json.dump(cases_data, f, ensure_ascii=False, indent=2)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception as e:
+        print(f"Error saving cases: {e}")
+
+def save_compensation_letters():
+    try:
+        letters_file = DATA_DIR / "compensation_letters.json"
+        letters_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in compensation_letters_db.items()}
+        with open(letters_file, 'w', encoding='utf-8') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            json.dump(letters_data, f, ensure_ascii=False, indent=2)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception as e:
+        print(f"Error saving compensation letters: {e}")
+
+load_data()
 
 security = HTTPBearer(auto_error=False)
 
@@ -145,9 +231,16 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if not credentials or credentials.credentials not in active_sessions:
+    if not credentials:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return credentials.credentials
+    
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return credentials.credentials
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 @app.get("/healthz")
 async def healthz():
@@ -156,15 +249,19 @@ async def healthz():
 @app.post("/api/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     if request.password == ADMIN_PASSWORD:
-        token = str(uuid.uuid4())
-        active_sessions.add(token)
+        expiration = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+        payload = {
+            "exp": expiration,
+            "iat": datetime.utcnow(),
+            "user": "admin"
+        }
+        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
         return LoginResponse(success=True, token=token)
     else:
         raise HTTPException(status_code=401, detail="Invalid password")
 
 @app.post("/api/auth/logout")
 async def logout(token: str = Depends(verify_token)):
-    active_sessions.discard(token)
     return {"message": "Logged out successfully"}
 
 @app.post("/api/auth/change-password")
@@ -230,6 +327,7 @@ async def create_client(client: ClientCreate, token: str = Depends(verify_token)
         created_at=datetime.now()
     )
     clients_db[client_id] = new_client
+    save_clients()
     return new_client
 
 @app.get("/api/clients", response_model=List[Client])
@@ -254,6 +352,7 @@ async def update_client(client_id: str, client_update: ClientUpdate, token: str 
         setattr(client, field, value)
     
     clients_db[client_id] = client
+    save_clients()
     return client
 
 @app.delete("/api/clients/{client_id}")
@@ -266,6 +365,7 @@ async def delete_client(client_id: str, token: str = Depends(verify_token)):
         raise HTTPException(status_code=400, detail="Cannot delete client with existing cases")
     
     del clients_db[client_id]
+    save_clients()
     return {"message": "Client deleted successfully"}
 
 @app.post("/api/cases", response_model=Case)
@@ -297,6 +397,7 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
         updated_at=now
     )
     cases_db[case_id] = new_case
+    save_cases()
     return new_case
 
 @app.get("/api/cases", response_model=List[Case])
@@ -331,6 +432,7 @@ async def update_case(case_id: str, case_update: CaseUpdate, token: str = Depend
     
     case.updated_at = datetime.now()
     cases_db[case_id] = case
+    save_cases()
     return case
 
 @app.delete("/api/cases/{case_id}")
@@ -339,6 +441,7 @@ async def delete_case(case_id: str, token: str = Depends(verify_token)):
         raise HTTPException(status_code=404, detail="Case not found")
     
     del cases_db[case_id]
+    save_cases()
     return {"message": "Case deleted successfully"}
 
 class CaseSearchParams(BaseModel):
@@ -448,6 +551,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, token: st
         updated_at=now
     )
     compensation_letters_db[letter_id] = new_letter
+    save_compensation_letters()
     return new_letter
 
 @app.get("/api/compensation-letters", response_model=List[CompensationLetter])
@@ -482,6 +586,7 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
     
     letter.updated_at = datetime.now()
     compensation_letters_db[letter_id] = letter
+    save_compensation_letters()
     return letter
 
 @app.delete("/api/compensation-letters/{letter_id}")
@@ -490,4 +595,5 @@ async def delete_compensation_letter(letter_id: str, token: str = Depends(verify
         raise HTTPException(status_code=404, detail="Compensation letter not found")
     
     del compensation_letters_db[letter_id]
+    save_compensation_letters()
     return {"message": "Compensation letter deleted successfully"}
