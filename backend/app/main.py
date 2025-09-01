@@ -36,6 +36,7 @@ class Client(BaseModel):
     address: str
     tax_id: Optional[str] = None
     created_at: datetime
+    updated_at: datetime
 
 class ClientCreate(BaseModel):
     name: str
@@ -198,6 +199,10 @@ def load_data():
                 clients_data = json.load(f)
                 for client_id, client_data in clients_data.items():
                     client_data["created_at"] = datetime.fromisoformat(client_data["created_at"])
+                    if "updated_at" in client_data:
+                        client_data["updated_at"] = datetime.fromisoformat(client_data["updated_at"])
+                    else:
+                        client_data["updated_at"] = client_data["created_at"]
                     clients_db[client_id] = Client(**client_data)
     except Exception as e:
         print(f"Error loading clients: {e}")
@@ -250,7 +255,7 @@ def save_clients():
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
         clients_file = DATA_DIR / "clients.json"
-        clients_data = {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()}
+        clients_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in clients_db.items()}
         with open(clients_file, 'w', encoding='utf-8') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             json.dump(clients_data, f, ensure_ascii=False, indent=2)
@@ -410,6 +415,7 @@ async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
 @app.post("/api/clients", response_model=Client)
 async def create_client(client: ClientCreate, token: str = Depends(verify_token)):
     client_id = str(uuid.uuid4())
+    now = datetime.now()
     new_client = Client(
         id=client_id,
         name=client.name,
@@ -417,7 +423,8 @@ async def create_client(client: ClientCreate, token: str = Depends(verify_token)
         phone=client.phone,
         address=client.address,
         tax_id=client.tax_id,
-        created_at=datetime.now()
+        created_at=now,
+        updated_at=now
     )
     clients_db[client_id] = new_client
     save_clients()
