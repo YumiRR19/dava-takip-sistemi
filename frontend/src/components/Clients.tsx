@@ -6,16 +6,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api, Client } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
+  const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
 
   useEffect(() => {
     loadClients()
   }, [])
+
+  useEffect(() => {
+    if (hasChangesForEntity('client')) {
+      loadClients()
+      clearDataChanges()
+    }
+  }, [hasChangesForEntity, clearDataChanges])
 
   const loadClients = async () => {
     try {

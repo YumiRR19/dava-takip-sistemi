@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { api, Case } from '@/lib/api'
+import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Cases() {
   const [cases, setCases] = useState<Case[]>([])
@@ -15,10 +16,18 @@ export default function Cases() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const { toast } = useToast()
+  const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
 
   useEffect(() => {
     loadCases()
   }, [statusFilter])
+
+  useEffect(() => {
+    if (hasChangesForEntity('case')) {
+      loadCases()
+      clearDataChanges()
+    }
+  }, [hasChangesForEntity, clearDataChanges])
 
   const loadCases = async () => {
     try {

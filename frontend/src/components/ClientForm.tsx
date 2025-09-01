@@ -23,6 +23,7 @@ export default function ClientForm() {
     address: '',
     tax_id: '',
   })
+  const [currentVersion, setCurrentVersion] = useState<number>(1)
 
   useEffect(() => {
     if (isEdit && id) {
@@ -40,6 +41,7 @@ export default function ClientForm() {
         address: clientData.address,
         tax_id: clientData.tax_id || '',
       })
+      setCurrentVersion(clientData.version)
     } catch (error) {
       toast({
         title: "Hata",
@@ -56,7 +58,10 @@ export default function ClientForm() {
 
     try {
       if (isEdit && id) {
-        const updateData: ClientUpdate = formData
+        const updateData: ClientUpdate = {
+          ...formData,
+          version: currentVersion
+        }
         await api.clients.update(id, updateData)
         toast({
           title: "Başarılı",
@@ -72,12 +77,23 @@ export default function ClientForm() {
         })
         navigate('/clients')
       }
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Müvekkil oluşturulurken bir hata oluştu.",
-        variant: "destructive",
-      })
+    } catch (error: any) {
+      if (error.status === 409) {
+        toast({
+          title: "Çakışma Hatası",
+          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          variant: "destructive",
+        })
+        if (isEdit && id) {
+          loadClient(id)
+        }
+      } else {
+        toast({
+          title: "Hata",
+          description: isEdit ? "Müvekkil güncellenirken bir hata oluştu." : "Müvekkil oluşturulurken bir hata oluştu.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }

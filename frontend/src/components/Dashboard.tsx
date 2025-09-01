@@ -1,20 +1,30 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, DashboardData } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { isConnected, hasChangesForEntity, clearDataChanges } = useRealTimeData()
 
   useEffect(() => {
     loadDashboardData()
   }, [])
+
+  useEffect(() => {
+    if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
+        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
+      loadDashboardData()
+      clearDataChanges()
+    }
+  }, [hasChangesForEntity, clearDataChanges])
 
   const loadDashboardData = async () => {
     try {
@@ -55,7 +65,19 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Anasayfa</h1>
+        <div className="flex items-center space-x-3">
+          <h1 className="text-3xl font-bold text-gray-900">Anasayfa</h1>
+          <div className="flex items-center space-x-1">
+            {isConnected ? (
+              <Wifi className="h-4 w-4 text-green-600" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-red-600" />
+            )}
+            <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+              {isConnected ? 'Bağlı' : 'Bağlantı Yok'}
+            </span>
+          </div>
+        </div>
         <div className="flex space-x-3">
           <Button asChild>
             <Link to="/cases/new">Yeni Dava</Link>

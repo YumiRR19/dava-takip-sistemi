@@ -6,6 +6,8 @@ export interface Client {
   address: string
   tax_id?: string
   created_at: string
+  updated_at: string
+  version: number
 }
 
 export interface ClientCreate {
@@ -22,6 +24,7 @@ export interface ClientUpdate {
   phone?: string
   address?: string
   tax_id?: string
+  version?: number
 }
 
 export interface Case {
@@ -42,6 +45,7 @@ export interface Case {
   office_archive_no: string
   created_at: string
   updated_at: string
+  version: number
 }
 
 export interface CaseCreate {
@@ -73,6 +77,7 @@ export interface CaseUpdate {
   next_hearing_date?: string
   reminder_date?: string
   office_archive_no?: string
+  version?: number
 }
 
 export interface CaseSearchParams {
@@ -124,6 +129,7 @@ export interface CompensationLetter {
   status: string
   created_at: string
   updated_at: string
+  version: number
 }
 
 export interface CompensationLetterCreate {
@@ -144,6 +150,7 @@ export interface CompensationLetterUpdate {
   court?: string
   case_number?: string
   status?: string
+  version?: number
 }
 
 export interface Execution {
@@ -162,6 +169,7 @@ export interface Execution {
   notes?: string
   created_at: string
   updated_at: string
+  version: number
 }
 
 export interface ExecutionCreate {
@@ -188,4 +196,5 @@ export interface ExecutionUpdate {
   reminder_date?: string
   reminder_text?: string
   notes?: string
+  version?: number
 }

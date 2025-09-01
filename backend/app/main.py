@@ -1,14 +1,16 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Set
 from datetime import datetime, date, timedelta
 import uuid
 import json
 import os
 import jwt
 import fcntl
+import threading
+import asyncio
 from pathlib import Path
 
 app = FastAPI(title="Dava Takip Sistemi", description="Legal Case Tracking System")
@@ -37,6 +39,7 @@ class Client(BaseModel):
     tax_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    version: int = 1
 
 class ClientCreate(BaseModel):
     name: str
@@ -51,6 +54,7 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
+    version: Optional[int] = None
 
 class Case(BaseModel):
     id: str
@@ -70,6 +74,7 @@ class Case(BaseModel):
     office_archive_no: str
     created_at: datetime
     updated_at: datetime
+    version: int = 1
 
 class CaseCreate(BaseModel):
     title: str
@@ -99,6 +104,7 @@ class CaseUpdate(BaseModel):
     next_hearing_date: Optional[date] = None
     reminder_date: Optional[date] = None
     office_archive_no: Optional[str] = None
+    version: Optional[int] = None
 
 clients_db: dict[str, Client] = {}
 cases_db: dict[str, Case] = {}
@@ -117,6 +123,7 @@ class CompensationLetter(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    version: int = 1
 
 class CompensationLetterCreate(BaseModel):
     letter_number: str
@@ -135,6 +142,7 @@ class CompensationLetterUpdate(BaseModel):
     court: Optional[str] = None
     case_number: Optional[str] = None
     status: Optional[str] = None
+    version: Optional[int] = None
 
 compensation_letters_db: dict[str, CompensationLetter] = {}
 
@@ -154,6 +162,7 @@ class Execution(BaseModel):
     notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    version: int = 1
 
 class ExecutionCreate(BaseModel):
     client_id: str
@@ -178,6 +187,7 @@ class ExecutionUpdate(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
+    version: Optional[int] = None
 
 executions_db: dict[str, Execution] = {}
 
@@ -188,6 +198,52 @@ JWT_EXPIRATION_HOURS = 24
 
 DATA_DIR = Path("/tmp/lexcloud_data")
 DATA_DIR.mkdir(exist_ok=True)
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+        self.connection_lock = threading.Lock()
+
+    async def connect(self, websocket: WebSocket, user_token: str):
+        await websocket.accept()
+        with self.connection_lock:
+            if user_token not in self.active_connections:
+                self.active_connections[user_token] = set()
+            self.active_connections[user_token].add(websocket)
+        print(f"WebSocket connected for user: {user_token[:10]}...")
+
+    def disconnect(self, websocket: WebSocket, user_token: str):
+        with self.connection_lock:
+            if user_token in self.active_connections:
+                self.active_connections[user_token].discard(websocket)
+                if not self.active_connections[user_token]:
+                    del self.active_connections[user_token]
+        print(f"WebSocket disconnected for user: {user_token[:10]}...")
+
+    async def broadcast_data_change(self, change_type: str, entity_type: str, entity_id: str, data: dict):
+        message = {
+            "type": "data_change",
+            "change_type": change_type,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        disconnected_connections = []
+        with self.connection_lock:
+            for user_token, connections in self.active_connections.items():
+                for connection in connections.copy():
+                    try:
+                        await connection.send_text(json.dumps(message))
+                    except Exception as e:
+                        print(f"Error sending WebSocket message: {e}")
+                        disconnected_connections.append((connection, user_token))
+        
+        for connection, user_token in disconnected_connections:
+            self.disconnect(connection, user_token)
+
+manager = ConnectionManager()
 
 def load_data():
     global clients_db, cases_db, compensation_letters_db, executions_db
@@ -266,13 +322,13 @@ def save_data():
             temp_filepath = filepath.with_suffix('.tmp')
             
             if filename == 'clients.json':
-                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in data.items()}
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "version": v.version} for k, v in data.items()}
             elif filename == 'cases.json':
-                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in data.items()}
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None, "version": v.version} for k, v in data.items()}
             elif filename == 'compensation_letters.json':
-                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in data.items()}
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "version": v.version} for k, v in data.items()}
             elif filename == 'executions.json':
-                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in data.items()}
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None, "version": v.version} for k, v in data.items()}
             
             with open(temp_filepath, 'w', encoding='utf-8') as f:
                 json.dump(serialized_data, f, ensure_ascii=False, indent=2, default=str)
@@ -324,6 +380,32 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+@app.websocket("/ws/{token}")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    try:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            await websocket.close(code=1008, reason="Token expired")
+            return
+        except jwt.InvalidTokenError:
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+        
+        await manager.connect(websocket, token)
+        
+        while True:
+            try:
+                data = await websocket.receive_text()
+                await websocket.send_text(json.dumps({"type": "pong", "timestamp": datetime.now().isoformat()}))
+            except WebSocketDisconnect:
+                break
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        manager.disconnect(websocket, token)
+
+
 
 @app.get("/healthz")
 async def healthz():
@@ -419,17 +501,14 @@ async def create_client(client: ClientCreate, token: str = Depends(verify_token)
         address=client.address,
         tax_id=client.tax_id,
         created_at=now,
-        updated_at=now
+        updated_at=now,
+        version=1
     )
     clients_db[client_id] = new_client
-    print(f"DEBUG: About to call save_data() for client {client.name}")
-    try:
-        save_data()
-        print(f"DEBUG: save_data() completed successfully for client {client.name}")
-    except Exception as e:
-        print(f"DEBUG: Error in save_data(): {e}")
-        import traceback
-        traceback.print_exc()
+    save_data()
+    
+    await manager.broadcast_data_change("create", "client", client_id, new_client.dict())
+    
     return new_client
 
 @app.get("/api/clients", response_model=List[Client])
@@ -450,18 +529,30 @@ async def update_client(client_id: str, client_update: ClientUpdate, token: str 
             raise HTTPException(status_code=404, detail="Client not found")
         
         client = clients_db[client_id]
+        
+        if hasattr(client_update, 'version') and client_update.version is not None:
+            if client.version != client_update.version:
+                raise HTTPException(status_code=409, detail=f"Conflict: Client was modified by another user. Expected version {client_update.version}, but current version is {client.version}")
+        
         update_data = client_update.dict(exclude_unset=True)
         
         for field, value in update_data.items():
-            setattr(client, field, value)
+            if field != 'version':
+                setattr(client, field, value)
         
         client.updated_at = datetime.now()
+        client.version += 1
         clients_db[client_id] = client
-        save_clients()
+        save_data()
+        
+        await manager.broadcast_data_change("update", "client", client_id, client.dict())
+        
         print(f"Client updated successfully: {client_id}")
         return client
     except Exception as e:
         print(f"Error updating client {client_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Error updating client: {str(e)}")
 
 @app.delete("/api/clients/{client_id}")
@@ -475,6 +566,9 @@ async def delete_client(client_id: str, token: str = Depends(verify_token)):
     
     del clients_db[client_id]
     save_data()
+    
+    await manager.broadcast_data_change("delete", "client", client_id, {})
+    
     return {"message": "Client deleted successfully"}
 
 @app.post("/api/cases", response_model=Case)
@@ -505,10 +599,14 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
             reminder_date=case.reminder_date,
             office_archive_no=case.office_archive_no,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            version=1
         )
         cases_db[case_id] = new_case
-        save_cases()
+        save_data()
+        
+        await manager.broadcast_data_change("create", "case", case_id, new_case.dict())
+        
         print(f"Case created successfully: {case_id}")
         return new_case
     except Exception as e:
@@ -542,6 +640,11 @@ async def update_case(case_id: str, case_update: CaseUpdate, token: str = Depend
             raise HTTPException(status_code=404, detail="Case not found")
         
         case = cases_db[case_id]
+        
+        if hasattr(case_update, 'version') and case_update.version is not None:
+            if case.version != case_update.version:
+                raise HTTPException(status_code=409, detail=f"Conflict: Case was modified by another user. Expected version {case_update.version}, but current version is {case.version}")
+        
         update_data = case_update.dict(exclude_unset=True)
         
         if 'client_id' in update_data and update_data['client_id'] not in clients_db:
@@ -549,19 +652,26 @@ async def update_case(case_id: str, case_update: CaseUpdate, token: str = Depend
             raise HTTPException(status_code=400, detail="Client not found")
         
         for field, value in update_data.items():
-            setattr(case, field, value)
+            if field != 'version':
+                setattr(case, field, value)
         
         if 'client_id' in update_data:
             client = clients_db[update_data['client_id']]
             case.client_name = client.name
         
         case.updated_at = datetime.now()
+        case.version += 1
         cases_db[case_id] = case
-        save_cases()
+        save_data()
+        
+        await manager.broadcast_data_change("update", "case", case_id, case.dict())
+        
         print(f"Case updated successfully: {case_id}")
         return case
     except Exception as e:
         print(f"Error updating case {case_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Error updating case: {str(e)}")
 
 @app.delete("/api/cases/{case_id}")
@@ -570,7 +680,10 @@ async def delete_case(case_id: str, token: str = Depends(verify_token)):
         raise HTTPException(status_code=404, detail="Case not found")
     
     del cases_db[case_id]
-    save_cases()
+    save_data()
+    
+    await manager.broadcast_data_change("delete", "case", case_id, {})
+    
     return {"message": "Case deleted successfully"}
 
 class CaseSearchParams(BaseModel):
@@ -684,10 +797,14 @@ async def create_compensation_letter(letter: CompensationLetterCreate, token: st
             case_number=letter.case_number,
             status=letter.status,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            version=1
         )
         compensation_letters_db[letter_id] = new_letter
-        save_compensation_letters()
+        save_data()
+        
+        await manager.broadcast_data_change("create", "compensation_letter", letter_id, new_letter.dict())
+        
         print(f"Compensation letter created successfully: {letter_id}")
         return new_letter
     except Exception as e:
@@ -721,18 +838,30 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
             raise HTTPException(status_code=404, detail="Compensation letter not found")
         
         letter = compensation_letters_db[letter_id]
+        
+        if hasattr(letter_update, 'version') and letter_update.version is not None:
+            if letter.version != letter_update.version:
+                raise HTTPException(status_code=409, detail=f"Conflict: Compensation letter was modified by another user. Expected version {letter_update.version}, but current version is {letter.version}")
+        
         update_data = letter_update.dict(exclude_unset=True)
         
         for field, value in update_data.items():
-            setattr(letter, field, value)
+            if field != 'version':
+                setattr(letter, field, value)
         
         letter.updated_at = datetime.now()
+        letter.version += 1
         compensation_letters_db[letter_id] = letter
-        save_compensation_letters()
+        save_data()
+        
+        await manager.broadcast_data_change("update", "compensation_letter", letter_id, letter.dict())
+        
         print(f"Compensation letter updated successfully: {letter_id}")
         return letter
     except Exception as e:
         print(f"Error updating compensation letter {letter_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Error updating compensation letter: {str(e)}")
 
 @app.delete("/api/compensation-letters/{letter_id}")
@@ -741,7 +870,10 @@ async def delete_compensation_letter(letter_id: str, token: str = Depends(verify
         raise HTTPException(status_code=404, detail="Compensation letter not found")
     
     del compensation_letters_db[letter_id]
-    save_compensation_letters()
+    save_data()
+    
+    await manager.broadcast_data_change("delete", "compensation_letter", letter_id, {})
+    
     return {"message": "Compensation letter deleted successfully"}
 
 @app.post("/api/executions", response_model=Execution)
@@ -770,10 +902,14 @@ async def create_execution(execution: ExecutionCreate, token: str = Depends(veri
             reminder_text=execution.reminder_text,
             notes=execution.notes,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            version=1
         )
         executions_db[execution_id] = new_execution
-        save_executions()
+        save_data()
+        
+        await manager.broadcast_data_change("create", "execution", execution_id, new_execution.dict())
+        
         print(f"Execution created successfully: {execution_id}")
         return new_execution
     except Exception as e:
@@ -806,6 +942,11 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
             raise HTTPException(status_code=404, detail="Execution not found")
         
         execution = executions_db[execution_id]
+        
+        if hasattr(execution_update, 'version') and execution_update.version is not None:
+            if execution.version != execution_update.version:
+                raise HTTPException(status_code=409, detail=f"Conflict: Execution was modified by another user. Expected version {execution_update.version}, but current version is {execution.version}")
+        
         update_data = execution_update.dict(exclude_unset=True)
         
         if 'client_id' in update_data and update_data['client_id'] not in clients_db:
@@ -813,19 +954,26 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
             raise HTTPException(status_code=400, detail="Client not found")
         
         for field, value in update_data.items():
-            setattr(execution, field, value)
+            if field != 'version':
+                setattr(execution, field, value)
         
         if 'client_id' in update_data:
             client = clients_db[update_data['client_id']]
             execution.client_name = client.name
         
         execution.updated_at = datetime.now()
+        execution.version += 1
         executions_db[execution_id] = execution
-        save_executions()
+        save_data()
+        
+        await manager.broadcast_data_change("update", "execution", execution_id, execution.dict())
+        
         print(f"Execution updated successfully: {execution_id}")
         return execution
     except Exception as e:
         print(f"Error updating execution {execution_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Error updating execution: {str(e)}")
 
 @app.delete("/api/executions/{execution_id}")
@@ -834,5 +982,8 @@ async def delete_execution(execution_id: str, token: str = Depends(verify_token)
         raise HTTPException(status_code=404, detail="Execution not found")
     
     del executions_db[execution_id]
-    save_executions()
+    save_data()
+    
+    await manager.broadcast_data_change("delete", "execution", execution_id, {})
+    
     return {"message": "Execution deleted successfully"}
