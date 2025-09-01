@@ -251,57 +251,52 @@ def load_data():
     except Exception as e:
         print(f"Error loading executions: {e}")
 
-def save_clients():
+def save_data():
+    """Save all data to files with error handling and logging"""
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
-        clients_file = DATA_DIR / "clients.json"
-        clients_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in clients_db.items()}
-        with open(clients_file, 'w', encoding='utf-8') as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            json.dump(clients_data, f, ensure_ascii=False, indent=2)
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        print(f"Saved {len(clients_db)} clients to {clients_file}")
+        
+        for filename, data in [
+            ('clients.json', clients_db),
+            ('cases.json', cases_db),
+            ('compensation_letters.json', compensation_letters_db),
+            ('executions.json', executions_db)
+        ]:
+            filepath = DATA_DIR / filename
+            temp_filepath = filepath.with_suffix('.tmp')
+            
+            if filename == 'clients.json':
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in data.items()}
+            elif filename == 'cases.json':
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in data.items()}
+            elif filename == 'compensation_letters.json':
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in data.items()}
+            elif filename == 'executions.json':
+                serialized_data = {k: {**v.model_dump(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in data.items()}
+            
+            with open(temp_filepath, 'w', encoding='utf-8') as f:
+                json.dump(serialized_data, f, ensure_ascii=False, indent=2, default=str)
+            
+            temp_filepath.replace(filepath)
+            
+        print(f"Data saved successfully at {datetime.now()}")
     except Exception as e:
-        print(f"Error saving clients: {e}")
+        print(f"Error saving data: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+def save_clients():
+    save_data()
 
 def save_cases():
-    try:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        cases_file = DATA_DIR / "cases.json"
-        cases_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()}
-        with open(cases_file, 'w', encoding='utf-8') as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            json.dump(cases_data, f, ensure_ascii=False, indent=2)
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        print(f"Saved {len(cases_db)} cases to {cases_file}")
-    except Exception as e:
-        print(f"Error saving cases: {e}")
+    save_data()
 
 def save_compensation_letters():
-    try:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        letters_file = DATA_DIR / "compensation_letters.json"
-        letters_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in compensation_letters_db.items()}
-        with open(letters_file, 'w', encoding='utf-8') as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            json.dump(letters_data, f, ensure_ascii=False, indent=2)
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        print(f"Saved {len(compensation_letters_db)} compensation letters to {letters_file}")
-    except Exception as e:
-        print(f"Error saving compensation letters: {e}")
+    save_data()
 
 def save_executions():
-    try:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        executions_file = DATA_DIR / "executions.json"
-        executions_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in executions_db.items()}
-        with open(executions_file, 'w', encoding='utf-8') as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            json.dump(executions_data, f, ensure_ascii=False, indent=2)
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        print(f"Saved {len(executions_db)} executions to {executions_file}")
-    except Exception as e:
-        print(f"Error saving executions: {e}")
+    save_data()
 
 load_data()
 
@@ -427,7 +422,14 @@ async def create_client(client: ClientCreate, token: str = Depends(verify_token)
         updated_at=now
     )
     clients_db[client_id] = new_client
-    save_clients()
+    print(f"DEBUG: About to call save_data() for client {client.name}")
+    try:
+        save_data()
+        print(f"DEBUG: save_data() completed successfully for client {client.name}")
+    except Exception as e:
+        print(f"DEBUG: Error in save_data(): {e}")
+        import traceback
+        traceback.print_exc()
     return new_client
 
 @app.get("/api/clients", response_model=List[Client])
@@ -472,7 +474,7 @@ async def delete_client(client_id: str, token: str = Depends(verify_token)):
         raise HTTPException(status_code=400, detail="Cannot delete client with existing cases")
     
     del clients_db[client_id]
-    save_clients()
+    save_data()
     return {"message": "Client deleted successfully"}
 
 @app.post("/api/cases", response_model=Case)
@@ -635,18 +637,23 @@ async def get_dashboard(token: str = Depends(verify_token)):
     
     upcoming_reminders = []
     for case in cases_db.values():
-        if case.reminder_date and today <= case.reminder_date <= upcoming_deadline:
-            upcoming_reminders.append({
-                "case_id": case.id,
-                "case_title": case.title,
-                "case_number": case.case_number,
-                "client_name": case.client_name,
-                "reminder_date": case.reminder_date,
-                "court": case.court,
-                "status": case.status,
-                "defendant": case.defendant,
-                "description": case.description or ""
-            })
+        if case.reminder_date:
+            reminder_date_obj = case.reminder_date
+            if hasattr(case.reminder_date, 'date'):
+                reminder_date_obj = case.reminder_date.date()
+            
+            if today <= reminder_date_obj <= upcoming_deadline:
+                upcoming_reminders.append({
+                    "case_id": case.id,
+                    "case_title": case.title,
+                    "case_number": case.case_number,
+                    "client_name": case.client_name,
+                    "reminder_date": case.reminder_date,
+                    "court": case.court,
+                    "status": case.status,
+                    "defendant": case.defendant,
+                    "description": case.description or ""
+                })
     
     upcoming_reminders.sort(key=lambda x: x["reminder_date"])
     
