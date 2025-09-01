@@ -106,6 +106,7 @@ export interface DashboardData {
     court: string
     status: string
     defendant: string
+    description?: string
   }>
 }
 

@@ -20,12 +20,17 @@ export default function Dashboard() {
     try {
       const dashboardData = await api.dashboard.getData()
       setData(dashboardData)
+      console.log('Dashboard data loaded:', dashboardData)
     } catch (error) {
+      console.error('Dashboard loading error:', error)
       toast({
         title: "Hata",
         description: "Dashboard verileri yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
+      setTimeout(() => {
+        loadDashboardData()
+      }, 2000)
     } finally {
       setLoading(false)
     }
@@ -98,18 +103,18 @@ export default function Dashboard() {
                   onDoubleClick={() => navigate(`/cases/${reminder.case_id}/edit`)}
                 >
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{reminder.case_title}</p>
-                    <p className="text-xs text-blue-600 font-medium">Dava No: {reminder.case_number}</p>
-                    <p className="text-xs text-gray-500">{reminder.client_name}</p>
-                    <p className="text-xs text-gray-500">{reminder.court}</p>
-                    <p className="text-xs text-gray-500">Karşı Taraf: {reminder.defendant}</p>
-                    <p className="text-xs text-orange-600 font-medium">Durum: {reminder.status}</p>
+                    <p className="text-sm font-medium text-blue-600">Dosya No: {reminder.case_number}</p>
+                    <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
+                    <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
+                    <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                    {reminder.description && (
+                      <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-red-600">
                       {new Date(reminder.reminder_date).toLocaleDateString('tr-TR')}
                     </p>
-                    <p className="text-xs text-gray-500">Hatırlatma</p>
                   </div>
                 </div>
               ))}

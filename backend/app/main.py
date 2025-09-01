@@ -421,18 +421,25 @@ async def get_client(client_id: str, token: str = Depends(verify_token)):
 
 @app.put("/api/clients/{client_id}", response_model=Client)
 async def update_client(client_id: str, client_update: ClientUpdate, token: str = Depends(verify_token)):
-    if client_id not in clients_db:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    client = clients_db[client_id]
-    update_data = client_update.dict(exclude_unset=True)
-    
-    for field, value in update_data.items():
-        setattr(client, field, value)
-    
-    clients_db[client_id] = client
-    save_clients()
-    return client
+    try:
+        if client_id not in clients_db:
+            print(f"Client not found: {client_id}")
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        client = clients_db[client_id]
+        update_data = client_update.dict(exclude_unset=True)
+        
+        for field, value in update_data.items():
+            setattr(client, field, value)
+        
+        client.updated_at = datetime.now()
+        clients_db[client_id] = client
+        save_clients()
+        print(f"Client updated successfully: {client_id}")
+        return client
+    except Exception as e:
+        print(f"Error updating client {client_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating client: {str(e)}")
 
 @app.delete("/api/clients/{client_id}")
 async def delete_client(client_id: str, token: str = Depends(verify_token)):
@@ -449,35 +456,41 @@ async def delete_client(client_id: str, token: str = Depends(verify_token)):
 
 @app.post("/api/cases", response_model=Case)
 async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
-    if case.client_id not in clients_db:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    case_id = str(uuid.uuid4())
-    client = clients_db[case.client_id]
-    now = datetime.now()
-    
-    new_case = Case(
-        id=case_id,
-        title=case.title,
-        description=case.description or "",
-        client_id=case.client_id,
-        client_name=client.name,
-        case_type=case.case_type,
-        status=case.status,
-        court=case.court,
-        case_number=case.case_number,
-        defendant=case.defendant,
-        notes=case.notes or "",
-        start_date=case.start_date,
-        next_hearing_date=case.next_hearing_date,
-        reminder_date=case.reminder_date,
-        office_archive_no=case.office_archive_no,
-        created_at=now,
-        updated_at=now
-    )
-    cases_db[case_id] = new_case
-    save_cases()
-    return new_case
+    try:
+        if case.client_id not in clients_db:
+            print(f"Client not found for case creation: {case.client_id}")
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        case_id = str(uuid.uuid4())
+        client = clients_db[case.client_id]
+        now = datetime.now()
+        
+        new_case = Case(
+            id=case_id,
+            title=case.title,
+            description=case.description or "",
+            client_id=case.client_id,
+            client_name=client.name,
+            case_type=case.case_type,
+            status=case.status,
+            court=case.court,
+            case_number=case.case_number,
+            defendant=case.defendant,
+            notes=case.notes or "",
+            start_date=case.start_date,
+            next_hearing_date=case.next_hearing_date,
+            reminder_date=case.reminder_date,
+            office_archive_no=case.office_archive_no,
+            created_at=now,
+            updated_at=now
+        )
+        cases_db[case_id] = new_case
+        save_cases()
+        print(f"Case created successfully: {case_id}")
+        return new_case
+    except Exception as e:
+        print(f"Error creating case: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating case: {str(e)}")
 
 @app.get("/api/cases", response_model=List[Case])
 async def get_cases(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
@@ -500,19 +513,33 @@ async def get_case(case_id: str, token: str = Depends(verify_token)):
 
 @app.put("/api/cases/{case_id}", response_model=Case)
 async def update_case(case_id: str, case_update: CaseUpdate, token: str = Depends(verify_token)):
-    if case_id not in cases_db:
-        raise HTTPException(status_code=404, detail="Case not found")
-    
-    case = cases_db[case_id]
-    update_data = case_update.dict(exclude_unset=True)
-    
-    for field, value in update_data.items():
-        setattr(case, field, value)
-    
-    case.updated_at = datetime.now()
-    cases_db[case_id] = case
-    save_cases()
-    return case
+    try:
+        if case_id not in cases_db:
+            print(f"Case not found: {case_id}")
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        case = cases_db[case_id]
+        update_data = case_update.dict(exclude_unset=True)
+        
+        if 'client_id' in update_data and update_data['client_id'] not in clients_db:
+            print(f"Client not found for case update: {update_data['client_id']}")
+            raise HTTPException(status_code=400, detail="Client not found")
+        
+        for field, value in update_data.items():
+            setattr(case, field, value)
+        
+        if 'client_id' in update_data:
+            client = clients_db[update_data['client_id']]
+            case.client_name = client.name
+        
+        case.updated_at = datetime.now()
+        cases_db[case_id] = case
+        save_cases()
+        print(f"Case updated successfully: {case_id}")
+        return case
+    except Exception as e:
+        print(f"Error updating case {case_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating case: {str(e)}")
 
 @app.delete("/api/cases/{case_id}")
 async def delete_case(case_id: str, token: str = Depends(verify_token)):
@@ -596,7 +623,8 @@ async def get_dashboard(token: str = Depends(verify_token)):
                 "reminder_date": case.reminder_date,
                 "court": case.court,
                 "status": case.status,
-                "defendant": case.defendant
+                "defendant": case.defendant,
+                "description": case.description or ""
             })
     
     upcoming_reminders.sort(key=lambda x: x["reminder_date"])
@@ -611,27 +639,32 @@ async def get_dashboard(token: str = Depends(verify_token)):
 
 @app.post("/api/compensation-letters", response_model=CompensationLetter)
 async def create_compensation_letter(letter: CompensationLetterCreate, token: str = Depends(verify_token)):
-    letter_id = str(uuid.uuid4())
-    now = datetime.now()
-    
-    new_letter = CompensationLetter(
-        id=letter_id,
-        title="",
-        client_id="",
-        client_name="",
-        letter_number=letter.letter_number,
-        bank=letter.bank,
-        customer_number=letter.customer_number,
-        customer=letter.customer,
-        court=letter.court,
-        case_number=letter.case_number,
-        status=letter.status,
-        created_at=now,
-        updated_at=now
-    )
-    compensation_letters_db[letter_id] = new_letter
-    save_compensation_letters()
-    return new_letter
+    try:
+        letter_id = str(uuid.uuid4())
+        now = datetime.now()
+        
+        new_letter = CompensationLetter(
+            id=letter_id,
+            title="",
+            client_id="",
+            client_name="",
+            letter_number=letter.letter_number,
+            bank=letter.bank,
+            customer_number=letter.customer_number,
+            customer=letter.customer,
+            court=letter.court,
+            case_number=letter.case_number,
+            status=letter.status,
+            created_at=now,
+            updated_at=now
+        )
+        compensation_letters_db[letter_id] = new_letter
+        save_compensation_letters()
+        print(f"Compensation letter created successfully: {letter_id}")
+        return new_letter
+    except Exception as e:
+        print(f"Error creating compensation letter: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating compensation letter: {str(e)}")
 
 @app.get("/api/compensation-letters", response_model=List[CompensationLetter])
 async def get_compensation_letters(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
@@ -654,19 +687,25 @@ async def get_compensation_letter(letter_id: str, token: str = Depends(verify_to
 
 @app.put("/api/compensation-letters/{letter_id}", response_model=CompensationLetter)
 async def update_compensation_letter(letter_id: str, letter_update: CompensationLetterUpdate, token: str = Depends(verify_token)):
-    if letter_id not in compensation_letters_db:
-        raise HTTPException(status_code=404, detail="Compensation letter not found")
-    
-    letter = compensation_letters_db[letter_id]
-    update_data = letter_update.dict(exclude_unset=True)
-    
-    for field, value in update_data.items():
-        setattr(letter, field, value)
-    
-    letter.updated_at = datetime.now()
-    compensation_letters_db[letter_id] = letter
-    save_compensation_letters()
-    return letter
+    try:
+        if letter_id not in compensation_letters_db:
+            print(f"Compensation letter not found: {letter_id}")
+            raise HTTPException(status_code=404, detail="Compensation letter not found")
+        
+        letter = compensation_letters_db[letter_id]
+        update_data = letter_update.dict(exclude_unset=True)
+        
+        for field, value in update_data.items():
+            setattr(letter, field, value)
+        
+        letter.updated_at = datetime.now()
+        compensation_letters_db[letter_id] = letter
+        save_compensation_letters()
+        print(f"Compensation letter updated successfully: {letter_id}")
+        return letter
+    except Exception as e:
+        print(f"Error updating compensation letter {letter_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating compensation letter: {str(e)}")
 
 @app.delete("/api/compensation-letters/{letter_id}")
 async def delete_compensation_letter(letter_id: str, token: str = Depends(verify_token)):
@@ -679,33 +718,39 @@ async def delete_compensation_letter(letter_id: str, token: str = Depends(verify
 
 @app.post("/api/executions", response_model=Execution)
 async def create_execution(execution: ExecutionCreate, token: str = Depends(verify_token)):
-    if execution.client_id not in clients_db:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    execution_id = str(uuid.uuid4())
-    client = clients_db[execution.client_id]
-    now = datetime.now()
-    
-    new_execution = Execution(
-        id=execution_id,
-        client_id=execution.client_id,
-        client_name=client.name,
-        defendant=execution.defendant,
-        execution_office=execution.execution_office,
-        execution_number=execution.execution_number,
-        status=execution.status,
-        execution_type=execution.execution_type,
-        start_date=execution.start_date,
-        office_archive_no=execution.office_archive_no,
-        reminder_date=execution.reminder_date,
-        reminder_text=execution.reminder_text,
-        notes=execution.notes,
-        created_at=now,
-        updated_at=now
-    )
-    executions_db[execution_id] = new_execution
-    save_executions()
-    return new_execution
+    try:
+        if execution.client_id not in clients_db:
+            print(f"Client not found for execution creation: {execution.client_id}")
+            raise HTTPException(status_code=404, detail="Client not found")
+        
+        execution_id = str(uuid.uuid4())
+        client = clients_db[execution.client_id]
+        now = datetime.now()
+        
+        new_execution = Execution(
+            id=execution_id,
+            client_id=execution.client_id,
+            client_name=client.name,
+            defendant=execution.defendant,
+            execution_office=execution.execution_office,
+            execution_number=execution.execution_number,
+            status=execution.status,
+            execution_type=execution.execution_type,
+            start_date=execution.start_date,
+            office_archive_no=execution.office_archive_no,
+            reminder_date=execution.reminder_date,
+            reminder_text=execution.reminder_text,
+            notes=execution.notes,
+            created_at=now,
+            updated_at=now
+        )
+        executions_db[execution_id] = new_execution
+        save_executions()
+        print(f"Execution created successfully: {execution_id}")
+        return new_execution
+    except Exception as e:
+        print(f"Error creating execution: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating execution: {str(e)}")
 
 @app.get("/api/executions", response_model=List[Execution])
 async def get_executions(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
@@ -727,18 +772,33 @@ async def get_execution(execution_id: str, token: str = Depends(verify_token)):
 
 @app.put("/api/executions/{execution_id}", response_model=Execution)
 async def update_execution(execution_id: str, execution_update: ExecutionUpdate, token: str = Depends(verify_token)):
-    if execution_id not in executions_db:
-        raise HTTPException(status_code=404, detail="Execution not found")
-    
-    execution = executions_db[execution_id]
-    update_data = execution_update.dict(exclude_unset=True)
-    
-    for field, value in update_data.items():
-        setattr(execution, field, value)
-    
-    execution.updated_at = datetime.now()
-    save_executions()
-    return execution
+    try:
+        if execution_id not in executions_db:
+            print(f"Execution not found: {execution_id}")
+            raise HTTPException(status_code=404, detail="Execution not found")
+        
+        execution = executions_db[execution_id]
+        update_data = execution_update.dict(exclude_unset=True)
+        
+        if 'client_id' in update_data and update_data['client_id'] not in clients_db:
+            print(f"Client not found for execution update: {update_data['client_id']}")
+            raise HTTPException(status_code=400, detail="Client not found")
+        
+        for field, value in update_data.items():
+            setattr(execution, field, value)
+        
+        if 'client_id' in update_data:
+            client = clients_db[update_data['client_id']]
+            execution.client_name = client.name
+        
+        execution.updated_at = datetime.now()
+        executions_db[execution_id] = execution
+        save_executions()
+        print(f"Execution updated successfully: {execution_id}")
+        return execution
+    except Exception as e:
+        print(f"Error updating execution {execution_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating execution: {str(e)}")
 
 @app.delete("/api/executions/{execution_id}")
 async def delete_execution(execution_id: str, token: str = Depends(verify_token)):

@@ -11,32 +11,41 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   const url = `${API_URL}${endpoint}`
   const token = localStorage.getItem('auth_token')
   
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    },
-    ...options,
-  })
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers,
+      },
+      ...options,
+    })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    if (response.status === 401) {
-      localStorage.removeItem('auth_token')
-      window.location.href = '/login'
+    if (!response.ok) {
+      const errorText = await response.text()
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token')
+        window.location.href = '/login'
+      }
+      let errorMessage = response.statusText
+      try {
+        const errorData = JSON.parse(errorText)
+        errorMessage = errorData.detail || errorMessage
+      } catch {
+        errorMessage = errorText || errorMessage
+      }
+      console.error(`API Error ${response.status}:`, errorMessage)
+      throw new ApiError(response.status, errorMessage)
     }
-    let errorMessage = response.statusText
-    try {
-      const errorData = JSON.parse(errorText)
-      errorMessage = errorData.detail || errorMessage
-    } catch {
-      errorMessage = errorText || errorMessage
+
+    return response.json()
+  } catch (error) {
+    console.error('API Request failed:', error)
+    if (error instanceof ApiError) {
+      throw error
     }
-    throw new ApiError(response.status, errorMessage)
+    throw new ApiError(500, 'Network error or server unavailable')
   }
-
-  return response.json()
 }
 
 export const api = {
