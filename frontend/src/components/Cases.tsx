@@ -134,7 +134,7 @@ export default function Cases() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Mahkeme/İcra</TableHead>
+                  <TableHead>Mahkeme</TableHead>
                   <TableHead>Dosya No</TableHead>
                   <TableHead>Müvekkil</TableHead>
                   <TableHead>Karşı Taraf</TableHead>

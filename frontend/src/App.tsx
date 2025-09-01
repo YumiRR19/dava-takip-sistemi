@@ -11,6 +11,8 @@ import ClientForm from './components/ClientForm'
 import CaseSearch from './components/CaseSearch'
 import CompensationLetters from './components/CompensationLetters'
 import CompensationLetterForm from './components/CompensationLetterForm'
+import Executions from './components/Executions'
+import ExecutionForm from './components/ExecutionForm'
 import Login from './components/Login'
 import Settings from './components/Settings'
 import './App.css'
@@ -38,6 +40,9 @@ function AppContent() {
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/edit/:id" element={<ClientForm />} />
             <Route path="/case-search" element={<CaseSearch />} />
+            <Route path="/executions" element={<Executions />} />
+            <Route path="/executions/new" element={<ExecutionForm />} />
+            <Route path="/executions/:id/edit" element={<ExecutionForm />} />
             <Route path="/compensation-letters" element={<CompensationLetters />} />
             <Route path="/compensation-letters/new" element={<CompensationLetterForm />} />
             <Route path="/compensation-letters/:id/edit" element={<CompensationLetterForm />} />

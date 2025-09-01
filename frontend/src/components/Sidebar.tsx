@@ -20,6 +20,7 @@ interface SidebarProps {
 const navigation = [
   { name: 'Anasayfa', href: '/', icon: Home },
   { name: 'Davalar', href: '/cases', icon: FileText },
+  { name: 'İcralar', href: '/executions', icon: Scale },
   { name: 'Teminat Mektupları', href: '/compensation-letters', icon: Mail },
   { name: 'Müvekkiller', href: '/clients', icon: Users },
   { name: 'Dava Sorgulama', href: '/case-search', icon: Search },

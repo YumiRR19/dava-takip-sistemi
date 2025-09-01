@@ -144,3 +144,47 @@ export interface CompensationLetterUpdate {
   case_number?: string
   status?: string
 }
+
+export interface Execution {
+  id: string
+  client_id: string
+  client_name: string
+  defendant: string
+  execution_office: string
+  execution_number: string
+  status: string
+  execution_type: string
+  start_date: string
+  office_archive_no: string
+  reminder_date?: string
+  reminder_text?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ExecutionCreate {
+  client_id: string
+  defendant: string
+  execution_office: string
+  execution_number: string
+  status: string
+  execution_type: string
+  start_date: string
+  office_archive_no: string
+  reminder_date?: string
+  reminder_text?: string
+  notes?: string
+}
+
+export interface ExecutionUpdate {
+  defendant?: string
+  execution_office?: string
+  execution_number?: string
+  status?: string
+  start_date?: string
+  office_archive_no?: string
+  reminder_date?: string
+  reminder_text?: string
+  notes?: string
+}

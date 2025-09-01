@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Calendar, TrendingUp } from 'lucide-react'
+import { FileText, Users } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, DashboardData } from '@/lib/api'
@@ -61,7 +61,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Toplam Dava</CardTitle>
@@ -81,29 +81,9 @@ export default function Dashboard() {
             <div className="text-2xl font-bold">{data.total_clients}</div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Yaklaşan Duruşma</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.upcoming_hearings?.length || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hatırlatmalar</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.upcoming_reminders?.length || 0}</div>
-          </CardContent>
-        </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Hatırlatmalar</CardTitle>
@@ -140,35 +120,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Yaklaşan Duruşmalar</CardTitle>
-            <CardDescription>Önümüzdeki 7 gün içindeki duruşmalar</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {(data.upcoming_hearings || []).slice(0, 5).map((hearing) => (
-                <div key={hearing.case_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{hearing.case_title}</p>
-                    <p className="text-xs text-blue-600 font-medium">Dava No: {hearing.case_number}</p>
-                    <p className="text-xs text-gray-500">{hearing.client_name}</p>
-                    <p className="text-xs text-gray-500">{hearing.court}</p>
-                    <p className="text-xs text-gray-500">Karşı Taraf: {hearing.defendant}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {new Date(hearing.hearing_date).toLocaleDateString('tr-TR')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(data.upcoming_hearings?.length || 0) === 0 && (
-                <p className="text-sm text-gray-500">Yaklaşan duruşma bulunmuyor.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

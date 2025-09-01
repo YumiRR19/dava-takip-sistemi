@@ -387,7 +387,7 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="court">Mahkeme/İcra</Label>
+              <Label htmlFor="court">Mahkeme</Label>
               <Popover open={courtOpen} onOpenChange={setCourtOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -513,7 +513,7 @@ export default function CaseSearch() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px]">Mahkeme/İcra</TableHead>
+                    <TableHead className="w-[200px]">Mahkeme</TableHead>
                     <TableHead className="w-[120px]">Dosya No</TableHead>
                     <TableHead className="w-[150px]">Müvekkil</TableHead>
                     <TableHead className="w-[150px]">Karşı Taraf</TableHead>

@@ -125,8 +125,31 @@ export const api = {
       method: 'DELETE',
     }),
   },
+
+  executions: {
+    getAll: (params?: { status?: string; client_id?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.status) searchParams.append('status', params.status)
+      if (params?.client_id) searchParams.append('client_id', params.client_id)
+      
+      const query = searchParams.toString()
+      return apiRequest<Execution[]>(`/api/executions${query ? `?${query}` : ''}`)
+    },
+    getById: (id: string) => apiRequest<Execution>(`/api/executions/${id}`),
+    create: (data: ExecutionCreate) => apiRequest<Execution>('/api/executions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    update: (id: string, data: ExecutionUpdate) => apiRequest<Execution>(`/api/executions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    delete: (id: string) => apiRequest<{ message: string }>(`/api/executions/${id}`, {
+      method: 'DELETE',
+    }),
+  },
 }
 
-import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate } from '../types'
+import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate } from '../types'
 
-export type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate }
+export type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate }

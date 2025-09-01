@@ -21,6 +21,7 @@ export default function CaseForm() {
   const { toast } = useToast()
 
   const [loading, setLoading] = useState(false)
+  const [clientsLoading, setClientsLoading] = useState(true)
   const [clients, setClients] = useState<Client[]>([])
   const [courtOpen, setCourtOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -47,6 +48,7 @@ export default function CaseForm() {
 
   const loadClients = async () => {
     try {
+      setClientsLoading(true)
       const clientsData = await api.clients.getAll()
       setClients(clientsData)
       if (clientsData.length > 0 && !formData.client_id) {
@@ -58,6 +60,8 @@ export default function CaseForm() {
         description: "Müvekkiller yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
+    } finally {
+      setClientsLoading(false)
     }
   }
 
@@ -90,6 +94,25 @@ export default function CaseForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (clientsLoading) {
+      toast({
+        title: "Uyarı",
+        description: "Müvekkiller yüklenirken lütfen bekleyin.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!formData.client_id || !clients.find(c => c.id === formData.client_id)) {
+      toast({
+        title: "Hata",
+        description: "Geçerli bir müvekkil seçiniz.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     const submissionData = {
@@ -206,7 +229,7 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="court">Mahkeme / İcra *</Label>
+                <Label htmlFor="court">Mahkeme *</Label>
                 <Popover open={courtOpen} onOpenChange={setCourtOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -232,9 +255,6 @@ export default function CaseForm() {
                           {[
                             "ADANA BANKA ALACAKLARI",
                             "GAYRİMENKUL SATIŞ İCRA DAİRESİ",
-                            "ADANA 1. GENEL İCRA DAİRESİ",
-                            "ADANA 2. GENEL İCRA DAİRESİ",
-                            "ADANA 3. GENEL İCRA DAİRESİ",
                             "GAZİANTEP İCRA DAİRESİ"
                           ].map((court) => (
                             <CommandItem
@@ -306,7 +326,6 @@ export default function CaseForm() {
                   <SelectContent>
                     <SelectItem value="Ceza">Ceza</SelectItem>
                     <SelectItem value="Hukuk">Hukuk</SelectItem>
-                    <SelectItem value="İcra">İcra</SelectItem>
                     <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
                     <SelectItem value="Satış Memuru">Satış Memuru</SelectItem>
                     <SelectItem value="Ara Buluculuk">Ara Buluculuk</SelectItem>
@@ -390,9 +409,9 @@ export default function CaseForm() {
               <Button type="button" variant="outline" onClick={() => navigate('/cases')}>
                 İptal
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || clientsLoading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
+                {loading ? 'Kaydediliyor...' : clientsLoading ? 'Müvekkiller yükleniyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
             </div>
           </form>

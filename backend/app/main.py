@@ -131,6 +131,49 @@ class CompensationLetterUpdate(BaseModel):
 
 compensation_letters_db: dict[str, CompensationLetter] = {}
 
+class Execution(BaseModel):
+    id: str
+    client_id: str
+    client_name: str
+    defendant: str
+    execution_office: str
+    execution_number: str
+    status: str
+    execution_type: str
+    start_date: date
+    office_archive_no: str
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+class ExecutionCreate(BaseModel):
+    client_id: str
+    defendant: str
+    execution_office: str
+    execution_number: str
+    status: str
+    execution_type: str
+    start_date: date
+    office_archive_no: str
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    notes: Optional[str] = None
+
+class ExecutionUpdate(BaseModel):
+    defendant: Optional[str] = None
+    execution_office: Optional[str] = None
+    execution_number: Optional[str] = None
+    status: Optional[str] = None
+    start_date: Optional[date] = None
+    office_archive_no: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    notes: Optional[str] = None
+
+executions_db: dict[str, Execution] = {}
+
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "Msghukuk0714."
 JWT_SECRET = os.getenv("JWT_SECRET") or "lexcloud-jwt-secret-key-2025"
 JWT_ALGORITHM = "HS256"
@@ -140,7 +183,7 @@ DATA_DIR = Path("/tmp/lexcloud_data")
 DATA_DIR.mkdir(exist_ok=True)
 
 def load_data():
-    global clients_db, cases_db, compensation_letters_db
+    global clients_db, cases_db, compensation_letters_db, executions_db
     
     try:
         clients_file = DATA_DIR / "clients.json"
@@ -181,6 +224,21 @@ def load_data():
                     compensation_letters_db[letter_id] = CompensationLetter(**letter_data)
     except Exception as e:
         print(f"Error loading compensation letters: {e}")
+    
+    try:
+        executions_file = DATA_DIR / "executions.json"
+        if executions_file.exists():
+            with open(executions_file, 'r', encoding='utf-8') as f:
+                executions_data = json.load(f)
+                for execution_id, execution_data in executions_data.items():
+                    execution_data["created_at"] = datetime.fromisoformat(execution_data["created_at"])
+                    execution_data["updated_at"] = datetime.fromisoformat(execution_data["updated_at"])
+                    execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
+                    if execution_data.get("reminder_date"):
+                        execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
+                    executions_db[execution_id] = Execution(**execution_data)
+    except Exception as e:
+        print(f"Error loading executions: {e}")
 
 def save_clients():
     try:
@@ -214,6 +272,17 @@ def save_compensation_letters():
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
     except Exception as e:
         print(f"Error saving compensation letters: {e}")
+
+def save_executions():
+    try:
+        executions_file = DATA_DIR / "executions.json"
+        executions_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in executions_db.items()}
+        with open(executions_file, 'w', encoding='utf-8') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            json.dump(executions_data, f, ensure_ascii=False, indent=2)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception as e:
+        print(f"Error saving executions: {e}")
 
 load_data()
 
@@ -278,13 +347,14 @@ async def backup_data(token: str = Depends(verify_token)):
         "clients": {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()},
         "cases": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()},
         "compensation_letters": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in compensation_letters_db.items()},
+        "executions": {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in executions_db.items()},
         "backup_date": datetime.now().isoformat()
     }
     return backup_data
 
 @app.post("/api/restore")
 async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
-    global clients_db, cases_db, compensation_letters_db
+    global clients_db, cases_db, compensation_letters_db, executions_db
     try:
         clients_db = {}
         for client_id, client_data in backup_data.get("clients", {}).items():
@@ -309,6 +379,15 @@ async def restore_data(backup_data: dict, token: str = Depends(verify_token)):
             letter_data["created_at"] = datetime.fromisoformat(letter_data["created_at"])
             letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
             compensation_letters_db[letter_id] = CompensationLetter(**letter_data)
+        
+        executions_db = {}
+        for execution_id, execution_data in backup_data.get("executions", {}).items():
+            execution_data["created_at"] = datetime.fromisoformat(execution_data["created_at"])
+            execution_data["updated_at"] = datetime.fromisoformat(execution_data["updated_at"])
+            execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
+            if execution_data.get("reminder_date"):
+                execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
+            executions_db[execution_id] = Execution(**execution_data)
         
         return {"message": "Data restored successfully"}
     except Exception as e:
@@ -597,3 +676,75 @@ async def delete_compensation_letter(letter_id: str, token: str = Depends(verify
     del compensation_letters_db[letter_id]
     save_compensation_letters()
     return {"message": "Compensation letter deleted successfully"}
+
+@app.post("/api/executions", response_model=Execution)
+async def create_execution(execution: ExecutionCreate, token: str = Depends(verify_token)):
+    if execution.client_id not in clients_db:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    execution_id = str(uuid.uuid4())
+    client = clients_db[execution.client_id]
+    now = datetime.now()
+    
+    new_execution = Execution(
+        id=execution_id,
+        client_id=execution.client_id,
+        client_name=client.name,
+        defendant=execution.defendant,
+        execution_office=execution.execution_office,
+        execution_number=execution.execution_number,
+        status=execution.status,
+        execution_type=execution.execution_type,
+        start_date=execution.start_date,
+        office_archive_no=execution.office_archive_no,
+        reminder_date=execution.reminder_date,
+        reminder_text=execution.reminder_text,
+        notes=execution.notes,
+        created_at=now,
+        updated_at=now
+    )
+    executions_db[execution_id] = new_execution
+    save_executions()
+    return new_execution
+
+@app.get("/api/executions", response_model=List[Execution])
+async def get_executions(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
+    executions = list(executions_db.values())
+    
+    if status:
+        executions = [execution for execution in executions if execution.status.lower() == status.lower()]
+    
+    if client_id:
+        executions = [execution for execution in executions if execution.client_id == client_id]
+    
+    return executions
+
+@app.get("/api/executions/{execution_id}", response_model=Execution)
+async def get_execution(execution_id: str, token: str = Depends(verify_token)):
+    if execution_id not in executions_db:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    return executions_db[execution_id]
+
+@app.put("/api/executions/{execution_id}", response_model=Execution)
+async def update_execution(execution_id: str, execution_update: ExecutionUpdate, token: str = Depends(verify_token)):
+    if execution_id not in executions_db:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    
+    execution = executions_db[execution_id]
+    update_data = execution_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(execution, field, value)
+    
+    execution.updated_at = datetime.now()
+    save_executions()
+    return execution
+
+@app.delete("/api/executions/{execution_id}")
+async def delete_execution(execution_id: str, token: str = Depends(verify_token)):
+    if execution_id not in executions_db:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    
+    del executions_db[execution_id]
+    save_executions()
+    return {"message": "Execution deleted successfully"}
