@@ -22,6 +22,12 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+@app.on_event("startup")
+async def startup_event():
+    print("Loading data on startup...")
+    load_data()
+    print(f"Loaded {len(clients_db)} clients, {len(cases_db)} cases, {len(compensation_letters_db)} compensation letters, {len(executions_db)} executions")
+
 class Client(BaseModel):
     id: str
     name: str
