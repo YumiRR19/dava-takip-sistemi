@@ -108,7 +108,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
                     <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
                     {reminder.description && (
-                      <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{reminder.description}</p>
                     )}
                   </div>
                   <div className="text-right">

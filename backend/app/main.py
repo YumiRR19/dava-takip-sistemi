@@ -248,45 +248,53 @@ def load_data():
 
 def save_clients():
     try:
+        os.makedirs(DATA_DIR, exist_ok=True)
         clients_file = DATA_DIR / "clients.json"
         clients_data = {k: {**v.dict(), "created_at": v.created_at.isoformat()} for k, v in clients_db.items()}
         with open(clients_file, 'w', encoding='utf-8') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             json.dump(clients_data, f, ensure_ascii=False, indent=2)
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        print(f"Saved {len(clients_db)} clients to {clients_file}")
     except Exception as e:
         print(f"Error saving clients: {e}")
 
 def save_cases():
     try:
+        os.makedirs(DATA_DIR, exist_ok=True)
         cases_file = DATA_DIR / "cases.json"
         cases_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "next_hearing_date": v.next_hearing_date.isoformat() if v.next_hearing_date else None, "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in cases_db.items()}
         with open(cases_file, 'w', encoding='utf-8') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             json.dump(cases_data, f, ensure_ascii=False, indent=2)
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        print(f"Saved {len(cases_db)} cases to {cases_file}")
     except Exception as e:
         print(f"Error saving cases: {e}")
 
 def save_compensation_letters():
     try:
+        os.makedirs(DATA_DIR, exist_ok=True)
         letters_file = DATA_DIR / "compensation_letters.json"
         letters_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat()} for k, v in compensation_letters_db.items()}
         with open(letters_file, 'w', encoding='utf-8') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             json.dump(letters_data, f, ensure_ascii=False, indent=2)
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        print(f"Saved {len(compensation_letters_db)} compensation letters to {letters_file}")
     except Exception as e:
         print(f"Error saving compensation letters: {e}")
 
 def save_executions():
     try:
+        os.makedirs(DATA_DIR, exist_ok=True)
         executions_file = DATA_DIR / "executions.json"
         executions_data = {k: {**v.dict(), "created_at": v.created_at.isoformat(), "updated_at": v.updated_at.isoformat(), "start_date": v.start_date.isoformat(), "reminder_date": v.reminder_date.isoformat() if v.reminder_date else None} for k, v in executions_db.items()}
         with open(executions_file, 'w', encoding='utf-8') as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             json.dump(executions_data, f, ensure_ascii=False, indent=2)
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        print(f"Saved {len(executions_db)} executions to {executions_file}")
     except Exception as e:
         print(f"Error saving executions: {e}")
 
