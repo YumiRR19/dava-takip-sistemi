@@ -7,10 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { api, Client, CaseCreate, CaseUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
@@ -23,7 +19,6 @@ export default function CaseForm() {
   const [loading, setLoading] = useState(false)
   const [clientsLoading, setClientsLoading] = useState(true)
   const [clients, setClients] = useState<Client[]>([])
-  const [courtOpen, setCourtOpen] = useState(false)
   const [formData, setFormData] = useState({
     description: '',
     client_id: '',
@@ -244,93 +239,14 @@ export default function CaseForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="court">Mahkeme *</Label>
-                <Popover open={courtOpen} onOpenChange={setCourtOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={courtOpen}
-                      className="w-full justify-between"
-                    >
-                      {formData.court || "Mahkeme seçin veya yazın..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput 
-                        placeholder="Mahkeme ara veya yaz..." 
-                        value={formData.court}
-                        onValueChange={(value) => handleChange('court', value)}
-                      />
-                      <CommandList>
-                        <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
-                        <CommandGroup>
-                          {[
-                            "ADANA 1. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 2. ASLIYE CEZA MAHKEMESİ", 
-                            "ADANA 3. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 4. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 5. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 6. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 7. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 8. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 9. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 10. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 11. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 12. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 13. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 14. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 15. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 16. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 17. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 18. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 19. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 20. ASLIYE CEZA MAHKEMESİ",
-                            "ADANA 1. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 2. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 3. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 4. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 5. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 6. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 7. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 8. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 9. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 10. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 11. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 12. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 13. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 14. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 15. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 16. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 17. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 18. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 19. ASLIYE HUKUK MAHKEMESİ",
-                            "ADANA 20. ASLIYE HUKUK MAHKEMESİ"
-                          ].map((court) => (
-                            <CommandItem
-                              key={court}
-                              value={court}
-                              onSelect={(currentValue) => {
-                                handleChange('court', currentValue)
-                                setCourtOpen(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.court === court ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {court}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <input type="hidden" name="court" value={formData.court} />
+                <Input
+                  id="court"
+                  name="court"
+                  value={formData.court}
+                  onChange={(e) => handleChange('court', e.target.value)}
+                  placeholder="Mahkeme adını manuel olarak girin"
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -368,14 +284,21 @@ export default function CaseForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="case_type">Dava Türü *</Label>
-                <Input
-                  id="case_type"
-                  name="case_type"
-                  value={formData.case_type}
-                  onChange={(e) => handleChange('case_type', e.target.value)}
-                  placeholder="Dava türünü manuel olarak girin"
-                  required
-                />
+                <Select value={formData.case_type} onValueChange={(value) => handleChange('case_type', value)} name="case_type">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Dava türü seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ceza">Ceza</SelectItem>
+                    <SelectItem value="Hukuk">Hukuk</SelectItem>
+                    <SelectItem value="İcra">İcra</SelectItem>
+                    <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
+                    <SelectItem value="Satış Memurluğu">Satış Memurluğu</SelectItem>
+                    <SelectItem value="Arabuluculuk">Arabuluculuk</SelectItem>
+                    <SelectItem value="Cbs">Cbs</SelectItem>
+                    <SelectItem value="Tazminat Komisyonu Başkanlığı">Tazminat Komisyonu Başkanlığı</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
