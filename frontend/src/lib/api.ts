@@ -48,6 +48,8 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   }
 }
 
+export const request = apiRequest
+
 export const api = {
   clients: {
     getAll: () => apiRequest<Client[]>('/api/clients'),

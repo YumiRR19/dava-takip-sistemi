@@ -1,22 +1,46 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff, Database, Server } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { api, DashboardData } from '@/lib/api'
+import { Badge } from '@/components/ui/badge'
+import { api, DashboardData, request } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [healthStatus, setHealthStatus] = useState({
+    api: true,
+    websocket: false,
+    database: true
+  })
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { isConnected, hasChangesForEntity, clearDataChanges } = useRealTimeData()
+  const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
 
   useEffect(() => {
     loadDashboardData()
+    checkHealthStatus()
   }, [])
+
+  const checkHealthStatus = async () => {
+    try {
+      const [wsHealth, dbHealth] = await Promise.all([
+        request('/api/health/websocket').catch(() => ({ status: 'error' })),
+        request('/api/health/database').catch(() => ({ status: 'error' }))
+      ])
+      
+      setHealthStatus({
+        api: true,
+        websocket: wsHealth.status === 'ok',
+        database: dbHealth.status === 'ok'
+      })
+    } catch (error) {
+      setHealthStatus(prev => ({ ...prev, api: false }))
+    }
+  }
 
   useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
@@ -67,15 +91,29 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <h1 className="text-3xl font-bold text-gray-900">Anasayfa</h1>
-          <div className="flex items-center space-x-1">
-            {isConnected ? (
-              <Wifi className="h-4 w-4 text-green-600" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-red-600" />
-            )}
-            <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-              {isConnected ? 'Bağlı' : 'Bağlantı Yok'}
-            </span>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1">
+              <Server className="h-4 w-4" />
+              <Badge variant={healthStatus.api ? "default" : "destructive"} className="text-xs">
+                API {healthStatus.api ? 'Aktif' : 'Hata'}
+              </Badge>
+            </div>
+            <div className="flex items-center space-x-1">
+              {isConnected ? (
+                <Wifi className="h-4 w-4 text-green-600" />
+              ) : (
+                <WifiOff className="h-4 w-4 text-red-600" />
+              )}
+              <Badge variant={isConnected ? "default" : "secondary"} className="text-xs">
+                WS {isConnected ? 'Bağlı' : (isPollingFallback ? 'Polling' : 'Kapalı')}
+              </Badge>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Database className="h-4 w-4" />
+              <Badge variant={healthStatus.database ? "default" : "destructive"} className="text-xs">
+                DB {healthStatus.database ? 'Aktif' : 'Hata'}
+              </Badge>
+            </div>
           </div>
         </div>
         <div className="flex space-x-3">

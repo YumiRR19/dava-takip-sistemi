@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useWebSocket } from './use-websocket'
+import { usePollingFallback } from './use-polling-fallback'
 import { useToast } from './use-toast'
 
 interface DataChangeEvent {
@@ -13,6 +14,7 @@ interface DataChangeEvent {
 
 export function useRealTimeData() {
   const { lastMessage, isConnected } = useWebSocket()
+  const { lastPolledData } = usePollingFallback({ enabled: !isConnected })
   const { toast } = useToast()
   const [dataChanges, setDataChanges] = useState<DataChangeEvent[]>([])
 
@@ -49,6 +51,19 @@ export function useRealTimeData() {
     }
   }, [lastMessage, toast])
 
+  useEffect(() => {
+    if (!isConnected && lastPolledData) {
+      setDataChanges(prev => [...prev, {
+        type: 'data_change',
+        change_type: 'update',
+        entity_type: 'client',
+        entity_id: 'polling-fallback',
+        data: lastPolledData,
+        timestamp: new Date().toISOString()
+      }])
+    }
+  }, [lastPolledData, isConnected])
+
   const getChangesForEntity = useCallback((entityType: string) => {
     return dataChanges.filter(change => change.entity_type === entityType)
   }, [dataChanges])
@@ -62,6 +77,7 @@ export function useRealTimeData() {
     dataChanges,
     clearDataChanges,
     getChangesForEntity,
-    hasChangesForEntity
+    hasChangesForEntity,
+    isPollingFallback: !isConnected
   }
 }

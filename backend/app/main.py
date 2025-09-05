@@ -227,12 +227,14 @@ class ConnectionManager:
                     del self.active_connections[user_token]
 
     async def broadcast_data_change(self, change_type: str, entity_type: str, entity_id: str, data: dict):
+        serializable_data = self._make_serializable(data)
+        
         message = {
             "type": "data_change",
             "change_type": change_type,
             "entity_type": entity_type,
             "entity_id": entity_id,
-            "data": data,
+            "data": serializable_data,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -248,6 +250,17 @@ class ConnectionManager:
         
         for connection, user_token in disconnected_connections:
             self.disconnect(connection, user_token)
+    
+    def _make_serializable(self, obj):
+        """Convert datetime objects to ISO format strings for JSON serialization"""
+        if isinstance(obj, dict):
+            return {key: self._make_serializable(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_serializable(item) for item in obj]
+        elif isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        else:
+            return obj
 
 def db_to_pydantic_client(db_client: ClientDB) -> Client:
     return Client(
@@ -351,11 +364,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         await websocket.accept()
         manager.connect(websocket, token)
+        
+        import asyncio
+        async def ping_task():
+            while True:
+                try:
+                    await asyncio.sleep(25)
+                    if websocket.client_state == websocket.client_state.CONNECTED:
+                        await websocket.ping()
+                except Exception:
+                    break
+        
+        ping_coroutine = asyncio.create_task(ping_task())
+        
         try:
             while True:
                 data = await websocket.receive_text()
                 print(f"Received WebSocket message: {data}")
         except WebSocketDisconnect:
+            ping_coroutine.cancel()
             manager.disconnect(websocket, token)
     except jwt.InvalidTokenError:
         await websocket.close(code=1008)
@@ -363,6 +390,23 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
+
+@app.get("/api/health/websocket")
+async def websocket_health():
+    connection_count = sum(len(connections) for connections in manager.active_connections.values())
+    return {
+        "status": "ok",
+        "active_connections": connection_count,
+        "total_users": len(manager.active_connections)
+    }
+
+@app.get("/api/health/database")
+async def database_health(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        return {"status": "error", "database": "disconnected", "error": str(e)}
 
 @app.post("/api/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
