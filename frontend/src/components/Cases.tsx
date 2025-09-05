@@ -69,7 +69,8 @@ export default function Cases() {
   const filteredCases = cases.filter(caseItem =>
     caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     caseItem.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase())
+    caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (caseItem.case_name && caseItem.case_name.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -96,7 +97,7 @@ export default function Cases() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Dava başlığı, müvekkil adı veya dava numarası ile ara..."
+            placeholder="Dava başlığı, müvekkil adı, dava numarası veya dava adı ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -118,8 +119,7 @@ export default function Cases() {
             <SelectItem value="Temyiz">Temyiz</SelectItem>
             <SelectItem value="İstinaf İtirazlı">İstinaf İtirazlı</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>
-            <SelectItem value="Protokollü">Protokollü</SelectItem>
-            <SelectItem value="Sözlü Taahütlü">Sözlü Taahütlü</SelectItem>
+            <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -147,6 +147,7 @@ export default function Cases() {
                   <TableHead>Dosya No</TableHead>
                   <TableHead>Müvekkil</TableHead>
                   <TableHead>Karşı Taraf</TableHead>
+                  <TableHead>Dava Adı</TableHead>
                   <TableHead>Hatırlatma Tarihi</TableHead>
                   <TableHead>Hatırlatma Metni</TableHead>
                   <TableHead>İşlemler</TableHead>
@@ -159,6 +160,7 @@ export default function Cases() {
                     <TableCell>{caseItem.case_number}</TableCell>
                     <TableCell>{caseItem.client_name}</TableCell>
                     <TableCell>{caseItem.defendant}</TableCell>
+                    <TableCell>{caseItem.case_name || '-'}</TableCell>
                     <TableCell>
                       {caseItem.reminder_date 
                         ? new Date(caseItem.reminder_date).toLocaleDateString('tr-TR')
