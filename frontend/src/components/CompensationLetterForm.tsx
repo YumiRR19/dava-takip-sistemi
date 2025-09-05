@@ -26,6 +26,7 @@ export default function CompensationLetterForm() {
     status: '',
     description_text: ''
   })
+  const [currentVersion, setCurrentVersion] = useState<number>(1)
 
   useEffect(() => {
     if (isEdit && id) {
@@ -47,6 +48,7 @@ export default function CompensationLetterForm() {
         status: letter.status,
         description_text: letter.description_text || ''
       })
+      setCurrentVersion(letter.version)
     } catch (error) {
       toast({
         title: "Hata",
@@ -71,7 +73,8 @@ export default function CompensationLetterForm() {
           court: formData.court,
           case_number: formData.case_number,
           status: formData.status,
-          description_text: formData.description_text || undefined
+          description_text: formData.description_text || undefined,
+          version: currentVersion
         }
         await api.compensationLetters.update(id, updateData)
         toast({
@@ -96,12 +99,23 @@ export default function CompensationLetterForm() {
         })
       }
       navigate('/compensation-letters')
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: isEdit ? "Teminat mektubu güncellenirken bir hata oluştu." : "Teminat mektubu oluşturulurken bir hata oluştu.",
-        variant: "destructive",
-      })
+    } catch (error: any) {
+      if (error.status === 409) {
+        toast({
+          title: "Çakışma Hatası",
+          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          variant: "destructive",
+        })
+        if (isEdit && id) {
+          loadLetter(id)
+        }
+      } else {
+        toast({
+          title: "Hata",
+          description: isEdit ? "Teminat mektubu güncellenirken bir hata oluştu." : "Teminat mektubu oluşturulurken bir hata oluştu.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }

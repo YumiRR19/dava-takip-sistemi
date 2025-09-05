@@ -34,6 +34,7 @@ export default function CaseForm() {
     reminder_date: '',
     office_archive_no: '',
   })
+  const [currentVersion, setCurrentVersion] = useState<number>(1)
 
   useEffect(() => {
     loadClients()
@@ -79,6 +80,7 @@ export default function CaseForm() {
         reminder_date: caseData.reminder_date ? new Date(caseData.reminder_date).toISOString().split('T')[0] : '',
         office_archive_no: caseData.office_archive_no || '',
       })
+      setCurrentVersion(caseData.version)
     } catch (error) {
       toast({
         title: "Hata",
@@ -133,7 +135,10 @@ export default function CaseForm() {
 
     try {
       if (isEdit && id) {
-        const updateData: CaseUpdate = { ...submissionData }
+        const updateData: CaseUpdate = { 
+          ...submissionData,
+          version: currentVersion
+        }
         if (!updateData.next_hearing_date) {
           delete updateData.next_hearing_date
         }
@@ -161,12 +166,23 @@ export default function CaseForm() {
       navigate('/cases')
     } catch (error: any) {
       console.error('Submission error:', error)
-      const errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
-      toast({
-        title: "Hata",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      if (error.status === 409) {
+        toast({
+          title: "Çakışma Hatası",
+          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          variant: "destructive",
+        })
+        if (isEdit && id) {
+          loadCase(id)
+        }
+      } else {
+        const errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
+        toast({
+          title: "Hata",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }

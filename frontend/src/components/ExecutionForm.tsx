@@ -33,6 +33,7 @@ export default function ExecutionForm() {
     notes: '',
     haciz_durumu: '',
   })
+  const [currentVersion, setCurrentVersion] = useState<number>(1)
 
   useEffect(() => {
     loadClients()
@@ -77,6 +78,7 @@ export default function ExecutionForm() {
         notes: executionData.notes || '',
         haciz_durumu: executionData.haciz_durumu || '',
       })
+      setCurrentVersion(executionData.version)
     } catch (error) {
       toast({
         title: "Hata",
@@ -127,7 +129,10 @@ export default function ExecutionForm() {
 
     try {
       if (isEdit && id) {
-        const updateData: ExecutionUpdate = { ...submissionData }
+        const updateData: ExecutionUpdate = { 
+          ...submissionData,
+          version: currentVersion
+        }
         if (!updateData.reminder_date) {
           delete updateData.reminder_date
         }
@@ -152,12 +157,23 @@ export default function ExecutionForm() {
       navigate('/executions')
     } catch (error: any) {
       console.error('Submission error:', error)
-      const errorMessage = error.message || (isEdit ? "İcra güncellenirken bir hata oluştu." : "İcra oluşturulurken bir hata oluştu.")
-      toast({
-        title: "Hata",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      if (error.status === 409) {
+        toast({
+          title: "Çakışma Hatası",
+          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          variant: "destructive",
+        })
+        if (isEdit && id) {
+          loadExecution(id)
+        }
+      } else {
+        const errorMessage = error.message || (isEdit ? "İcra güncellenirken bir hata oluştu." : "İcra oluşturulurken bir hata oluştu.")
+        toast({
+          title: "Hata",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }
