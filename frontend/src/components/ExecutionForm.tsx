@@ -31,6 +31,7 @@ export default function ExecutionForm() {
     reminder_date: '',
     reminder_text: '',
     notes: '',
+    haciz_durumu: '',
   })
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export default function ExecutionForm() {
         reminder_date: executionData.reminder_date ? new Date(executionData.reminder_date).toISOString().split('T')[0] : '',
         reminder_text: executionData.reminder_text || '',
         notes: executionData.notes || '',
+        haciz_durumu: executionData.haciz_durumu || '',
       })
     } catch (error) {
       toast({
@@ -120,6 +122,7 @@ export default function ExecutionForm() {
       reminder_date: formData.reminder_date || undefined,
       reminder_text: formData.reminder_text || undefined,
       notes: formData.notes || undefined,
+      haciz_durumu: formData.haciz_durumu || undefined,
     }
 
     try {
@@ -224,6 +227,10 @@ export default function ExecutionForm() {
                     <SelectItem value="ADANA 1.GENEL İCRA">ADANA 1.GENEL İCRA</SelectItem>
                     <SelectItem value="ADANA 2.GENEL İCRA">ADANA 2.GENEL İCRA</SelectItem>
                     <SelectItem value="ADANA 3.GENEL İCRA">ADANA 3.GENEL İCRA</SelectItem>
+                    <SelectItem value="ADANA BANKA ALACAKLARI İCRA DAİRESİ">ADANA BANKA ALACAKLARI İCRA DAİRESİ</SelectItem>
+                    <SelectItem value="GAYRİMENKUL SATIŞ İCRA DAİRESİ">GAYRİMENKUL SATIŞ İCRA DAİRESİ</SelectItem>
+                    <SelectItem value="GAZİANTEP İCRA DAİRESİ">GAZİANTEP İCRA DAİRESİ</SelectItem>
+                    <SelectItem value="KAHRAMANMARAŞ İCRA DAİRESİ">KAHRAMANMARAŞ İCRA DAİRESİ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -301,6 +308,20 @@ export default function ExecutionForm() {
                   value={formData.reminder_date}
                   onChange={(e) => handleChange('reminder_date', e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="haciz_durumu">Haciz Durumu</Label>
+                <Select value={formData.haciz_durumu} onValueChange={(value) => handleChange('haciz_durumu', value)} name="haciz_durumu">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Haciz durumu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Hacizli Araç">Hacizli Araç</SelectItem>
+                    <SelectItem value="Yakalamalı">Yakalamalı</SelectItem>
+                    <SelectItem value="Hacizli Gayrimenkul">Hacizli Gayrimenkul</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -120,17 +120,39 @@ export default function Dashboard() {
             <div className="space-y-3">
               {(data.upcoming_reminders || []).slice(0, 5).map((reminder) => (
                 <div 
-                  key={reminder.case_id} 
+                  key={reminder.type === 'case' ? reminder.case_id : reminder.execution_id} 
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                  onDoubleClick={() => navigate(`/cases/${reminder.case_id}/edit`)}
+                  onDoubleClick={() => {
+                    if (reminder.type === 'case') {
+                      navigate(`/cases/${reminder.case_id}/edit`)
+                    } else {
+                      navigate(`/executions/${reminder.execution_id}/edit`)
+                    }
+                  }}
                 >
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-600">Dosya No: {reminder.case_number}</p>
-                    <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
-                    <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
-                    <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
-                    {reminder.description && (
-                      <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
+                    {reminder.type === 'case' ? (
+                      <>
+                        <p className="text-sm font-medium text-blue-600">Dosya No: {reminder.case_number}</p>
+                        {reminder.case_name && (
+                          <p className="text-xs text-gray-700 font-medium">Dava Adı: {reminder.case_name}</p>
+                        )}
+                        <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
+                        <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
+                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        {reminder.description && (
+                          <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-blue-600">İcra No: {reminder.execution_number}</p>
+                        <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
+                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        {reminder.reminder_text && (
+                          <p className="text-xs text-gray-500 mt-1">Hatırlatma Metni: {reminder.reminder_text}</p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="text-right">

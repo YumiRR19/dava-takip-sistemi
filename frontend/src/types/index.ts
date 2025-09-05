@@ -30,6 +30,7 @@ export interface ClientUpdate {
 export interface Case {
   id: string
   title: string
+  case_name?: string
   description?: string
   client_id: string
   client_name: string
@@ -50,6 +51,7 @@ export interface Case {
 
 export interface CaseCreate {
   title: string
+  case_name?: string
   description?: string
   client_id: string
   case_type: string
@@ -66,6 +68,7 @@ export interface CaseCreate {
 
 export interface CaseUpdate {
   title?: string
+  case_name?: string
   description?: string
   case_type?: string
   status?: string
@@ -103,15 +106,21 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    case_id: string
-    case_title: string
-    case_number: string
+    type: 'case' | 'execution'
+    case_id?: string
+    case_title?: string
+    case_name?: string
+    case_number?: string
+    execution_id?: string
+    execution_number?: string
+    execution_office?: string
     client_name: string
     reminder_date: string
-    court: string
-    status: string
+    court?: string
+    status?: string
     defendant: string
     description?: string
+    reminder_text?: string
   }>
 }
 
@@ -127,6 +136,7 @@ export interface CompensationLetter {
   court: string
   case_number: string
   status: string
+  description_text?: string
   created_at: string
   updated_at: string
   version: number
@@ -140,6 +150,7 @@ export interface CompensationLetterCreate {
   court: string
   case_number: string
   status: string
+  description_text?: string
 }
 
 export interface CompensationLetterUpdate {
@@ -150,6 +161,7 @@ export interface CompensationLetterUpdate {
   court?: string
   case_number?: string
   status?: string
+  description_text?: string
   version?: number
 }
 
@@ -167,6 +179,7 @@ export interface Execution {
   reminder_date?: string
   reminder_text?: string
   notes?: string
+  haciz_durumu?: string
   created_at: string
   updated_at: string
   version: number
@@ -184,6 +197,7 @@ export interface ExecutionCreate {
   reminder_date?: string
   reminder_text?: string
   notes?: string
+  haciz_durumu?: string
 }
 
 export interface ExecutionUpdate {
@@ -196,5 +210,6 @@ export interface ExecutionUpdate {
   reminder_date?: string
   reminder_text?: string
   notes?: string
+  haciz_durumu?: string
   version?: number
 }

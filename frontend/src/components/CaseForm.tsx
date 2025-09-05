@@ -27,6 +27,7 @@ export default function CaseForm() {
   const [formData, setFormData] = useState({
     description: '',
     client_id: '',
+    case_name: '',
     case_type: '',
     status: 'Derdest',
     court: '',
@@ -71,6 +72,7 @@ export default function CaseForm() {
       setFormData({
         description: caseData.description || '',
         client_id: caseData.client_id,
+        case_name: caseData.case_name || '',
         case_type: caseData.case_type,
         status: caseData.status,
         court: caseData.court,
@@ -117,6 +119,7 @@ export default function CaseForm() {
 
     const submissionData = {
       title: formData.case_number,
+      case_name: formData.case_name || undefined,
       description: formData.description,
       client_id: formData.client_id,
       case_type: formData.case_type,
@@ -217,6 +220,17 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="case_name">Dava Adı</Label>
+                <Input
+                  id="case_name"
+                  name="case_name"
+                  value={formData.case_name}
+                  onChange={(e) => handleChange('case_name', e.target.value)}
+                  placeholder="Dava adını girin"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="defendant">Karşı Taraf *</Label>
                 <Input
                   id="defendant"
@@ -253,9 +267,46 @@ export default function CaseForm() {
                         <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
                         <CommandGroup>
                           {[
-                            "ADANA BANKA ALACAKLARI",
-                            "GAYRİMENKUL SATIŞ İCRA DAİRESİ",
-                            "GAZİANTEP İCRA DAİRESİ"
+                            "ADANA 1. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 2. ASLIYE CEZA MAHKEMESİ", 
+                            "ADANA 3. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 4. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 5. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 6. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 7. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 8. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 9. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 10. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 11. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 12. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 13. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 14. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 15. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 16. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 17. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 18. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 19. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 20. ASLIYE CEZA MAHKEMESİ",
+                            "ADANA 1. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 2. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 3. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 4. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 5. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 6. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 7. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 8. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 9. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 10. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 11. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 12. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 13. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 14. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 15. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 16. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 17. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 18. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 19. ASLIYE HUKUK MAHKEMESİ",
+                            "ADANA 20. ASLIYE HUKUK MAHKEMESİ"
                           ].map((court) => (
                             <CommandItem
                               key={court}
@@ -309,10 +360,8 @@ export default function CaseForm() {
                     <SelectItem value="İnfaz">İnfaz</SelectItem>
                     <SelectItem value="Temyiz">Temyiz</SelectItem>
                     <SelectItem value="İstinaf">İstinaf</SelectItem>
-                    <SelectItem value="İtirazlı">İtirazlı</SelectItem>
                     <SelectItem value="Derdest">Derdest</SelectItem>
-                    <SelectItem value="Protokollü">Protokollü</SelectItem>
-                    <SelectItem value="Sözlü Taahütlü">Sözlü Taahütlü</SelectItem>
+                    <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -16,6 +16,7 @@ export default function Executions() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [hacizFilter, setHacizFilter] = useState<string>('all')
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -25,7 +26,7 @@ export default function Executions() {
 
   useEffect(() => {
     filterExecutions()
-  }, [executions, searchTerm, statusFilter])
+  }, [executions, searchTerm, statusFilter, hacizFilter])
 
   const loadExecutions = async () => {
     try {
@@ -49,12 +50,17 @@ export default function Executions() {
       filtered = filtered.filter(execution =>
         execution.execution_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         execution.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        execution.defendant.toLowerCase().includes(searchTerm.toLowerCase())
+        execution.defendant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (execution.haciz_durumu && execution.haciz_durumu.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     }
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter(execution => execution.status === statusFilter)
+    }
+
+    if (hacizFilter !== 'all') {
+      filtered = filtered.filter(execution => execution.haciz_durumu === hacizFilter)
     }
 
     setFilteredExecutions(filtered)
@@ -133,7 +139,7 @@ export default function Executions() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="İcra no, müvekkil veya karşı taraf ara..."
+                  placeholder="İcra no, müvekkil, karşı taraf veya haciz durumu ara..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -154,6 +160,17 @@ export default function Executions() {
                 <SelectItem value="Davalı">Davalı</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={hacizFilter} onValueChange={setHacizFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Haciz durumu filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Haciz Durumları</SelectItem>
+                <SelectItem value="Hacizli Araç">Hacizli Araç</SelectItem>
+                <SelectItem value="Yakalamalı">Yakalamalı</SelectItem>
+                <SelectItem value="Hacizli Gayrimenkul">Hacizli Gayrimenkul</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="rounded-md border">
@@ -165,6 +182,7 @@ export default function Executions() {
                   <TableHead>Müvekkil</TableHead>
                   <TableHead>Karşı Taraf</TableHead>
                   <TableHead>Durum</TableHead>
+                  <TableHead>Haciz Durumu</TableHead>
                   <TableHead>Açılış Tarihi</TableHead>
                   <TableHead>Hatırlatma</TableHead>
                   <TableHead className="text-right">İşlemler</TableHead>
@@ -173,8 +191,8 @@ export default function Executions() {
               <TableBody>
                 {filteredExecutions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                      {searchTerm || statusFilter !== 'all' ? 'Arama kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                      {searchTerm || statusFilter !== 'all' || hacizFilter !== 'all' ? 'Arama kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -188,6 +206,15 @@ export default function Executions() {
                         <Badge variant={getStatusBadgeVariant(execution.status)}>
                           {execution.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {execution.haciz_durumu ? (
+                          <Badge variant="outline">
+                            {execution.haciz_durumu}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {new Date(execution.start_date).toLocaleDateString('tr-TR')}

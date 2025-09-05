@@ -59,6 +59,7 @@ class ClientUpdate(BaseModel):
 class Case(BaseModel):
     id: str
     title: str
+    case_name: Optional[str] = None
     description: Optional[str] = None
     client_id: str
     client_name: str
@@ -78,6 +79,7 @@ class Case(BaseModel):
 
 class CaseCreate(BaseModel):
     title: str
+    case_name: Optional[str] = None
     description: Optional[str] = None
     client_id: str
     case_type: str
@@ -93,6 +95,7 @@ class CaseCreate(BaseModel):
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
+    case_name: Optional[str] = None
     description: Optional[str] = None
     case_type: Optional[str] = None
     status: Optional[str] = None
@@ -121,6 +124,7 @@ class CompensationLetter(BaseModel):
     court: str
     case_number: str
     status: str
+    description_text: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int = 1
@@ -133,6 +137,7 @@ class CompensationLetterCreate(BaseModel):
     court: str
     case_number: str
     status: str
+    description_text: Optional[str] = None
 
 class CompensationLetterUpdate(BaseModel):
     letter_number: Optional[str] = None
@@ -142,6 +147,7 @@ class CompensationLetterUpdate(BaseModel):
     court: Optional[str] = None
     case_number: Optional[str] = None
     status: Optional[str] = None
+    description_text: Optional[str] = None
     version: Optional[int] = None
 
 compensation_letters_db: dict[str, CompensationLetter] = {}
@@ -160,6 +166,7 @@ class Execution(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
+    haciz_durumu: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int = 1
@@ -176,6 +183,7 @@ class ExecutionCreate(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
+    haciz_durumu: Optional[str] = None
 
 class ExecutionUpdate(BaseModel):
     defendant: Optional[str] = None
@@ -187,6 +195,7 @@ class ExecutionUpdate(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
+    haciz_durumu: Optional[str] = None
     version: Optional[int] = None
 
 executions_db: dict[str, Execution] = {}
@@ -585,6 +594,7 @@ async def create_case(case: CaseCreate, token: str = Depends(verify_token)):
         new_case = Case(
             id=case_id,
             title=case.title,
+            case_name=case.case_name,
             description=case.description or "",
             client_id=case.client_id,
             client_name=client.name,
@@ -757,8 +767,10 @@ async def get_dashboard(token: str = Depends(verify_token)):
             
             if today <= reminder_date_obj <= upcoming_deadline:
                 upcoming_reminders.append({
+                    "type": "case",
                     "case_id": case.id,
                     "case_title": case.title,
+                    "case_name": case.case_name or "",
                     "case_number": case.case_number,
                     "client_name": case.client_name,
                     "reminder_date": case.reminder_date,
@@ -766,6 +778,24 @@ async def get_dashboard(token: str = Depends(verify_token)):
                     "status": case.status,
                     "defendant": case.defendant,
                     "description": case.description or ""
+                })
+    
+    for execution in executions_db.values():
+        if execution.reminder_date:
+            reminder_date_obj = execution.reminder_date
+            if hasattr(execution.reminder_date, 'date'):
+                reminder_date_obj = execution.reminder_date.date()
+            
+            if today <= reminder_date_obj <= upcoming_deadline:
+                upcoming_reminders.append({
+                    "type": "execution",
+                    "execution_id": execution.id,
+                    "execution_number": execution.execution_number,
+                    "execution_office": execution.execution_office,
+                    "client_name": execution.client_name,
+                    "reminder_date": execution.reminder_date,
+                    "defendant": execution.defendant,
+                    "reminder_text": execution.reminder_text or ""
                 })
     
     upcoming_reminders.sort(key=lambda x: x["reminder_date"])
@@ -796,6 +826,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, token: st
             court=letter.court,
             case_number=letter.case_number,
             status=letter.status,
+            description_text=letter.description_text,
             created_at=now,
             updated_at=now,
             version=1
@@ -901,6 +932,7 @@ async def create_execution(execution: ExecutionCreate, token: str = Depends(veri
             reminder_date=execution.reminder_date,
             reminder_text=execution.reminder_text,
             notes=execution.notes,
+            haciz_durumu=execution.haciz_durumu,
             created_at=now,
             updated_at=now,
             version=1
@@ -917,7 +949,7 @@ async def create_execution(execution: ExecutionCreate, token: str = Depends(veri
         raise HTTPException(status_code=500, detail=f"Error creating execution: {str(e)}")
 
 @app.get("/api/executions", response_model=List[Execution])
-async def get_executions(status: Optional[str] = None, client_id: Optional[str] = None, token: str = Depends(verify_token)):
+async def get_executions(status: Optional[str] = None, client_id: Optional[str] = None, haciz_durumu: Optional[str] = None, token: str = Depends(verify_token)):
     executions = list(executions_db.values())
     
     if status:
@@ -925,6 +957,9 @@ async def get_executions(status: Optional[str] = None, client_id: Optional[str] 
     
     if client_id:
         executions = [execution for execution in executions if execution.client_id == client_id]
+    
+    if haciz_durumu:
+        executions = [execution for execution in executions if execution.haciz_durumu and execution.haciz_durumu.lower() == haciz_durumu.lower()]
     
     return executions
 
