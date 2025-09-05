@@ -368,19 +368,14 @@ export default function CaseForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="case_type">Dava Türü *</Label>
-                <Select value={formData.case_type} onValueChange={(value) => handleChange('case_type', value)} name="case_type">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Dava türü seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="Hukuk">Hukuk</SelectItem>
-                    <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
-                    <SelectItem value="Satış Memuru">Satış Memuru</SelectItem>
-                    <SelectItem value="Ara Buluculuk">Ara Buluculuk</SelectItem>
-                    <SelectItem value="Tazminat Komisyonu Başkanlığı">Tazminat Komisyonu Başkanlığı</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="case_type"
+                  name="case_type"
+                  value={formData.case_type}
+                  onChange={(e) => handleChange('case_type', e.target.value)}
+                  placeholder="Dava türünü manuel olarak girin"
+                  required
+                />
               </div>
 
               <div className="space-y-2">
