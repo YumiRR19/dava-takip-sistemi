@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (password: string): Promise<boolean> => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     if (token) {
       try {
-        await fetch(`${API_URL}/api/auth/logout`, {
+        await fetch(`${API_URL}/api/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
