@@ -13,6 +13,9 @@ import threading
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="LexCloud API", version="1.0.0")
 
@@ -403,7 +406,8 @@ async def websocket_health():
 @app.get("/api/health/database")
 async def database_health(db: Session = Depends(get_db)):
     try:
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         return {"status": "ok", "database": "connected"}
     except Exception as e:
         return {"status": "error", "database": "disconnected", "error": str(e)}

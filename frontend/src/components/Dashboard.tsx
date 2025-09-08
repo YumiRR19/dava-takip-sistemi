@@ -34,8 +34,8 @@ export default function Dashboard() {
       
       setHealthStatus({
         api: true,
-        websocket: wsHealth.status === 'ok',
-        database: dbHealth.status === 'ok'
+        websocket: (wsHealth as any).status === 'ok',
+        database: (dbHealth as any).status === 'ok'
       })
     } catch (error) {
       setHealthStatus(prev => ({ ...prev, api: false }))
