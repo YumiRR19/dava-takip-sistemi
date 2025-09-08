@@ -106,7 +106,7 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution'
+    type: 'case' | 'execution' | 'compensation_letter'
     case_id?: string
     case_title?: string
     case_name?: string
@@ -114,11 +114,14 @@ export interface DashboardData {
     execution_id?: string
     execution_number?: string
     execution_office?: string
+    compensation_letter_id?: string
+    letter_number?: string
+    customer?: string
     client_name: string
     reminder_date: string
     court?: string
     status?: string
-    defendant: string
+    defendant?: string
     description?: string
     reminder_text?: string
   }>
@@ -137,6 +140,8 @@ export interface CompensationLetter {
   case_number: string
   status: string
   description_text?: string
+  reminder_date?: string
+  reminder_text?: string
   created_at: string
   updated_at: string
   version: number
@@ -152,6 +157,8 @@ export interface CompensationLetterCreate {
   case_number: string
   status: string
   description_text?: string
+  reminder_date?: string
+  reminder_text?: string
 }
 
 export interface CompensationLetterUpdate {
@@ -164,6 +171,8 @@ export interface CompensationLetterUpdate {
   case_number?: string
   status?: string
   description_text?: string
+  reminder_date?: string
+  reminder_text?: string
   version?: number
 }
 

@@ -252,7 +252,7 @@ export default function ExecutionForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="execution_number">İcra No *</Label>
+                <Label htmlFor="execution_number">İcra Dosya No *</Label>
                 <Input
                   id="execution_number"
                   name="execution_number"

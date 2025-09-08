@@ -55,7 +55,7 @@ export default function Clients() {
       })
     } catch (error: any) {
       const errorMessage = error.message.includes('existing cases') 
-        ? 'Bu müvekkile ait davalar bulunduğu için silinemez.'
+        ? 'Bu müvekkile ait dava dosyaları bulunduğu için silinemez.'
         : 'Müvekkil silinirken bir hata oluştu.'
       
       toast({

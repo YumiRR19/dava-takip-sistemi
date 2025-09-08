@@ -126,6 +126,8 @@ class CompensationLetter(BaseModel):
     case_number: str
     status: str
     description_text: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -140,6 +142,8 @@ class CompensationLetterCreate(BaseModel):
     case_number: str
     status: str
     description_text: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -151,6 +155,8 @@ class CompensationLetterUpdate(BaseModel):
     case_number: Optional[str] = None
     status: Optional[str] = None
     description_text: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -315,6 +321,8 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         case_number=db_letter.case_number,
         status=db_letter.status,
         description_text=db_letter.description_text,
+        reminder_date=db_letter.reminder_date,
+        reminder_text=db_letter.reminder_text,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -813,6 +821,26 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "days_until": days_until
                 })
     
+    db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None)).all()
+    for letter in db_compensation_letters:
+        if letter.reminder_date:
+            reminder_date = letter.reminder_date
+            days_until = (reminder_date - date.today()).days
+            
+            if 0 <= days_until <= 7:
+                upcoming_reminders.append({
+                    "type": "compensation_letter",
+                    "compensation_letter_id": letter.id,
+                    "letter_number": letter.letter_number,
+                    "court": letter.court,
+                    "case_number": letter.case_number,
+                    "customer": letter.customer,
+                    "client_name": letter.client_name,
+                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_text": letter.reminder_text,
+                    "days_until": days_until
+                })
+    
     upcoming_reminders.sort(key=lambda x: x["days_until"])
     
     return {
@@ -843,6 +871,8 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         case_number=letter.case_number,
         status=letter.status,
         description_text=letter.description_text,
+        reminder_date=letter.reminder_date,
+        reminder_text=letter.reminder_text,
         created_at=now,
         updated_at=now,
         version=1

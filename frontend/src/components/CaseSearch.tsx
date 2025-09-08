@@ -338,7 +338,7 @@ export default function CaseSearch() {
         <CardHeader>
           <CardTitle>Arama Filtreleri</CardTitle>
           <CardDescription>
-            Davaları filtrelemek için aşağıdaki kriterleri kullanın.
+            Dava Dosyalarını filtrelemek için aşağıdaki kriterleri kullanın.
           </CardDescription>
         </CardHeader>
         <CardContent>

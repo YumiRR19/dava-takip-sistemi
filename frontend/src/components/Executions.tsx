@@ -35,7 +35,7 @@ export default function Executions() {
     } catch (error) {
       toast({
         title: "Hata",
-        description: "İcralar yüklenirken bir hata oluştu.",
+        description: "İcra Takipleri yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
     } finally {
@@ -117,7 +117,7 @@ export default function Executions() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">İcralar</h1>
+        <h1 className="text-3xl font-bold text-gray-900">İcra Takipleri</h1>
         <Button asChild>
           <Link to="/executions/new">
             <Plus className="h-4 w-4 mr-2" />
@@ -139,7 +139,7 @@ export default function Executions() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="İcra no, müvekkil, karşı taraf veya haciz durumu ara..."
+                  placeholder="İcra dosya no, müvekkil, karşı taraf veya haciz durumu ara..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -178,7 +178,7 @@ export default function Executions() {
               <TableHeader>
                 <TableRow>
                   <TableHead>İcra</TableHead>
-                  <TableHead>İcra No</TableHead>
+                  <TableHead>İcra Dosya No</TableHead>
                   <TableHead>Müvekkil</TableHead>
                   <TableHead>Karşı Taraf</TableHead>
                   <TableHead>Durum</TableHead>

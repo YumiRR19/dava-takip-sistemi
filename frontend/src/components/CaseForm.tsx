@@ -266,7 +266,7 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="case_number">Dava No *</Label>
+                <Label htmlFor="case_number">Dava Dosya No *</Label>
                 <Input
                   id="case_number"
                   name="case_number"

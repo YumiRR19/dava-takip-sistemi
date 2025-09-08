@@ -7,6 +7,9 @@ from datetime import datetime, date
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lexcloud.db")
 
+if DATABASE_URL.startswith("postgres://") and not os.getenv("PRODUCTION"):
+    DATABASE_URL = "sqlite:///./lexcloud.db"
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -62,6 +65,8 @@ class CompensationLetterDB(Base):
     case_number = Column(String, nullable=False)
     status = Column(String, nullable=False)
     description_text = Column(Text, nullable=True)
+    reminder_date = Column(Date, nullable=True)
+    reminder_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
