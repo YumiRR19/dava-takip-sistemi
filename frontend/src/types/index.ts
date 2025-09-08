@@ -143,6 +143,7 @@ export interface CompensationLetter {
 }
 
 export interface CompensationLetterCreate {
+  client_id: string
   letter_number: string
   bank: string
   customer_number: string
@@ -154,6 +155,7 @@ export interface CompensationLetterCreate {
 }
 
 export interface CompensationLetterUpdate {
+  client_id?: string
   letter_number?: string
   bank?: string
   customer_number?: string

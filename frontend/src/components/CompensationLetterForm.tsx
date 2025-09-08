@@ -17,6 +17,7 @@ export default function CompensationLetterForm() {
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
+    client_id: '',
     letter_number: '',
     bank: '',
     customer_number: '',
@@ -26,9 +27,24 @@ export default function CompensationLetterForm() {
     status: '',
     description_text: ''
   })
+  const [clients, setClients] = useState<any[]>([])
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
+  const loadClients = async () => {
+    try {
+      const clientsData = await api.clients.getAll()
+      setClients(clientsData)
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Müvekiller yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    }
+  }
+
   useEffect(() => {
+    loadClients()
     if (isEdit && id) {
       loadLetter(id)
     }
@@ -39,6 +55,7 @@ export default function CompensationLetterForm() {
     try {
       const letter = await api.compensationLetters.getById(letterId)
       setFormData({
+        client_id: letter.client_id,
         letter_number: letter.letter_number,
         bank: letter.bank,
         customer_number: letter.customer_number,
@@ -66,6 +83,7 @@ export default function CompensationLetterForm() {
     try {
       if (isEdit && id) {
         const updateData: CompensationLetterUpdate = {
+          client_id: formData.client_id,
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -83,6 +101,7 @@ export default function CompensationLetterForm() {
         })
       } else {
         const createData: CompensationLetterCreate = {
+          client_id: formData.client_id,
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -140,6 +159,26 @@ export default function CompensationLetterForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="client_id">Müvekkil *</Label>
+                <Select
+                  value={formData.client_id}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Müvekkil seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="letter_number">Mektup No *</Label>
                 <Input
