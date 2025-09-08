@@ -96,7 +96,7 @@ export default function CompensationLetterForm() {
           case_number: formData.case_number,
           status: formData.status,
           description_text: formData.description_text || undefined,
-          reminder_date: formData.reminder_date || undefined,
+          reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
           reminder_text: formData.reminder_text || undefined,
           version: currentVersion
         }
@@ -116,7 +116,7 @@ export default function CompensationLetterForm() {
           case_number: formData.case_number,
           status: formData.status,
           description_text: formData.description_text || undefined,
-          reminder_date: formData.reminder_date || undefined,
+          reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
           reminder_text: formData.reminder_text || undefined
         }
         await api.compensationLetters.create(createData)
@@ -254,6 +254,19 @@ export default function CompensationLetterForm() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="reminder_date">Hatırlatma Tarihi</Label>
+                <Input
+                  id="reminder_date"
+                  type="date"
+                  value={formData.reminder_date}
+                  onChange={(e) => {
+                    const dateValue = e.target.value
+                    setFormData({ ...formData, reminder_date: dateValue })
+                  }}
+                />
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="status">Durumu *</Label>
                 <Select
@@ -274,6 +287,16 @@ export default function CompensationLetterForm() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="reminder_text">Hatırlatma Metni</Label>
+              <Input
+                id="reminder_text"
+                value={formData.reminder_text}
+                onChange={(e) => setFormData({ ...formData, reminder_text: e.target.value })}
+                placeholder="Hatırlatma metni girin"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description_text">Açıklama Metni</Label>
               <textarea
                 id="description_text"
@@ -283,28 +306,6 @@ export default function CompensationLetterForm() {
                 placeholder="Açıklama metni girin"
                 rows={3}
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="reminder_date">Hatırlatma Tarihi</Label>
-                <Input
-                  id="reminder_date"
-                  type="date"
-                  value={formData.reminder_date}
-                  onChange={(e) => setFormData({ ...formData, reminder_date: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reminder_text">Hatırlatma Metni</Label>
-                <Input
-                  id="reminder_text"
-                  value={formData.reminder_text}
-                  onChange={(e) => setFormData({ ...formData, reminder_text: e.target.value })}
-                  placeholder="Hatırlatma metni girin"
-                />
-              </div>
             </div>
 
             <div className="flex justify-end space-x-4">
