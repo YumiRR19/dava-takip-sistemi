@@ -33,6 +33,7 @@ export default function CaseForm() {
     next_hearing_date: '',
     reminder_date: '',
     office_archive_no: '',
+    responsible_person: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -79,6 +80,7 @@ export default function CaseForm() {
         next_hearing_date: caseData.next_hearing_date ? new Date(caseData.next_hearing_date).toISOString().split('T')[0] : '',
         reminder_date: caseData.reminder_date ? new Date(caseData.reminder_date).toISOString().split('T')[0] : '',
         office_archive_no: caseData.office_archive_no || '',
+        responsible_person: caseData.responsible_person || ''
       })
       setCurrentVersion(caseData.version)
     } catch (error) {
@@ -129,6 +131,7 @@ export default function CaseForm() {
       next_hearing_date: formData.next_hearing_date,
       reminder_date: formData.reminder_date,
       office_archive_no: formData.office_archive_no,
+      responsible_person: formData.responsible_person || undefined
     }
 
     console.log('Form data before submission:', submissionData)
@@ -360,6 +363,24 @@ export default function CaseForm() {
                   onChange={(e) => handleChange('office_archive_no', e.target.value)}
                   placeholder="Ofis arşiv numarasını girin"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+                <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
+                  <SelectTrigger>
+                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif">Av.M.Şerif</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

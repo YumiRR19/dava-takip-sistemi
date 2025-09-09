@@ -27,7 +27,8 @@ export default function CompensationLetterForm() {
     status: '',
     description_text: '',
     reminder_date: '',
-    reminder_text: ''
+    reminder_text: '',
+    responsible_person: ''
   })
   const [clients, setClients] = useState<any[]>([])
   const [currentVersion, setCurrentVersion] = useState<number>(1)
@@ -67,7 +68,8 @@ export default function CompensationLetterForm() {
         status: letter.status,
         description_text: letter.description_text || '',
         reminder_date: letter.reminder_date ? new Date(letter.reminder_date).toISOString().split('T')[0] : '',
-        reminder_text: letter.reminder_text || ''
+        reminder_text: letter.reminder_text || '',
+        responsible_person: letter.responsible_person || ''
       })
       setCurrentVersion(letter.version)
     } catch (error) {
@@ -98,6 +100,7 @@ export default function CompensationLetterForm() {
           description_text: formData.description_text || undefined,
           reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
           reminder_text: formData.reminder_text || undefined,
+          responsible_person: formData.responsible_person || undefined,
           version: currentVersion
         }
         await api.compensationLetters.update(id, updateData)
@@ -117,7 +120,8 @@ export default function CompensationLetterForm() {
           status: formData.status,
           description_text: formData.description_text || undefined,
           reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
-          reminder_text: formData.reminder_text || undefined
+          reminder_text: formData.reminder_text || undefined,
+          responsible_person: formData.responsible_person || undefined
         }
         await api.compensationLetters.create(createData)
         toast({
@@ -265,6 +269,25 @@ export default function CompensationLetterForm() {
                     setFormData({ ...formData, reminder_date: dateValue })
                   }}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+                <Select value={formData.responsible_person} onValueChange={(value) => setFormData({ ...formData, responsible_person: value })} name="responsible_person">
+                  <SelectTrigger>
+                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif">Av.M.Şerif</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2 md:col-span-2">

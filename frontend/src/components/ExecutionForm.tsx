@@ -32,6 +32,7 @@ export default function ExecutionForm() {
     reminder_text: '',
     notes: '',
     haciz_durumu: '',
+    responsible_person: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -77,6 +78,7 @@ export default function ExecutionForm() {
         reminder_text: executionData.reminder_text || '',
         notes: executionData.notes || '',
         haciz_durumu: executionData.haciz_durumu || '',
+        responsible_person: executionData.responsible_person || ''
       })
       setCurrentVersion(executionData.version)
     } catch (error) {
@@ -125,6 +127,7 @@ export default function ExecutionForm() {
       reminder_text: formData.reminder_text || undefined,
       notes: formData.notes || undefined,
       haciz_durumu: formData.haciz_durumu || undefined,
+      responsible_person: formData.responsible_person || undefined
     }
 
     try {
@@ -339,6 +342,25 @@ export default function ExecutionForm() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+              <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
+                <SelectTrigger>
+                  <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Av.M.Şerif">Av.M.Şerif</SelectItem>
+                  <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                  <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                  <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                  <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                  <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                  <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                  <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

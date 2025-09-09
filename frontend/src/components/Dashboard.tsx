@@ -249,6 +249,11 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="text-right">
+                    {reminder.responsible_person && (
+                      <p className="text-sm font-medium text-red-600 mb-1">
+                        {reminder.responsible_person}
+                      </p>
+                    )}
                     <p className="text-sm font-medium text-red-600">
                       {new Date(reminder.reminder_date).toLocaleDateString('tr-TR')}
                     </p>

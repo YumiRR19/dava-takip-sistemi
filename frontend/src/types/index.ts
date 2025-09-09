@@ -44,6 +44,7 @@ export interface Case {
   next_hearing_date?: string
   reminder_date?: string
   office_archive_no: string
+  responsible_person?: string
   created_at: string
   updated_at: string
   version: number
@@ -64,6 +65,7 @@ export interface CaseCreate {
   next_hearing_date?: string
   reminder_date?: string
   office_archive_no: string
+  responsible_person?: string
 }
 
 export interface CaseUpdate {
@@ -80,6 +82,7 @@ export interface CaseUpdate {
   next_hearing_date?: string
   reminder_date?: string
   office_archive_no?: string
+  responsible_person?: string
   version?: number
 }
 
@@ -124,6 +127,7 @@ export interface DashboardData {
     defendant?: string
     description?: string
     reminder_text?: string
+    responsible_person?: string
   }>
 }
 
@@ -142,6 +146,7 @@ export interface CompensationLetter {
   description_text?: string
   reminder_date?: string
   reminder_text?: string
+  responsible_person?: string
   created_at: string
   updated_at: string
   version: number
@@ -159,6 +164,7 @@ export interface CompensationLetterCreate {
   description_text?: string
   reminder_date?: string
   reminder_text?: string
+  responsible_person?: string
 }
 
 export interface CompensationLetterUpdate {
@@ -173,6 +179,7 @@ export interface CompensationLetterUpdate {
   description_text?: string
   reminder_date?: string
   reminder_text?: string
+  responsible_person?: string
   version?: number
 }
 
@@ -191,6 +198,7 @@ export interface Execution {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  responsible_person?: string
   created_at: string
   updated_at: string
   version: number
@@ -209,6 +217,7 @@ export interface ExecutionCreate {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  responsible_person?: string
 }
 
 export interface ExecutionUpdate {
@@ -222,5 +231,6 @@ export interface ExecutionUpdate {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  responsible_person?: string
   version?: number
 }

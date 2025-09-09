@@ -76,6 +76,7 @@ class Case(BaseModel):
     next_hearing_date: Optional[date] = None
     reminder_date: Optional[date] = None
     office_archive_no: str
+    responsible_person: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -95,6 +96,7 @@ class CaseCreate(BaseModel):
     next_hearing_date: Optional[date] = None
     reminder_date: Optional[date] = None
     office_archive_no: str
+    responsible_person: Optional[str] = None
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -111,6 +113,7 @@ class CaseUpdate(BaseModel):
     next_hearing_date: Optional[date] = None
     reminder_date: Optional[date] = None
     office_archive_no: Optional[str] = None
+    responsible_person: Optional[str] = None
     version: Optional[int] = None
 
 class CompensationLetter(BaseModel):
@@ -128,6 +131,7 @@ class CompensationLetter(BaseModel):
     description_text: Optional[str] = None
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
+    responsible_person: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -144,6 +148,7 @@ class CompensationLetterCreate(BaseModel):
     description_text: Optional[str] = None
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
+    responsible_person: Optional[str] = None
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -157,6 +162,7 @@ class CompensationLetterUpdate(BaseModel):
     description_text: Optional[str] = None
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
+    responsible_person: Optional[str] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -174,6 +180,7 @@ class Execution(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    responsible_person: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -191,6 +198,7 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    responsible_person: Optional[str] = None
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -205,6 +213,7 @@ class ExecutionUpdate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    responsible_person: Optional[str] = None
     version: Optional[int] = None
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
@@ -302,6 +311,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         next_hearing_date=db_case.next_hearing_date,
         reminder_date=db_case.reminder_date,
         office_archive_no=db_case.office_archive_no,
+        responsible_person=db_case.responsible_person,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
         version=db_case.version
@@ -323,6 +333,7 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         description_text=db_letter.description_text,
         reminder_date=db_letter.reminder_date,
         reminder_text=db_letter.reminder_text,
+        responsible_person=db_letter.responsible_person,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -344,6 +355,7 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         reminder_text=db_execution.reminder_text,
         notes=db_execution.notes,
         haciz_durumu=db_execution.haciz_durumu,
+        responsible_person=db_execution.responsible_person,
         created_at=db_execution.created_at,
         updated_at=db_execution.updated_at,
         version=db_execution.version
@@ -643,6 +655,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         next_hearing_date=case.next_hearing_date,
         reminder_date=case.reminder_date,
         office_archive_no=case.office_archive_no,
+        responsible_person=case.responsible_person,
         created_at=now,
         updated_at=now,
         version=1
@@ -799,6 +812,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "defendant": case.defendant,
                     "reminder_date": reminder_date.isoformat(),
                     "description": case.description,
+                    "responsible_person": case.responsible_person,
                     "days_until": days_until
                 })
     
@@ -818,6 +832,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "defendant": execution.defendant,
                     "reminder_date": reminder_date.isoformat(),
                     "reminder_text": execution.reminder_text,
+                    "responsible_person": execution.responsible_person,
                     "days_until": days_until
                 })
     
@@ -838,6 +853,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "client_name": letter.client_name,
                     "reminder_date": reminder_date.isoformat(),
                     "reminder_text": letter.reminder_text,
+                    "responsible_person": letter.responsible_person,
                     "days_until": days_until
                 })
     
@@ -873,6 +889,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         description_text=letter.description_text,
         reminder_date=letter.reminder_date,
         reminder_text=letter.reminder_text,
+        responsible_person=letter.responsible_person,
         created_at=now,
         updated_at=now,
         version=1
@@ -993,6 +1010,7 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         reminder_text=execution.reminder_text,
         notes=execution.notes,
         haciz_durumu=execution.haciz_durumu,
+        responsible_person=execution.responsible_person,
         created_at=now,
         updated_at=now,
         version=1
