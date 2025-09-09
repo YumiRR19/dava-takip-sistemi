@@ -361,40 +361,6 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="defendant">Karşı Taraf</Label>
-              <Input
-                id="defendant"
-                placeholder="Karşı taraf adı ara..."
-                value={searchParams.defendant || ''}
-                onChange={(e) => handleParamChange('defendant', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Durum</Label>
-              <Select value={searchParams.status || ''} onValueChange={(value) => handleParamChange('status', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Durum seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tümü</SelectItem>
-                  <SelectItem value="Beraat">Beraat</SelectItem>
-                  <SelectItem value="Ceza">Ceza</SelectItem>
-                  <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
-                  <SelectItem value="Kabul">Kabul</SelectItem>
-                  <SelectItem value="Red">Red</SelectItem>
-                  <SelectItem value="İnfaz">İnfaz</SelectItem>
-                  <SelectItem value="Temyiz">Temyiz</SelectItem>
-                  <SelectItem value="İstinaf">İstinaf</SelectItem>
-                  <SelectItem value="İtirazlı">İtirazlı</SelectItem>
-                  <SelectItem value="Derdest">Derdest</SelectItem>
-                  <SelectItem value="Protokollü">Protokollü</SelectItem>
-                  <SelectItem value="Sözlü Taahütlü">Sözlü Taahütlü</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="court">Mahkeme</Label>
               <Popover open={courtOpen} onOpenChange={setCourtOpen}>
                 <PopoverTrigger asChild>
@@ -451,6 +417,30 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="status">Durum</Label>
+              <Select value={searchParams.status || ''} onValueChange={(value) => handleParamChange('status', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Durum seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="Beraat">Beraat</SelectItem>
+                  <SelectItem value="Ceza">Ceza</SelectItem>
+                  <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
+                  <SelectItem value="Kabul">Kabul</SelectItem>
+                  <SelectItem value="Red">Red</SelectItem>
+                  <SelectItem value="İnfaz">İnfaz</SelectItem>
+                  <SelectItem value="Temyiz">Temyiz</SelectItem>
+                  <SelectItem value="İstinaf">İstinaf</SelectItem>
+                  <SelectItem value="İtirazlı">İtirazlı</SelectItem>
+                  <SelectItem value="Derdest">Derdest</SelectItem>
+                  <SelectItem value="Protokollü">Protokollü</SelectItem>
+                  <SelectItem value="Sözlü Taahütlü">Sözlü Taahütlü</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="client_id">Müvekkil</Label>
               <Select value={searchParams.client_id || ''} onValueChange={(value) => handleParamChange('client_id', value)}>
                 <SelectTrigger>
@@ -465,6 +455,16 @@ export default function CaseSearch() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="defendant">Karşı Taraf</Label>
+              <Input
+                id="defendant"
+                placeholder="Karşı taraf adı ara..."
+                value={searchParams.defendant || ''}
+                onChange={(e) => handleParamChange('defendant', e.target.value)}
+              />
             </div>
 
           </div>

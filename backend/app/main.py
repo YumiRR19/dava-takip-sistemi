@@ -859,9 +859,16 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
     
     upcoming_reminders.sort(key=lambda x: x["days_until"])
     
+    status_counts = {}
+    db_cases = db.query(CaseDB).all()
+    for case in db_cases:
+        status = case.status
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
     return {
         "total_cases": total_cases,
         "total_clients": total_clients,
+        "status_counts": status_counts,
         "upcoming_reminders": upcoming_reminders
     }
 
