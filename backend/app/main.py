@@ -12,6 +12,8 @@ import asyncio
 import threading
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
+import logging
 from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
 from dotenv import load_dotenv
 
@@ -787,6 +789,23 @@ async def search_cases(
     
     db_cases = query.all()
     return [db_to_pydantic_case(case) for case in db_cases]
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Fly.io"""
+    try:
+        db = next(get_db())
+        db.execute(text("SELECT 1"))
+        db.close()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unavailable")
 
 @app.get("/api/dashboard")
 async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
