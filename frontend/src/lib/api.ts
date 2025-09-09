@@ -88,10 +88,17 @@ export const api = {
     delete: (id: string) => apiRequest<{ message: string }>(`/api/cases/${id}`, {
       method: 'DELETE',
     }),
-    search: (searchParams: CaseSearchParams) => apiRequest<Case[]>('/api/cases/search', {
-      method: 'POST',
-      body: JSON.stringify(searchParams),
-    }),
+    search: (searchParams: CaseSearchParams) => {
+      const urlParams = new URLSearchParams()
+      if (searchParams.case_type) urlParams.append('case_type', searchParams.case_type)
+      if (searchParams.status) urlParams.append('status', searchParams.status)
+      if (searchParams.court) urlParams.append('court', searchParams.court)
+      if (searchParams.client_id) urlParams.append('client_id', searchParams.client_id)
+      if (searchParams.defendant) urlParams.append('q', searchParams.defendant)
+      
+      const query = urlParams.toString()
+      return apiRequest<Case[]>(`/api/cases/search${query ? `?${query}` : ''}`)
+    },
   },
   
   dashboard: {

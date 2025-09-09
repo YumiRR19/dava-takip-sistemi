@@ -24,8 +24,7 @@ export default function CaseSearch() {
     status: '',
     court: '',
     client_id: '',
-    start_date_from: '',
-    start_date_to: '',
+    defendant: '',
   })
   const { toast } = useToast()
 
@@ -55,8 +54,7 @@ export default function CaseSearch() {
       if (searchParams.status) filteredParams.status = searchParams.status
       if (searchParams.court) filteredParams.court = searchParams.court
       if (searchParams.client_id) filteredParams.client_id = searchParams.client_id
-      if (searchParams.start_date_from) filteredParams.start_date_from = searchParams.start_date_from
-      if (searchParams.start_date_to) filteredParams.start_date_to = searchParams.start_date_to
+      if (searchParams.defendant) filteredParams.defendant = searchParams.defendant
 
       const results = await api.cases.search(filteredParams)
       setSearchResults(results)
@@ -356,10 +354,20 @@ export default function CaseSearch() {
                   <SelectItem value="İcra">İcra</SelectItem>
                   <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
                   <SelectItem value="Satış Memuru">Satış Memuru</SelectItem>
-                  <SelectItem value="Ara Buluculuk">Ara Buluculuk</SelectItem>
+                  <SelectItem value="Arabuluculuk">Arabuluculuk</SelectItem>
                   <SelectItem value="Tazminat Komisyonu Başkanlığı">Tazminat Komisyonu Başkanlığı</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="defendant">Karşı Taraf</Label>
+              <Input
+                id="defendant"
+                placeholder="Karşı taraf adı ara..."
+                value={searchParams.defendant || ''}
+                onChange={(e) => handleParamChange('defendant', e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">
@@ -459,29 +467,16 @@ export default function CaseSearch() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="start_date_from">Açılış Tarihi (Başlangıç)</Label>
-              <Input
-                id="start_date_from"
-                type="date"
-                value={searchParams.start_date_from || ''}
-                onChange={(e) => handleParamChange('start_date_from', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="start_date_to">Açılış Tarihi (Bitiş)</Label>
-              <Input
-                id="start_date_to"
-                type="date"
-                value={searchParams.start_date_to || ''}
-                onChange={(e) => handleParamChange('start_date_to', e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="flex justify-end space-x-4 mt-6">
-            <Button type="button" variant="outline" onClick={() => setSearchParams({})}>
+            <Button type="button" variant="outline" onClick={() => setSearchParams({
+              case_type: '',
+              status: '',
+              court: '',
+              client_id: '',
+              defendant: '',
+            })}>
               Temizle
             </Button>
             <Button onClick={handleSearch} disabled={loading}>

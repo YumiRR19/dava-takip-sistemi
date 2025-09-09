@@ -91,8 +91,7 @@ export interface CaseSearchParams {
   status?: string
   court?: string
   client_id?: string
-  start_date_from?: string
-  start_date_to?: string
+  defendant?: string
 }
 
 export interface DashboardData {
