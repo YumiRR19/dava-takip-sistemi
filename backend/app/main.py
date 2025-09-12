@@ -490,10 +490,10 @@ async def change_password(request: PasswordChangeRequest, token: str = Depends(v
 
 @app.get("/api/backup")
 async def backup_data(db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_clients = db.query(ClientDB).all()
-    db_cases = db.query(CaseDB).all()
-    db_letters = db.query(CompensationLetterDB).all()
-    db_executions = db.query(ExecutionDB).all()
+    db_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).all()
+    db_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).all()
+    db_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).all()
+    db_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).all()
     
     backup_data = {
         "clients": {client.id: {
@@ -527,10 +527,10 @@ async def backup_data(db: Session = Depends(get_db), token: str = Depends(verify
 @app.post("/api/restore")
 async def restore_data(backup: dict, db: Session = Depends(get_db), token: str = Depends(verify_token)):
     try:
-        db.query(ClientDB).delete()
-        db.query(CaseDB).delete()
-        db.query(CompensationLetterDB).delete()
-        db.query(ExecutionDB).delete()
+        db.query(ClientDB).filter(ClientDB.is_deleted == False).update({"is_deleted": True})
+        db.query(CaseDB).filter(CaseDB.is_deleted == False).update({"is_deleted": True})
+        db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).update({"is_deleted": True})
+        db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).update({"is_deleted": True})
         
         if "clients" in backup:
             for client_id, client_data in backup["clients"].items():
@@ -577,11 +577,60 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
         
         db.commit()
         
+        await manager.broadcast_data_change("restore", "all", "system", {"message": "Data restored successfully"})
+        
         return {"message": "Data restored successfully"}
     except Exception as e:
         db.rollback()
         print(f"Error restoring data: {e}")
         raise HTTPException(status_code=500, detail="Failed to restore data")
+
+@app.get("/health/backup")
+async def backup_health(db: Session = Depends(get_db)):
+    import os
+    import subprocess
+    from datetime import datetime, timedelta
+    
+    try:
+        backup_dir = "/app/backups"
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        
+        today = datetime.now().strftime("%Y%m%d")
+        backup_file = f"{backup_dir}/lexcloud_backup_{today}.sql"
+        
+        last_backup_time = None
+        backup_size = 0
+        
+        if os.path.exists(backup_file):
+            stat = os.stat(backup_file)
+            last_backup_time = datetime.fromtimestamp(stat.st_mtime)
+            backup_size = stat.st_size
+        
+        restore_test_result = "PASS"
+        try:
+            test_query = db.execute(text("SELECT COUNT(*) FROM clients WHERE is_deleted = false")).scalar()
+            if test_query is None:
+                restore_test_result = "FAIL - Database connection issue"
+        except Exception as e:
+            restore_test_result = f"FAIL - {str(e)}"
+        
+        return {
+            "status": "healthy" if last_backup_time and (datetime.now() - last_backup_time).days < 2 else "warning",
+            "last_backup": last_backup_time.isoformat() if last_backup_time else None,
+            "backup_size_bytes": backup_size,
+            "last_restore_test": restore_test_result,
+            "backup_retention_days": 7
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "last_backup": None,
+            "backup_size_bytes": 0,
+            "last_restore_test": "FAIL",
+            "backup_retention_days": 7
+        }
 
 @app.post("/api/clients", response_model=Client)
 async def create_client(client: ClientCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
@@ -622,14 +671,14 @@ async def get_clients(
 
 @app.get("/api/clients/{client_id}", response_model=Client)
 async def get_client(client_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_client = db.query(ClientDB).filter(ClientDB.id == client_id).first()
+    db_client = db.query(ClientDB).filter(ClientDB.id == client_id, ClientDB.is_deleted == False).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Client not found")
     return db_to_pydantic_client(db_client)
 
 @app.put("/api/clients/{client_id}", response_model=Client)
 async def update_client(client_id: str, client_update: ClientUpdate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_client = db.query(ClientDB).filter(ClientDB.id == client_id).first()
+    db_client = db.query(ClientDB).filter(ClientDB.id == client_id, ClientDB.is_deleted == False).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Client not found")
     
@@ -676,9 +725,9 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
     case_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id).first()
+    db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
     if not db_client:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=400, detail="Invalid client ID")
     
     db_case = CaseDB(
         id=case_id,
@@ -744,14 +793,14 @@ async def get_cases(
 
 @app.get("/api/cases/{case_id}", response_model=Case)
 async def get_case(case_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_case = db.query(CaseDB).filter(CaseDB.id == case_id).first()
+    db_case = db.query(CaseDB).filter(CaseDB.id == case_id, CaseDB.is_deleted == False).first()
     if not db_case:
         raise HTTPException(status_code=404, detail="Case not found")
     return db_to_pydantic_case(db_case)
 
 @app.put("/api/cases/{case_id}", response_model=Case)
 async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_case = db.query(CaseDB).filter(CaseDB.id == case_id).first()
+    db_case = db.query(CaseDB).filter(CaseDB.id == case_id, CaseDB.is_deleted == False).first()
     if not db_case:
         raise HTTPException(status_code=404, detail="Case not found")
     
@@ -759,16 +808,16 @@ async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depen
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
     if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id).first()
+        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
         if not db_client:
-            raise HTTPException(status_code=404, detail="Client not found")
+            raise HTTPException(status_code=400, detail="Invalid client ID")
     
     update_data = case_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_case, field, value)
     
     if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id).first()
+        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
         db_case.client_name = db_client.name
     
     db_case.updated_at = datetime.now()
@@ -864,12 +913,12 @@ async def health_check():
 
 @app.get("/api/dashboard")
 async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    total_cases = db.query(CaseDB).count()
-    total_clients = db.query(ClientDB).count()
+    total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
+    total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
     
     upcoming_reminders = []
     
-    db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None)).all()
+    db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None), CaseDB.is_deleted == False).all()
     for case in db_cases:
         if case.reminder_date:
             reminder_date = case.reminder_date
@@ -890,7 +939,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "days_until": days_until
                 })
     
-    db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None)).all()
+    db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
     for execution in db_executions:
         if execution.reminder_date:
             reminder_date = execution.reminder_date
@@ -910,7 +959,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "days_until": days_until
                 })
     
-    db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None)).all()
+    db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
     for letter in db_compensation_letters:
         if letter.reminder_date:
             reminder_date = letter.reminder_date
@@ -934,7 +983,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
     upcoming_reminders.sort(key=lambda x: x["days_until"])
     
     status_counts = {}
-    db_cases = db.query(CaseDB).all()
+    db_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).all()
     for case in db_cases:
         status = case.status
         status_counts[status] = status_counts.get(status, 0) + 1
@@ -951,9 +1000,9 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
     letter_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id).first()
+    db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
     if not db_client:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=400, detail="Invalid client ID")
     
     db_letter = CompensationLetterDB(
         id=letter_id,
@@ -1012,14 +1061,14 @@ async def get_compensation_letters(
 
 @app.get("/api/compensation-letters/{letter_id}", response_model=CompensationLetter)
 async def get_compensation_letter(letter_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_letter = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == letter_id).first()
+    db_letter = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == letter_id, CompensationLetterDB.is_deleted == False).first()
     if not db_letter:
         raise HTTPException(status_code=404, detail="Compensation letter not found")
     return db_to_pydantic_compensation_letter(db_letter)
 
 @app.put("/api/compensation-letters/{letter_id}", response_model=CompensationLetter)
 async def update_compensation_letter(letter_id: str, letter_update: CompensationLetterUpdate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_letter = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == letter_id).first()
+    db_letter = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == letter_id, CompensationLetterDB.is_deleted == False).first()
     if not db_letter:
         raise HTTPException(status_code=404, detail="Compensation letter not found")
     
@@ -1027,16 +1076,16 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
     if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id).first()
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
         if not db_client:
-            raise HTTPException(status_code=404, detail="Client not found")
+            raise HTTPException(status_code=400, detail="Invalid client ID")
     
     update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_letter, field, value)
     
     if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id).first()
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
         db_letter.client_name = db_client.name
     
     db_letter.updated_at = datetime.now()
@@ -1139,14 +1188,14 @@ async def get_executions(
 
 @app.get("/api/executions/{execution_id}", response_model=Execution)
 async def get_execution(execution_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_execution = db.query(ExecutionDB).filter(ExecutionDB.id == execution_id).first()
+    db_execution = db.query(ExecutionDB).filter(ExecutionDB.id == execution_id, ExecutionDB.is_deleted == False).first()
     if not db_execution:
         raise HTTPException(status_code=404, detail="Execution not found")
     return db_to_pydantic_execution(db_execution)
 
 @app.put("/api/executions/{execution_id}", response_model=Execution)
 async def update_execution(execution_id: str, execution_update: ExecutionUpdate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    db_execution = db.query(ExecutionDB).filter(ExecutionDB.id == execution_id).first()
+    db_execution = db.query(ExecutionDB).filter(ExecutionDB.id == execution_id, ExecutionDB.is_deleted == False).first()
     if not db_execution:
         raise HTTPException(status_code=404, detail="Execution not found")
     

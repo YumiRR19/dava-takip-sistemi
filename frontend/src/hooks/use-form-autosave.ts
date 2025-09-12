@@ -27,6 +27,15 @@ export function useFormAutosave({ key, data, enabled = true, debounceMs = 2000 }
   const clearDraft = useCallback(() => {
     try {
       localStorage.removeItem(`form_draft_${key}`)
+      
+      const dashboardKeys = ['dashboard_data', 'cases_cache', 'clients_cache', 'executions_cache', 'compensation_letters_cache']
+      dashboardKeys.forEach(cacheKey => {
+        try {
+          localStorage.removeItem(cacheKey)
+        } catch (e) {
+          console.warn(`Failed to clear cache ${cacheKey}:`, e)
+        }
+      })
     } catch (error) {
       console.warn('Failed to clear form draft:', error)
     }

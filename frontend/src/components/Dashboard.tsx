@@ -139,7 +139,12 @@ export default function Dashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.total_cases}</div>
+            <div className="text-2xl font-bold">
+              {data.total_cases}
+              {data.total_cases === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Henüz dava eklenmemiş</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -149,7 +154,12 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.total_clients}</div>
+            <div className="text-2xl font-bold">
+              {data.total_clients}
+              {data.total_clients === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Henüz müvekkil eklenmemiş</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -261,12 +271,17 @@ export default function Dashboard() {
                 </div>
               ))}
               {filteredReminders.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  {reminderFilter === 'all' 
-                    ? 'Yaklaşan hatırlatma bulunmuyor.' 
-                    : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için yaklaşan hatırlatma bulunmuyor.`
-                  }
-                </p>
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500 mb-2">
+                    {reminderFilter === 'all' 
+                      ? 'Yaklaşan hatırlatma bulunmuyor.' 
+                      : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için yaklaşan hatırlatma bulunmuyor.`
+                    }
+                  </p>
+                  {data.total_cases === 0 && data.total_clients === 0 && (
+                    <p className="text-xs text-gray-400">Dava ve müvekkil ekleyerek başlayın.</p>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
