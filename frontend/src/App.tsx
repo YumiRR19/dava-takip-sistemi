@@ -8,7 +8,6 @@ import Cases from './components/Cases'
 import Clients from './components/Clients'
 import CaseForm from './components/CaseForm'
 import ClientForm from './components/ClientForm'
-import CaseSearch from './components/CaseSearch'
 import CompensationLetters from './components/CompensationLetters'
 import CompensationLetterForm from './components/CompensationLetterForm'
 import Executions from './components/Executions'
@@ -39,7 +38,6 @@ function AppContent() {
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/edit/:id" element={<ClientForm />} />
-            <Route path="/case-search" element={<CaseSearch />} />
             <Route path="/executions" element={<Executions />} />
             <Route path="/executions/new" element={<ExecutionForm />} />
             <Route path="/executions/:id/edit" element={<ExecutionForm />} />

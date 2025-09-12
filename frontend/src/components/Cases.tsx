@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { api, Case } from '@/lib/api'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
+import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 export default function Cases() {
   const [cases, setCases] = useState<Case[]>([])
@@ -17,10 +18,11 @@ export default function Cases() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
+  const debouncedSearchTerm = useDebouncedSearch(searchTerm, 300)
 
   useEffect(() => {
     loadCases()
-  }, [statusFilter])
+  }, [statusFilter, debouncedSearchTerm])
 
   useEffect(() => {
     if (hasChangesForEntity('case')) {
@@ -31,7 +33,13 @@ export default function Cases() {
 
   const loadCases = async () => {
     try {
-      const params = statusFilter && statusFilter !== 'all' ? { status: statusFilter } : undefined
+      const params: any = {}
+      if (statusFilter && statusFilter !== 'all') {
+        params.status = statusFilter
+      }
+      if (debouncedSearchTerm) {
+        params.query = debouncedSearchTerm
+      }
       const casesData = await api.cases.getAll(params)
       setCases(casesData)
     } catch (error) {
@@ -70,7 +78,8 @@ export default function Cases() {
     caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     caseItem.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     caseItem.case_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (caseItem.case_name && caseItem.case_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (caseItem.case_name && caseItem.case_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (caseItem.defendant && caseItem.defendant.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -97,7 +106,7 @@ export default function Cases() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Dava başlığı, müvekkil adı, dava numarası veya dava adı ile ara..."
+            placeholder="Dava başlığı, müvekkil adı, dava numarası, dava adı veya karşı taraf ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"

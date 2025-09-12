@@ -7,7 +7,6 @@ import {
   X,
   Scale,
   Settings,
-  Search,
   Mail
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -23,7 +22,6 @@ const navigation = [
   { name: 'İcra Takipleri', href: '/executions', icon: Scale },
   { name: 'Teminat Mektupları', href: '/compensation-letters', icon: Mail },
   { name: 'Müvekkiller', href: '/clients', icon: Users },
-  { name: 'Dava Sorgulama', href: '/case-search', icon: Search },
   { name: 'Ayarlar', href: '/settings', icon: Settings },
 ]
 

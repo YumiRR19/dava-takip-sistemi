@@ -68,10 +68,13 @@ export const api = {
   },
   
   cases: {
-    getAll: (params?: { status?: string; client_id?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; query?: string; page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
+      if (params?.query) searchParams.append('query', params.query)
+      if (params?.page) searchParams.append('page', params.page.toString())
+      if (params?.limit) searchParams.append('limit', params.limit.toString())
       
       const query = searchParams.toString()
       return apiRequest<Case[]>(`/api/cases${query ? `?${query}` : ''}`)

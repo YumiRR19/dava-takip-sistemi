@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, DateTime, Date, Integer, Text
+from sqlalchemy import create_engine, Column, String, DateTime, Date, Integer, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
@@ -26,6 +26,7 @@ class ClientDB(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
 
 class CaseDB(Base):
     __tablename__ = "cases"
@@ -50,6 +51,7 @@ class CaseDB(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
 
 class CompensationLetterDB(Base):
     __tablename__ = "compensation_letters"
@@ -72,6 +74,7 @@ class CompensationLetterDB(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
 
 class ExecutionDB(Base):
     __tablename__ = "executions"
@@ -94,6 +97,7 @@ class ExecutionDB(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
 
 def get_db():
     db = SessionLocal()
