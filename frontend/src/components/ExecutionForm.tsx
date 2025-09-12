@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { api, Client, ExecutionCreate, ExecutionUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useFormAutosave } from '@/hooks/use-form-autosave'
 
 export default function ExecutionForm() {
   const navigate = useNavigate()
@@ -35,13 +36,24 @@ export default function ExecutionForm() {
     responsible_person: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
+  
+  const { loadDraft, clearDraft } = useFormAutosave({
+    key: `execution_${id || 'new'}`,
+    data: formData,
+    enabled: !loading && !clientsLoading
+  })
 
   useEffect(() => {
     loadClients()
     if (isEdit && id) {
       loadExecution(id)
+    } else {
+      const draft = loadDraft()
+      if (draft) {
+        setFormData(prev => ({ ...prev, ...draft }))
+      }
     }
-  }, [isEdit, id])
+  }, [isEdit, id, loadDraft])
 
   const loadClients = async () => {
     try {
@@ -103,10 +115,19 @@ export default function ExecutionForm() {
       return
     }
 
-    if (!formData.client_id || !clients.find(c => c.id === formData.client_id)) {
+    if (!formData.client_id) {
       toast({
         title: "Hata",
-        description: "Geçerli bir müvekkil seçiniz.",
+        description: "Lütfen bir müvekkil seçiniz.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (!clients.find(c => c.id === formData.client_id)) {
+      toast({
+        title: "Hata",
+        description: "Seçilen müvekkil geçerli değil. Lütfen listeden bir müvekkil seçiniz.",
         variant: "destructive",
       })
       return
@@ -156,6 +177,7 @@ export default function ExecutionForm() {
           title: "Başarılı",
           description: "İcra başarıyla oluşturuldu.",
         })
+        clearDraft()
       }
       navigate('/executions')
     } catch (error: any) {
@@ -391,7 +413,7 @@ export default function ExecutionForm() {
               <Button type="button" variant="outline" onClick={() => navigate('/executions')}>
                 İptal
               </Button>
-              <Button type="submit" disabled={loading || clientsLoading}>
+              <Button type="submit" disabled={loading || clientsLoading || !formData.client_id}>
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Kaydediliyor...' : clientsLoading ? 'Müvekkiller yükleniyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
