@@ -52,7 +52,7 @@ export const request = apiRequest
 
 export const api = {
   clients: {
-    getAll: () => apiRequest<Client[]>('/api/clients'),
+    getAll: (options?: { signal?: AbortSignal }) => apiRequest<Client[]>('/api/clients', options),
     getById: (id: string) => apiRequest<Client>(`/api/clients/${id}`),
     create: (data: ClientCreate) => apiRequest<Client>('/api/clients', {
       method: 'POST',

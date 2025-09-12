@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,9 +17,6 @@ export default function ExecutionForm() {
   const isEdit = !!id
   const { toast } = useToast()
 
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(false)
-  const [clientsLoading, setClientsLoading] = useState(true)
   const [formData, setFormData] = useState({
     client_id: '',
     defendant: '',
@@ -36,6 +33,13 @@ export default function ExecutionForm() {
     responsible_person: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
+  const [clients, setClients] = useState<Client[]>([])
+  const [loading, setLoading] = useState(false)
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [clientsError, setClientsError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const requestIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
   
   const { loadDraft, clearDraft } = useFormAutosave({
     key: `execution_${id || 'new'}`,
@@ -53,24 +57,129 @@ export default function ExecutionForm() {
         setFormData(prev => ({ ...prev, ...draft }))
       }
     }
-  }, [isEdit, id, loadDraft])
+  }, [isEdit, id])
 
-  const loadClients = async () => {
+  const loadClients = async (attempt = 1) => {
+    const maxRetries = 3
+    const timeout = 5000
+    
+    const t0 = Date.now()
+    console.log(`[ExecutionForm] t0 fetch start: ${t0}, attempt: ${attempt}`)
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    const requestId = ++requestIdRef.current
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    
+    let active = true
+    
     try {
-      setClientsLoading(true)
-      const clientsData = await api.clients.getAll()
-      setClients(clientsData)
-      if (clientsData.length > 0 && !formData.client_id) {
-        setFormData(prev => ({ ...prev, client_id: clientsData[0].id }))
+      if (requestId === requestIdRef.current) {
+        setClientsLoading(true)
+        setClientsError(null)
       }
-    } catch (error) {
+      
+      const timeoutPromise = new Promise<'timeout'>((resolve) => 
+        setTimeout(() => resolve('timeout'), timeout)
+      )
+      
+      const result = await Promise.race([
+        api.clients.getAll({ signal: abortController.signal }).catch(err => {
+          if (err.name === 'AbortError') throw err
+          throw new Error(`API Error: ${err.message || 'Unknown error'}`)
+        }),
+        timeoutPromise
+      ])
+      
+      const t1 = Date.now()
+      console.log(`[ExecutionForm] t1 response: ${t1}, duration: ${t1-t0}ms, result type: ${result === 'timeout' ? 'timeout' : 'data'}`)
+      
+      if (!active || requestId !== requestIdRef.current) {
+        console.log(`[ExecutionForm] Stale request ${requestId}, current: ${requestIdRef.current}`)
+        return
+      }
+      
+      if (result === 'timeout') {
+        console.log(`[ExecutionForm] Request timeout after ${timeout}ms, attempt ${attempt}`)
+        
+        if (attempt < maxRetries) {
+          const backoffDelay = Math.pow(2, attempt - 1) * 1000
+          setTimeout(() => {
+            if (active && requestId === requestIdRef.current) {
+              setRetryCount(attempt)
+              loadClients(attempt + 1)
+            }
+          }, backoffDelay)
+          return
+        } else {
+          setClientsError("Müvekkiller yüklenirken zaman aşımı oluştu. Lütfen sayfayı yenileyin.")
+        }
+      } else {
+        const clientsData = result as Client[]
+        const t2 = Date.now()
+        console.log(`[ExecutionForm] t2 setClients: ${t2}, count: ${clientsData.length}`)
+        
+        setClients(clientsData)
+        setRetryCount(0)
+        
+        const t4 = Date.now()
+        console.log(`[ExecutionForm] t4 setError(false): ${t4}`)
+        setClientsError(null)
+        
+        if (clientsData.length > 0 && !formData.client_id) {
+          setFormData(prev => ({ ...prev, client_id: clientsData[0].id }))
+        }
+      }
+      
+    } catch (error: any) {
+      const t1 = Date.now()
+      console.error(`[ExecutionForm] Error loading clients (attempt ${attempt}):`, error)
+      console.log(`[ExecutionForm] t1 error: ${t1}, duration: ${t1-t0}ms, error: ${error.message}`)
+      
+      if (!active || requestId !== requestIdRef.current) {
+        console.log(`[ExecutionForm] Stale error request ${requestId}, current: ${requestIdRef.current}`)
+        return
+      }
+      
+      if (error.name === 'AbortError') {
+        return
+      }
+      
+      if (attempt < maxRetries) {
+        const backoffDelay = Math.pow(2, attempt - 1) * 1000
+        setTimeout(() => {
+          if (active && requestId === requestIdRef.current) {
+            setRetryCount(attempt)
+            loadClients(attempt + 1)
+          }
+        }, backoffDelay)
+        return
+      }
+      
+      setClientsError("Müvekkiller yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.")
+      setClientsLoading(false)
       toast({
         title: "Hata",
         description: "Müvekkiller yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
     } finally {
-      setClientsLoading(false)
+      const t3 = Date.now()
+      console.log(`[ExecutionForm] t3 finally setLoading(false): ${t3}, requestId: ${requestId}, current: ${requestIdRef.current}`)
+      
+      if (requestId === requestIdRef.current) {
+        setClientsLoading(false)
+      }
+    }
+    
+    return () => {
+      active = false
+      if (abortController === abortControllerRef.current) {
+        abortController.abort()
+      }
     }
   }
 
@@ -232,16 +341,51 @@ export default function ExecutionForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Müvekkil *</Label>
-                <Select value={formData.client_id} onValueChange={(value) => handleChange('client_id', value)} name="client_id">
+                <Select 
+                  key={`client-select-${clientsLoading}-${clients.length}-${!!clientsError}`}
+                  value={formData.client_id} 
+                  onValueChange={(value) => handleChange('client_id', value)} 
+                  name="client_id"
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Müvekkil seçin" />
+                    <SelectValue placeholder={
+                      clientsLoading ? "Müvekkiller yükleniyor..." :
+                      clientsError ? "Hata oluştu" :
+                      clients.length === 0 ? "Müvekkil bulunamadı" :
+                      "Müvekkil seçin"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
+                    {clientsError ? (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-red-600 mb-2">{clientsError}</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => loadClients()}
+                          disabled={clientsLoading}
+                        >
+                          Tekrar Dene
+                        </Button>
+                      </div>
+                    ) : clients.length === 0 && !clientsLoading ? (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-gray-600 mb-2">Henüz müvekkil eklenmemiş</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => navigate('/clients/new')}
+                        >
+                          Müvekkil Ekle
+                        </Button>
+                      </div>
+                    ) : (
+                      clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -415,7 +559,7 @@ export default function ExecutionForm() {
               </Button>
               <Button type="submit" disabled={loading || clientsLoading || !formData.client_id}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : clientsLoading ? 'Müvekkiller yükleniyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
+                {loading ? 'Kaydediliyor...' : clientsLoading ? `Müvekkiller yükleniyor${retryCount > 0 ? ` (${retryCount}/3)` : ''}...` : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
             </div>
           </form>

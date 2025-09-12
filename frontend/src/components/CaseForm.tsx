@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,8 +17,12 @@ export default function CaseForm() {
   const { toast } = useToast()
 
   const [loading, setLoading] = useState(false)
-  const [clientsLoading, setClientsLoading] = useState(true)
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [clientsError, setClientsError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [clients, setClients] = useState<Client[]>([])
+  const requestIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const [formData, setFormData] = useState({
     description: '',
     client_id: '',
@@ -44,23 +48,105 @@ export default function CaseForm() {
     }
   }, [isEdit, id])
 
-  const loadClients = async () => {
+  const loadClients = async (attempt = 1) => {
+    const maxRetries = 3
+    const timeout = 5000
+    let active = true
+    const requestId = ++requestIdRef.current
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    
+    const t0 = Date.now()
+    console.log(`[CaseForm] t0: fetch start at ${t0}, requestId=${requestId}`)
+    
     try {
       setClientsLoading(true)
-      const clientsData = await api.clients.getAll()
+      setClientsError(null)
+      
+      const timeoutPromise = new Promise<'timeout'>((resolve) => 
+        setTimeout(() => resolve('timeout'), timeout)
+      )
+      
+      const fetchPromise = api.clients.getAll({ signal: abortControllerRef.current.signal }).catch(err => {
+        if (err.name === 'AbortError') throw err
+        throw new Error(`API Error: ${err.message || 'Unknown error'}`)
+      })
+      
+      const result = await Promise.race([fetchPromise, timeoutPromise])
+      
+      if (!active || requestId !== requestIdRef.current) {
+        console.log(`[CaseForm] Stale request ${requestId}, ignoring result`)
+        return
+      }
+      
+      const t1 = Date.now()
+      console.log(`[CaseForm] t1: response at ${t1}, requestId=${requestId}`)
+      
+      if (result === 'timeout') {
+        console.log(`[CaseForm] Timeout reached at ${t1}, but continuing to wait for data`)
+        const lateResult = await fetchPromise.catch(() => null)
+        if (lateResult && active && requestId === requestIdRef.current) {
+          const t2 = Date.now()
+          console.log(`[CaseForm] t2: setClients (late) at ${t2}, len=${lateResult.length}`)
+          setClients(lateResult)
+          setClientsError(null)
+          if (lateResult.length > 0 && !formData.client_id) {
+            setFormData(prev => ({ ...prev, client_id: lateResult[0].id }))
+          }
+        }
+        return
+      }
+      
+      const clientsData = result as Client[]
+      const t2 = Date.now()
+      console.log(`[CaseForm] t2: setClients at ${t2}, len=${clientsData.length}, requestId=${requestId}`)
       setClients(clientsData)
+      setRetryCount(0)
+      setClientsError(null)
+      
       if (clientsData.length > 0 && !formData.client_id) {
         setFormData(prev => ({ ...prev, client_id: clientsData[0].id }))
       }
+      
     } catch (error) {
+      if (!active || requestId !== requestIdRef.current) {
+        console.log(`[CaseForm] Stale error for request ${requestId}, ignoring`)
+        return
+      }
+      
+      console.error(`[CaseForm] Error loading clients (attempt ${attempt}):`, error)
+      
+      if (attempt < maxRetries) {
+        const backoffDelay = Math.pow(2, attempt - 1) * 1000
+        setTimeout(() => {
+          if (active && requestId === requestIdRef.current) {
+            setRetryCount(attempt)
+            loadClients(attempt + 1)
+          }
+        }, backoffDelay)
+        return
+      }
+      
+      setClientsError("Müvekkiller yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.")
+      setClientsLoading(false)
       toast({
         title: "Hata",
         description: "Müvekkiller yüklenirken bir hata oluştu.",
         variant: "destructive",
       })
     } finally {
-      setClientsLoading(false)
+      const t3 = Date.now()
+      console.log(`[CaseForm] t3: setLoading(false) at ${t3}, requestId=${requestId}, current: ${requestIdRef.current}`)
+      
+      if (requestId === requestIdRef.current) {
+        setClientsLoading(false)
+      }
     }
+    
+    return () => { active = false }
   }
 
   const loadCase = async (caseId: string) => {
@@ -219,16 +305,51 @@ export default function CaseForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Müvekkil *</Label>
-                <Select value={formData.client_id} onValueChange={(value) => handleChange('client_id', value)} name="client_id">
+                <Select 
+                  key={`client-select-${clientsLoading}-${clients.length}-${!!clientsError}`}
+                  value={formData.client_id} 
+                  onValueChange={(value) => handleChange('client_id', value)} 
+                  name="client_id"
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Müvekkil seçin" />
+                    <SelectValue placeholder={
+                      clientsLoading ? "Müvekkiller yükleniyor..." :
+                      clientsError ? "Hata oluştu" :
+                      clients.length === 0 ? "Müvekkil bulunamadı" :
+                      "Müvekkil seçin"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
+                    {clientsError ? (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-red-600 mb-2">{clientsError}</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => loadClients()}
+                          disabled={clientsLoading}
+                        >
+                          Tekrar Dene
+                        </Button>
+                      </div>
+                    ) : clients.length === 0 && !clientsLoading ? (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-gray-600 mb-2">Henüz müvekkil eklenmemiş</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => navigate('/clients/new')}
+                        >
+                          Müvekkil Ekle
+                        </Button>
+                      </div>
+                    ) : (
+                      clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -413,9 +534,9 @@ export default function CaseForm() {
               <Button type="button" variant="outline" onClick={() => navigate('/cases')}>
                 İptal
               </Button>
-              <Button type="submit" disabled={loading || clientsLoading}>
+              <Button type="submit" disabled={loading || clientsLoading || !formData.client_id}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : clientsLoading ? 'Müvekkiller yükleniyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
+                {loading ? 'Kaydediliyor...' : clientsLoading ? `Müvekkiller yükleniyor${retryCount > 0 ? ` (${retryCount}/3)` : ''}...` : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
             </div>
           </form>
