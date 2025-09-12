@@ -21,3 +21,6 @@ coverage.xml
 .mypy_cache
 .pytest_cache
 .hypothesis
+*.db
+*.sqlite*
+lexcloud.db
