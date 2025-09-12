@@ -13,7 +13,7 @@ import asyncio
 import threading
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, Index, ForeignKey
+from sqlalchemy import text, Index, ForeignKey, or_
 import logging
 from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
 from dotenv import load_dotenv
@@ -732,7 +732,7 @@ async def get_cases(
         db_query = db_query.filter(CaseDB.status == status)
     if query:
         db_query = db_query.filter(
-            db.or_(
+            or_(
                 CaseDB.title.ilike(f"%{query}%"),
                 CaseDB.defendant.ilike(f"%{query}%")
             )
