@@ -35,6 +35,22 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.on_event("startup")
 async def startup_event():
     print("Initializing database on startup...")
+    
+    database_url = os.getenv("DATABASE_URL", "NOT_SET")
+    if database_url != "NOT_SET":
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+            db_host = parsed.hostname
+            db_name = parsed.path.lstrip('/')
+            print(f"✅ Connected to DB: {db_host}/{db_name}")
+            print(f"Database host: {db_host}")
+            print(f"Database name: {db_name}")
+        except Exception as e:
+            print(f"⚠️ Could not parse DATABASE_URL: {e}")
+    else:
+        print("❌ DATABASE_URL not set!")
+    
     create_tables()
     print("Database tables created successfully")
 
