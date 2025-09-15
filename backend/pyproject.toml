@@ -13,7 +13,11 @@ pyjwt = "^2.10.1"
 sqlalchemy = "^2.0.43"
 alembic = "^1.16.5"
 psycopg2-binary = "^2.9.10"
+pytest = "^8.0.0"
 
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
 
 [build-system]
 requires = ["poetry-core"]

@@ -43,13 +43,16 @@ async def startup_event():
             parsed = urlparse(database_url)
             db_host = parsed.hostname
             db_name = parsed.path.lstrip('/')
+            driver = "postgres"
             print(f"✅ Connected to DB: {db_host}/{db_name}")
+            print(f"Database driver: {driver}")
             print(f"Database host: {db_host}")
             print(f"Database name: {db_name}")
         except Exception as e:
             print(f"⚠️ Could not parse DATABASE_URL: {e}")
     else:
         print("❌ DATABASE_URL not set!")
+        raise ValueError("DATABASE_URL environment variable is required")
     
     create_tables()
     print("Database tables created successfully")
@@ -452,16 +455,37 @@ async def api_health():
 async def db_health(db: Session = Depends(get_db)):
     try:
         from sqlalchemy import text
+        from urllib.parse import urlparse
+        
         db.execute(text("SELECT 1"))
         db.execute(text("CREATE TEMP TABLE health_test (id INTEGER)"))
         db.execute(text("INSERT INTO health_test (id) VALUES (1)"))
         db.execute(text("SELECT id FROM health_test WHERE id = 1"))
         db.execute(text("DROP TABLE health_test"))
         db.commit()
-        return {"status": "ok", "database": "read_write_ok", "timestamp": datetime.now().isoformat()}
+        
+        database_url = os.getenv("DATABASE_URL", "")
+        parsed = urlparse(database_url)
+        
+        return {
+            "connected": True,
+            "driver": "postgres",
+            "host": parsed.hostname or "unknown",
+            "db": parsed.path.lstrip('/') or "unknown",
+            "status": "ok",
+            "timestamp": datetime.now().isoformat()
+        }
     except Exception as e:
         db.rollback()
-        return {"status": "error", "database": "failed", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "connected": False,
+            "driver": "postgres",
+            "host": "unknown",
+            "db": "unknown", 
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/health/ws")
 async def ws_health():

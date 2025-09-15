@@ -5,10 +5,16 @@ from sqlalchemy.sql import func
 import os
 from datetime import datetime, date
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lexcloud.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL.startswith("postgres://") and not os.getenv("PRODUCTION"):
-    DATABASE_URL = "sqlite:///./lexcloud.db"
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
+
+if not (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://")):
+    raise ValueError("DATABASE_URL must be a PostgreSQL connection string (postgresql:// or postgres://)")
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

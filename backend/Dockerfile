@@ -16,8 +16,7 @@ RUN pip install poetry && \
 # Copy application code
 COPY . .
 
-# Create directory for SQLite database
-RUN mkdir -p /app/data
+# No SQLite database directory needed - Postgres only
 
 # Expose port
 EXPOSE 8000
