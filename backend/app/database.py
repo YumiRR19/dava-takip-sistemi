@@ -18,9 +18,9 @@ if DATABASE_URL.startswith("postgres://"):
 
 if "sslmode=" not in DATABASE_URL and "lexcloud-db" in DATABASE_URL:
     if "?" in DATABASE_URL:
-        DATABASE_URL += "&sslmode=prefer"
+        DATABASE_URL += "&sslmode=disable"
     else:
-        DATABASE_URL += "?sslmode=prefer"
+        DATABASE_URL += "?sslmode=disable"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
