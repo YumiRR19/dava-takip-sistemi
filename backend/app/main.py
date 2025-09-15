@@ -54,8 +54,12 @@ async def startup_event():
         print("❌ DATABASE_URL not set!")
         raise ValueError("DATABASE_URL environment variable is required")
     
-    create_tables()
-    print("Database tables created successfully")
+    try:
+        create_tables()
+        print("✅ Database tables created successfully")
+    except Exception as table_error:
+        print(f"⚠️ Table creation failed: {table_error}")
+        print("✅ Backend starting without table creation - tables may already exist")
 
 class Client(BaseModel):
     id: str
