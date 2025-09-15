@@ -54,12 +54,19 @@ async def startup_event():
         print("❌ DATABASE_URL not set!")
         raise ValueError("DATABASE_URL environment variable is required")
     
-    try:
-        create_tables()
-        print("✅ Database tables created successfully")
-    except Exception as table_error:
-        print(f"⚠️ Table creation failed: {table_error}")
-        print("✅ Backend starting without table creation - tables may already exist")
+    def create_tables_async():
+        try:
+            create_tables()
+            print("✅ Database tables created successfully")
+        except Exception as table_error:
+            print(f"⚠️ Table creation failed: {table_error}")
+            print("✅ Backend starting without table creation - tables may already exist")
+    
+    thread = threading.Thread(target=create_tables_async)
+    thread.daemon = True
+    thread.start()
+    
+    print("✅ Backend startup completed - table creation running in background")
 
 class Client(BaseModel):
     id: str
