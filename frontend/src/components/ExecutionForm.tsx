@@ -445,6 +445,7 @@ export default function ExecutionForm() {
                     <SelectItem value="İtirazlı">İtirazlı</SelectItem>
                     <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                     <SelectItem value="Davalı">Davalı</SelectItem>
+                    <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -517,7 +518,7 @@ export default function ExecutionForm() {
                   <SelectValue placeholder="İlgili/Sorumlu seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Av.M.Şerif">Av.M.Şerif</SelectItem>
+                  <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
                   <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
                   <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
                   <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>

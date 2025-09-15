@@ -126,9 +126,10 @@ export default function Cases() {
             <SelectItem value="Red">Red</SelectItem>
             <SelectItem value="İnfaz">İnfaz</SelectItem>
             <SelectItem value="Temyiz">Temyiz</SelectItem>
-            <SelectItem value="İstinaf İtirazlı">İstinaf İtirazlı</SelectItem>
+            <SelectItem value="İstinaf">İstinaf</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>
             <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
+            <SelectItem value="G.K. Bekleniyor">G.K. Bekleniyor</SelectItem>
           </SelectContent>
         </Select>
       </div>

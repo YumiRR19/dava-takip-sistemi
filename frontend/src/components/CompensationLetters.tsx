@@ -101,9 +101,9 @@ export default function CompensationLetters() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Durumlar</SelectItem>
-            <SelectItem value="İade Edildi">İade Edildi</SelectItem>
-            <SelectItem value="İade Taleb Edildi">İade Taleb Edildi</SelectItem>
-            <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
+            <SelectItem value="İADE">İADE</SelectItem>
+            <SelectItem value="İADE İSTENDİ">İADE İSTENDİ</SelectItem>
+            <SelectItem value="DEVAM EDİYOR">DEVAM EDİYOR</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -101,6 +101,8 @@ export default function Executions() {
         return 'secondary'
       case 'Davalı':
         return 'default'
+      case 'Ödeme Sözü':
+        return 'secondary'
       default:
         return 'default'
     }
@@ -158,6 +160,7 @@ export default function Executions() {
                 <SelectItem value="İtirazlı">İtirazlı</SelectItem>
                 <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                 <SelectItem value="Davalı">Davalı</SelectItem>
+                <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
               </SelectContent>
             </Select>
             <Select value={hacizFilter} onValueChange={setHacizFilter}>

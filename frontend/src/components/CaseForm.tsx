@@ -418,6 +418,7 @@ export default function CaseForm() {
                     <SelectItem value="İstinaf">İstinaf</SelectItem>
                     <SelectItem value="Derdest">Derdest</SelectItem>
                     <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
+                    <SelectItem value="G.K. Bekleniyor">G.K. Bekleniyor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -492,7 +493,7 @@ export default function CaseForm() {
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif">Av.M.Şerif</SelectItem>
+                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
                     <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
                     <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
                     <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
