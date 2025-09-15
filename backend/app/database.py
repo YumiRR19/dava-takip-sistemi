@@ -22,7 +22,15 @@ if "sslmode=" not in DATABASE_URL and "lexcloud-db" in DATABASE_URL:
     else:
         DATABASE_URL += "?sslmode=disable"
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+engine = create_engine(
+    DATABASE_URL, 
+    pool_pre_ping=True, 
+    pool_recycle=300,
+    connect_args={
+        "connect_timeout": 10,
+        "application_name": "lexcloud-backend"
+    }
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
