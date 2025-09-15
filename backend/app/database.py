@@ -28,10 +28,11 @@ engine = create_engine(
     pool_size=1,
     max_overflow=0,
     pool_timeout=30,
+    pool_pre_ping=True,
+    pool_recycle=300,
     connect_args={
-        "connect_timeout": 30,
-        "application_name": "lexcloud-backend",
-        "options": "-c default_transaction_isolation=read_committed"
+        "connect_timeout": 10,
+        "application_name": "lexcloud-backend"
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
