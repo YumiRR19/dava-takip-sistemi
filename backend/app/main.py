@@ -822,6 +822,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
 async def get_cases(
     status: Optional[str] = None, 
     query: Optional[str] = None,
+    responsible_person: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db), 
@@ -830,6 +831,8 @@ async def get_cases(
     db_query = db.query(CaseDB).filter(CaseDB.is_deleted == False)
     if status:
         db_query = db_query.filter(CaseDB.status == status)
+    if responsible_person:
+        db_query = db_query.filter(CaseDB.responsible_person == responsible_person)
     if query:
         db_query = db_query.filter(
             or_(
@@ -1220,6 +1223,7 @@ async def get_executions(
     status: Optional[str] = None,
     client_id: Optional[str] = None,
     haciz_durumu: Optional[str] = None,
+    responsible_person: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -1230,6 +1234,8 @@ async def get_executions(
         query = query.filter(ExecutionDB.status == status)
     if client_id:
         query = query.filter(ExecutionDB.client_id == client_id)
+    if responsible_person:
+        query = query.filter(ExecutionDB.responsible_person == responsible_person)
     if haciz_durumu:
         query = query.filter(ExecutionDB.haciz_durumu == haciz_durumu)
     

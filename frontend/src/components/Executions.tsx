@@ -17,6 +17,7 @@ export default function Executions() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hacizFilter, setHacizFilter] = useState<string>('all')
+  const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('all')
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -26,7 +27,7 @@ export default function Executions() {
 
   useEffect(() => {
     filterExecutions()
-  }, [executions, searchTerm, statusFilter, hacizFilter])
+  }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter])
 
   const loadExecutions = async () => {
     try {
@@ -61,6 +62,10 @@ export default function Executions() {
 
     if (hacizFilter !== 'all') {
       filtered = filtered.filter(execution => execution.haciz_durumu === hacizFilter)
+    }
+
+    if (responsiblePersonFilter !== 'all') {
+      filtered = filtered.filter(execution => execution.responsible_person === responsiblePersonFilter)
     }
 
     setFilteredExecutions(filtered)
@@ -174,6 +179,22 @@ export default function Executions() {
                 <SelectItem value="Hacizli Gayrimenkul">Hacizli Gayrimenkul</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="İlgili/Sorumlu Filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
+                <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+                <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="rounded-md border">
@@ -195,7 +216,7 @@ export default function Executions() {
                 {filteredExecutions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      {searchTerm || statusFilter !== 'all' || hacizFilter !== 'all' ? 'Arama kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
+                      {searchTerm || statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' ? 'Arama kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
                     </TableCell>
                   </TableRow>
                 ) : (

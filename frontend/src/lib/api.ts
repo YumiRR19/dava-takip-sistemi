@@ -68,11 +68,12 @@ export const api = {
   },
   
   cases: {
-    getAll: (params?: { status?: string; client_id?: string; query?: string; page?: number; limit?: number }) => {
+    getAll: (params?: { status?: string; client_id?: string; query?: string; responsible_person?: string; page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.query) searchParams.append('query', params.query)
+      if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.page) searchParams.append('page', params.page.toString())
       if (params?.limit) searchParams.append('limit', params.limit.toString())
       
@@ -148,10 +149,11 @@ export const api = {
   },
 
   executions: {
-    getAll: (params?: { status?: string; client_id?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; responsible_person?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
+      if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       
       const query = searchParams.toString()
       return apiRequest<Execution[]>(`/api/executions${query ? `?${query}` : ''}`)

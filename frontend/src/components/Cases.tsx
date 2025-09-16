@@ -16,13 +16,14 @@ export default function Cases() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('')
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
   const debouncedSearchTerm = useDebouncedSearch(searchTerm, 300)
 
   useEffect(() => {
     loadCases()
-  }, [statusFilter, debouncedSearchTerm])
+  }, [statusFilter, responsiblePersonFilter, debouncedSearchTerm])
 
   useEffect(() => {
     if (hasChangesForEntity('case')) {
@@ -36,6 +37,9 @@ export default function Cases() {
       const params: any = {}
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter
+      }
+      if (responsiblePersonFilter && responsiblePersonFilter !== 'all') {
+        params.responsible_person = responsiblePersonFilter
       }
       if (debouncedSearchTerm) {
         params.query = debouncedSearchTerm
@@ -129,7 +133,25 @@ export default function Cases() {
             <SelectItem value="İstinaf">İstinaf</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>
             <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-            <SelectItem value="G.K. Bekleniyor">G.K. Bekleniyor</SelectItem>
+            <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
+            <SelectItem value="Bilir Kişi">Bilir Kişi</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="İlgili/Sorumlu Filtrele" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
+            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -138,9 +160,9 @@ export default function Cases() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm || (statusFilter && statusFilter !== 'all') ? 'Arama kriterlerinize uygun dava bulunamadı.' : 'Henüz dava bulunmuyor.'}
+              {searchTerm || (statusFilter && statusFilter !== 'all') || (responsiblePersonFilter && responsiblePersonFilter !== 'all') ? 'Arama kriterlerinize uygun dava bulunamadı.' : 'Henüz dava bulunmuyor.'}
             </p>
-            {!searchTerm && (!statusFilter || statusFilter === 'all') && (
+            {!searchTerm && (!statusFilter || statusFilter === 'all') && (!responsiblePersonFilter || responsiblePersonFilter === 'all') && (
               <Button asChild className="mt-4">
                 <Link to="/cases/new">İlk Davayı Oluştur</Link>
               </Button>
