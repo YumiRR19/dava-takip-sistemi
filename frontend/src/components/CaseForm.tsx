@@ -219,7 +219,8 @@ export default function CaseForm() {
       next_hearing_date: formData.next_hearing_date,
       reminder_date: formData.reminder_date,
       office_archive_no: formData.office_archive_no,
-      responsible_person: formData.responsible_person || undefined
+      responsible_person: formData.responsible_person || undefined,
+      görevlendiren: formData.görevlendiren || undefined
     }
 
     console.log('Form data before submission:', submissionData)

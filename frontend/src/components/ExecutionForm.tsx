@@ -259,7 +259,8 @@ export default function ExecutionForm() {
       reminder_text: formData.reminder_text || undefined,
       notes: formData.notes || undefined,
       haciz_durumu: formData.haciz_durumu || undefined,
-      responsible_person: formData.responsible_person || undefined
+      responsible_person: formData.responsible_person || undefined,
+      görevlendiren: formData.görevlendiren || undefined
     }
 
     try {
