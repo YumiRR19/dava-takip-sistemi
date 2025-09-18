@@ -68,12 +68,13 @@ export const api = {
   },
   
   cases: {
-    getAll: (params?: { status?: string; client_id?: string; query?: string; responsible_person?: string; page?: number; limit?: number }) => {
+    getAll: (params?: { status?: string; client_id?: string; query?: string; responsible_person?: string; görevlendiren?: string; page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.query) searchParams.append('query', params.query)
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
+      if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       if (params?.page) searchParams.append('page', params.page.toString())
       if (params?.limit) searchParams.append('limit', params.limit.toString())
       
@@ -126,10 +127,11 @@ export const api = {
   },
   
   compensationLetters: {
-    getAll: (params?: { status?: string; client_id?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; görevlendiren?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
+      if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       
       const query = searchParams.toString()
       return apiRequest<CompensationLetter[]>(`/api/compensation-letters${query ? `?${query}` : ''}`)
@@ -149,11 +151,12 @@ export const api = {
   },
 
   executions: {
-    getAll: (params?: { status?: string; client_id?: string; responsible_person?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; responsible_person?: string; görevlendiren?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
+      if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       
       const query = searchParams.toString()
       return apiRequest<Execution[]>(`/api/executions${query ? `?${query}` : ''}`)

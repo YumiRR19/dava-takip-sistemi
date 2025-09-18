@@ -261,7 +261,12 @@ export default function Dashboard() {
                   <div className="text-right">
                     {reminder.responsible_person && (
                       <p className="text-sm font-medium text-red-600 mb-1">
-                        {reminder.responsible_person}
+                        İlgili/Sorumlu: {reminder.responsible_person}
+                      </p>
+                    )}
+                    {(reminder as any).görevlendiren && (
+                      <p className="text-sm font-medium text-blue-600 mb-1">
+                        Görevlendiren: {(reminder as any).görevlendiren}
                       </p>
                     )}
                     <p className="text-sm font-medium text-red-600">

@@ -112,6 +112,7 @@ class Case(BaseModel):
     reminder_date: Optional[date] = None
     office_archive_no: str
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -132,6 +133,7 @@ class CaseCreate(BaseModel):
     reminder_date: Optional[date] = None
     office_archive_no: str
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -149,6 +151,7 @@ class CaseUpdate(BaseModel):
     reminder_date: Optional[date] = None
     office_archive_no: Optional[str] = None
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
     version: Optional[int] = None
 
 class CompensationLetter(BaseModel):
@@ -167,6 +170,8 @@ class CompensationLetter(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
+    responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -184,6 +189,7 @@ class CompensationLetterCreate(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -198,6 +204,8 @@ class CompensationLetterUpdate(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
+    görevlendiren: Optional[str] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -216,6 +224,8 @@ class Execution(BaseModel):
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
+    responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -233,7 +243,9 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -249,6 +261,8 @@ class ExecutionUpdate(BaseModel):
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
+    görevlendiren: Optional[str] = None
     version: Optional[int] = None
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
@@ -798,6 +812,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         reminder_date=case.reminder_date,
         office_archive_no=case.office_archive_no,
         responsible_person=case.responsible_person,
+        görevlendiren=case.görevlendiren,
         created_at=now,
         updated_at=now,
         version=1
@@ -823,6 +838,7 @@ async def get_cases(
     status: Optional[str] = None, 
     query: Optional[str] = None,
     responsible_person: Optional[str] = None,
+    görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db), 
@@ -833,6 +849,8 @@ async def get_cases(
         db_query = db_query.filter(CaseDB.status == status)
     if responsible_person:
         db_query = db_query.filter(CaseDB.responsible_person == responsible_person)
+    if görevlendiren:
+        db_query = db_query.filter(CaseDB.görevlendiren == görevlendiren)
     if query:
         db_query = db_query.filter(
             or_(
@@ -1074,6 +1092,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         reminder_date=letter.reminder_date,
         reminder_text=letter.reminder_text,
         responsible_person=letter.responsible_person,
+        görevlendiren=letter.görevlendiren,
         created_at=now,
         updated_at=now,
         version=1
@@ -1098,6 +1117,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
 async def get_compensation_letters(
     status: Optional[str] = None,
     client_id: Optional[str] = None,
+    görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -1108,6 +1128,8 @@ async def get_compensation_letters(
         query = query.filter(CompensationLetterDB.status == status)
     if client_id:
         query = query.filter(CompensationLetterDB.client_id == client_id)
+    if görevlendiren:
+        query = query.filter(CompensationLetterDB.görevlendiren == görevlendiren)
     
     offset = (page - 1) * limit
     db_letters = query.order_by(CompensationLetterDB.updated_at.desc()).offset(offset).limit(limit).all()
@@ -1198,6 +1220,7 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         notes=execution.notes,
         haciz_durumu=execution.haciz_durumu,
         responsible_person=execution.responsible_person,
+        görevlendiren=execution.görevlendiren,
         created_at=now,
         updated_at=now,
         version=1
@@ -1224,6 +1247,7 @@ async def get_executions(
     client_id: Optional[str] = None,
     haciz_durumu: Optional[str] = None,
     responsible_person: Optional[str] = None,
+    görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -1236,6 +1260,8 @@ async def get_executions(
         query = query.filter(ExecutionDB.client_id == client_id)
     if responsible_person:
         query = query.filter(ExecutionDB.responsible_person == responsible_person)
+    if görevlendiren:
+        query = query.filter(ExecutionDB.görevlendiren == görevlendiren)
     if haciz_durumu:
         query = query.filter(ExecutionDB.haciz_durumu == haciz_durumu)
     

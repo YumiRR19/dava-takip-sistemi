@@ -14,16 +14,23 @@ export default function CompensationLetters() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('')
   const { toast } = useToast()
 
   useEffect(() => {
     loadLetters()
-  }, [statusFilter])
+  }, [statusFilter, görevlendirenFilter])
 
   const loadLetters = async () => {
     try {
-      const params = statusFilter && statusFilter !== 'all' ? { status: statusFilter } : undefined
-      const lettersData = await api.compensationLetters.getAll(params)
+      const params: any = {}
+      if (statusFilter && statusFilter !== 'all') {
+        params.status = statusFilter
+      }
+      if (görevlendirenFilter && görevlendirenFilter !== 'all') {
+        params.görevlendiren = görevlendirenFilter
+      }
+      const lettersData = await api.compensationLetters.getAll(Object.keys(params).length > 0 ? params : undefined)
       setLetters(lettersData)
     } catch (error) {
       toast({
@@ -106,15 +113,32 @@ export default function CompensationLetters() {
             <SelectItem value="DEVAM EDİYOR">DEVAM EDİYOR</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={görevlendirenFilter} onValueChange={setGörevlendirenFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Görevlendiren Filtrele" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Görevlendirenler</SelectItem>
+            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {filteredLetters.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm || (statusFilter && statusFilter !== 'all') ? 'Arama kriterlerinize uygun teminat mektubu bulunamadı.' : 'Henüz teminat mektubu bulunmuyor.'}
+              {searchTerm || (statusFilter && statusFilter !== 'all') || (görevlendirenFilter && görevlendirenFilter !== 'all') ? 'Arama kriterlerinize uygun teminat mektubu bulunamadı.' : 'Henüz teminat mektubu bulunmuyor.'}
             </p>
-            {!searchTerm && (!statusFilter || statusFilter === 'all') && (
+            {!searchTerm && (!statusFilter || statusFilter === 'all') && (!görevlendirenFilter || görevlendirenFilter === 'all') && (
               <Button asChild className="mt-4">
                 <Link to="/compensation-letters/new">İlk Teminat Mektubunu Oluştur</Link>
               </Button>

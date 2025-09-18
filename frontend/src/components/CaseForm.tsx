@@ -37,7 +37,8 @@ export default function CaseForm() {
     next_hearing_date: '',
     reminder_date: '',
     office_archive_no: '',
-    responsible_person: ''
+    responsible_person: '',
+    görevlendiren: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -166,7 +167,8 @@ export default function CaseForm() {
         next_hearing_date: caseData.next_hearing_date ? new Date(caseData.next_hearing_date).toISOString().split('T')[0] : '',
         reminder_date: caseData.reminder_date ? new Date(caseData.reminder_date).toISOString().split('T')[0] : '',
         office_archive_no: caseData.office_archive_no || '',
-        responsible_person: caseData.responsible_person || ''
+        responsible_person: caseData.responsible_person || '',
+        görevlendiren: caseData.görevlendiren || ''
       })
       setCurrentVersion(caseData.version)
     } catch (error) {
@@ -419,7 +421,7 @@ export default function CaseForm() {
                     <SelectItem value="Derdest">Derdest</SelectItem>
                     <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
                     <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="Bilir Kişi">Bilir Kişi</SelectItem>
+                    <SelectItem value="Bilir Kişi">Bilirkişi</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -492,6 +494,24 @@ export default function CaseForm() {
                 <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
                   <SelectTrigger>
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="görevlendiren">Görevlendiren</Label>
+                <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>

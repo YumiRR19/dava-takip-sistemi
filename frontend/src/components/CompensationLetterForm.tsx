@@ -28,7 +28,8 @@ export default function CompensationLetterForm() {
     description_text: '',
     reminder_date: '',
     reminder_text: '',
-    responsible_person: ''
+    responsible_person: '',
+    görevlendiren: ''
   })
   const [clients, setClients] = useState<any[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
@@ -162,7 +163,8 @@ export default function CompensationLetterForm() {
         description_text: letter.description_text || '',
         reminder_date: letter.reminder_date ? new Date(letter.reminder_date).toISOString().split('T')[0] : '',
         reminder_text: letter.reminder_text || '',
-        responsible_person: letter.responsible_person || ''
+        responsible_person: letter.responsible_person || '',
+        görevlendiren: letter.görevlendiren || ''
       })
       setCurrentVersion(letter.version)
     } catch (error) {
@@ -400,6 +402,25 @@ export default function CompensationLetterForm() {
                 <Select value={formData.responsible_person} onValueChange={(value) => setFormData({ ...formData, responsible_person: value })} name="responsible_person">
                   <SelectTrigger>
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="görevlendiren">Görevlendiren</Label>
+                <Select value={formData.görevlendiren} onValueChange={(value) => setFormData({ ...formData, görevlendiren: value })} name="görevlendiren">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>

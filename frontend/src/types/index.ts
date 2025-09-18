@@ -45,6 +45,7 @@ export interface Case {
   reminder_date?: string
   office_archive_no: string
   responsible_person?: string
+  görevlendiren?: string
   created_at: string
   updated_at: string
   version: number
@@ -83,6 +84,7 @@ export interface CaseUpdate {
   reminder_date?: string
   office_archive_no?: string
   responsible_person?: string
+  görevlendiren?: string
   version?: number
 }
 
@@ -146,6 +148,7 @@ export interface CompensationLetter {
   reminder_date?: string
   reminder_text?: string
   responsible_person?: string
+  görevlendiren?: string
   created_at: string
   updated_at: string
   version: number
@@ -164,6 +167,7 @@ export interface CompensationLetterCreate {
   reminder_date?: string
   reminder_text?: string
   responsible_person?: string
+  görevlendiren?: string
 }
 
 export interface CompensationLetterUpdate {
@@ -179,6 +183,7 @@ export interface CompensationLetterUpdate {
   reminder_date?: string
   reminder_text?: string
   responsible_person?: string
+  görevlendiren?: string
   version?: number
 }
 
@@ -198,6 +203,7 @@ export interface Execution {
   notes?: string
   haciz_durumu?: string
   responsible_person?: string
+  görevlendiren?: string
   created_at: string
   updated_at: string
   version: number
@@ -217,6 +223,7 @@ export interface ExecutionCreate {
   notes?: string
   haciz_durumu?: string
   responsible_person?: string
+  görevlendiren?: string
 }
 
 export interface ExecutionUpdate {
@@ -231,5 +238,6 @@ export interface ExecutionUpdate {
   notes?: string
   haciz_durumu?: string
   responsible_person?: string
+  görevlendiren?: string
   version?: number
 }
