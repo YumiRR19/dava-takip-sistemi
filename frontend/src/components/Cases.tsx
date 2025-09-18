@@ -137,7 +137,7 @@ export default function Cases() {
             <SelectItem value="İstinaf">İstinaf</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>
             <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-            <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
+            <SelectItem value="Gerekli Karar Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
             <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
           </SelectContent>
         </Select>

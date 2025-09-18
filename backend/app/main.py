@@ -205,7 +205,6 @@ class CompensationLetterUpdate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
-    görevlendiren: Optional[str] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -223,7 +222,6 @@ class Execution(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
-    responsible_person: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     created_at: datetime
@@ -243,7 +241,6 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
-    haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
 
@@ -261,7 +258,6 @@ class ExecutionUpdate(BaseModel):
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
-    görevlendiren: Optional[str] = None
     görevlendiren: Optional[str] = None
     version: Optional[int] = None
 
@@ -361,6 +357,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         reminder_date=db_case.reminder_date,
         office_archive_no=db_case.office_archive_no,
         responsible_person=db_case.responsible_person,
+        görevlendiren=db_case.görevlendiren,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
         version=db_case.version
@@ -383,6 +380,7 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         reminder_date=db_letter.reminder_date,
         reminder_text=db_letter.reminder_text,
         responsible_person=db_letter.responsible_person,
+        görevlendiren=db_letter.görevlendiren,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -405,6 +403,7 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         notes=db_execution.notes,
         haciz_durumu=db_execution.haciz_durumu,
         responsible_person=db_execution.responsible_person,
+        görevlendiren=db_execution.görevlendiren,
         created_at=db_execution.created_at,
         updated_at=db_execution.updated_at,
         version=db_execution.version
