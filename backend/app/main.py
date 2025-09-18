@@ -1008,6 +1008,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "reminder_date": reminder_date.isoformat(),
                     "description": case.description,
                     "responsible_person": case.responsible_person,
+                    "görevlendiren": case.görevlendiren,
                     "days_until": days_until
                 })
     
@@ -1028,6 +1029,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "reminder_date": reminder_date.isoformat(),
                     "reminder_text": execution.reminder_text,
                     "responsible_person": execution.responsible_person,
+                    "görevlendiren": execution.görevlendiren,
                     "days_until": days_until
                 })
     
@@ -1049,6 +1051,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "reminder_date": reminder_date.isoformat(),
                     "reminder_text": letter.reminder_text,
                     "responsible_person": letter.responsible_person,
+                    "görevlendiren": letter.görevlendiren,
                     "days_until": days_until
                 })
     

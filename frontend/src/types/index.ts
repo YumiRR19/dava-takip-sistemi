@@ -67,6 +67,7 @@ export interface CaseCreate {
   reminder_date?: string
   office_archive_no: string
   responsible_person?: string
+  görevlendiren?: string
 }
 
 export interface CaseUpdate {
@@ -129,6 +130,7 @@ export interface DashboardData {
     description?: string
     reminder_text?: string
     responsible_person?: string
+    görevlendiren?: string
   }>
 }
 
