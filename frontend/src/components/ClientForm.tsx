@@ -22,6 +22,7 @@ export default function ClientForm() {
     phone: '',
     address: '',
     tax_id: '',
+    vekalet_ofis_no: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -40,6 +41,7 @@ export default function ClientForm() {
         phone: clientData.phone,
         address: clientData.address,
         tax_id: clientData.tax_id || '',
+        vekalet_ofis_no: clientData.vekalet_ofis_no || ''
       })
       setCurrentVersion(clientData.version)
     } catch (error) {
@@ -60,6 +62,7 @@ export default function ClientForm() {
       if (isEdit && id) {
         const updateData: ClientUpdate = {
           ...formData,
+          vekalet_ofis_no: formData.vekalet_ofis_no || undefined,
           version: currentVersion
         }
         await api.clients.update(id, updateData)
@@ -69,7 +72,10 @@ export default function ClientForm() {
         })
         navigate('/clients')
       } else {
-        const createData: ClientCreate = formData
+        const createData: ClientCreate = {
+          ...formData,
+          vekalet_ofis_no: formData.vekalet_ofis_no || undefined
+        }
         await api.clients.create(createData)
         toast({
           title: "Başarılı",
@@ -165,6 +171,16 @@ export default function ClientForm() {
                 value={formData.tax_id}
                 onChange={(e) => handleChange('tax_id', e.target.value)}
                 placeholder="T.C. Kimlik No veya Vergi No girin"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="vekalet_ofis_no">Vekalet Ofis No</Label>
+              <Input
+                id="vekalet_ofis_no"
+                value={formData.vekalet_ofis_no}
+                onChange={(e) => handleChange('vekalet_ofis_no', e.target.value)}
+                placeholder="Vekalet ofis numarası girin"
               />
             </div>
 

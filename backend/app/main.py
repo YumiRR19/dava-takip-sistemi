@@ -75,6 +75,7 @@ class Client(BaseModel):
     phone: str
     address: str
     tax_id: Optional[str] = None
+    vekalet_ofis_no: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     version: int
@@ -85,6 +86,7 @@ class ClientCreate(BaseModel):
     phone: str
     address: str
     tax_id: Optional[str] = None
+    vekalet_ofis_no: Optional[str] = None
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
@@ -92,7 +94,8 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
-    version: Optional[int] = None
+    vekalet_ofis_no: Optional[str] = None
+    version: int
 
 class Case(BaseModel):
     id: str
@@ -333,6 +336,7 @@ def db_to_pydantic_client(db_client: ClientDB) -> Client:
         phone=db_client.phone,
         address=db_client.address,
         tax_id=db_client.tax_id,
+        vekalet_ofis_no=db_client.vekalet_ofis_no,
         created_at=db_client.created_at,
         updated_at=db_client.updated_at,
         version=db_client.version
@@ -708,9 +712,11 @@ async def create_client(client: ClientCreate, db: Session = Depends(get_db), tok
         phone=client.phone,
         address=client.address,
         tax_id=client.tax_id,
+        vekalet_ofis_no=client.vekalet_ofis_no,
         created_at=now,
         updated_at=now,
-        version=1
+        version=1,
+        is_deleted=False
     )
     
     db.add(db_client)

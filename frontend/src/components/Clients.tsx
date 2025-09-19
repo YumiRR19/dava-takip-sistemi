@@ -69,7 +69,8 @@ export default function Clients() {
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.phone.includes(searchTerm)
+    client.phone.includes(searchTerm) ||
+    (client.vekalet_ofis_no && client.vekalet_ofis_no.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -95,7 +96,7 @@ export default function Clients() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input
-          placeholder="Müvekkil adı, e-posta veya telefon ile ara..."
+          placeholder="Ad, email, telefon veya vekalet ofis no ile ara..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"

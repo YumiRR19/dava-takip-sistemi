@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Check, ChevronsUpDown } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { api, Client, ExecutionCreate, ExecutionUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useFormAutosave } from '@/hooks/use-form-autosave'
+import { cn } from '@/lib/utils'
 
 export default function ExecutionForm() {
   const navigate = useNavigate()
@@ -41,6 +44,7 @@ export default function ExecutionForm() {
   const [retryCount, setRetryCount] = useState(0)
   const requestIdRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const [executionOfficeOpen, setExecutionOfficeOpen] = useState(false)
   
   const { loadDraft, clearDraft } = useFormAutosave({
     key: `execution_${id || 'new'}`,
@@ -407,20 +411,59 @@ export default function ExecutionForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="execution_office">İcra *</Label>
-                <Select value={formData.execution_office} onValueChange={(value) => handleChange('execution_office', value)} name="execution_office">
-                  <SelectTrigger>
-                    <SelectValue placeholder="İcra seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADANA 1.GENEL İCRA">ADANA 1.GENEL İCRA</SelectItem>
-                    <SelectItem value="ADANA 2.GENEL İCRA">ADANA 2.GENEL İCRA</SelectItem>
-                    <SelectItem value="ADANA 3.GENEL İCRA">ADANA 3.GENEL İCRA</SelectItem>
-                    <SelectItem value="ADANA BANKA ALACAKLARI İCRA DAİRESİ">ADANA BANKA ALACAKLARI İCRA DAİRESİ</SelectItem>
-                    <SelectItem value="GAYRİMENKUL SATIŞ İCRA DAİRESİ">GAYRİMENKUL SATIŞ İCRA DAİRESİ</SelectItem>
-                    <SelectItem value="GAZİANTEP İCRA DAİRESİ">GAZİANTEP İCRA DAİRESİ</SelectItem>
-                    <SelectItem value="KAHRAMANMARAŞ İCRA DAİRESİ">KAHRAMANMARAŞ İCRA DAİRESİ</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover open={executionOfficeOpen} onOpenChange={setExecutionOfficeOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={executionOfficeOpen}
+                      className="w-full justify-between"
+                    >
+                      {formData.execution_office || "İcra dairesi seçin veya yazın..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput 
+                        placeholder="İcra dairesi ara veya yaz..." 
+                        value={formData.execution_office}
+                        onValueChange={(value) => handleChange('execution_office', value)}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
+                        <CommandGroup>
+                          {[
+                            "ADANA 1.GENEL İCRA",
+                            "ADANA 2.GENEL İCRA",
+                            "ADANA 3.GENEL İCRA",
+                            "ADANA BANKA ALACAKLARI İCRA DAİRESİ",
+                            "GAYRİMENKUL SATIŞ İCRA DAİRESİ",
+                            "GAZİANTEP İCRA DAİRESİ",
+                            "KAHRAMANMARAŞ İCRA DAİRESİ"
+                          ].map((office) => (
+                            <CommandItem
+                              key={office}
+                              value={office}
+                              onSelect={(currentValue) => {
+                                handleChange('execution_office', currentValue)
+                                setExecutionOfficeOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.execution_office === office ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {office}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
@@ -507,18 +550,20 @@ export default function ExecutionForm() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Hacizli Araç">Hacizli Araç</SelectItem>
-                    <SelectItem value="Yakalamalı">Yakalamalı</SelectItem>
-                    <SelectItem value="Hacizli Gayrimenkul">Hacizli Gayrimenkul</SelectItem>
+                    <SelectItem value="Rehinli Araç">Rehinli Araç</SelectItem>
+                    <SelectItem value="Yakalamalı / Şatış">Yakalamalı / Şatış</SelectItem>
+                    <SelectItem value="İpotekli / Gayrimenkul">İpotekli / Gayrimenkul</SelectItem>
+                    <SelectItem value="Hacizli / Gayrimenkul">Hacizli / Gayrimenkul</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
-              <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
+              <Label htmlFor="görevlendiren">Görevlendiren</Label>
+              <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
                 <SelectTrigger>
-                  <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  <SelectValue placeholder="Görevlendiren seçin" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
@@ -534,10 +579,10 @@ export default function ExecutionForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="görevlendiren">Görevlendiren</Label>
-              <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
+              <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+              <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
                 <SelectTrigger>
-                  <SelectValue placeholder="Görevlendiren seçin" />
+                  <SelectValue placeholder="İlgili/Sorumlu seçin" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>

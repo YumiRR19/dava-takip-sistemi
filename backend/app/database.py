@@ -47,6 +47,7 @@ class ClientDB(Base):
     phone = Column(String, nullable=False)
     address = Column(String, nullable=False)
     tax_id = Column(String, nullable=True)
+    vekalet_ofis_no = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)

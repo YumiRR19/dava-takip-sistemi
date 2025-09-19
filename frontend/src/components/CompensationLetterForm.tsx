@@ -400,10 +400,10 @@ export default function CompensationLetterForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
-                <Select value={formData.responsible_person} onValueChange={(value) => setFormData({ ...formData, responsible_person: value })} name="responsible_person">
+                <Label htmlFor="görevlendiren">Görevlendiren</Label>
+                <Select value={formData.görevlendiren} onValueChange={(value) => setFormData({ ...formData, görevlendiren: value })} name="görevlendiren">
                   <SelectTrigger>
-                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                    <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
@@ -419,10 +419,10 @@ export default function CompensationLetterForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="görevlendiren">Görevlendiren</Label>
-                <Select value={formData.görevlendiren} onValueChange={(value) => setFormData({ ...formData, görevlendiren: value })} name="görevlendiren">
+                <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+                <Select value={formData.responsible_person} onValueChange={(value) => setFormData({ ...formData, responsible_person: value })} name="responsible_person">
                   <SelectTrigger>
-                    <SelectValue placeholder="Görevlendiren seçin" />
+                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>

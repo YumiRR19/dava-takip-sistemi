@@ -5,6 +5,7 @@ export interface Client {
   phone: string
   address: string
   tax_id?: string
+  vekalet_ofis_no?: string
   created_at: string
   updated_at: string
   version: number
@@ -16,6 +17,7 @@ export interface ClientCreate {
   phone: string
   address: string
   tax_id?: string
+  vekalet_ofis_no?: string
 }
 
 export interface ClientUpdate {
@@ -24,7 +26,8 @@ export interface ClientUpdate {
   phone?: string
   address?: string
   tax_id?: string
-  version?: number
+  vekalet_ofis_no?: string
+  version: number
 }
 
 export interface Case {

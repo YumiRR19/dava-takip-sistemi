@@ -180,8 +180,10 @@ export default function Executions() {
               <SelectContent>
                 <SelectItem value="all">Tüm Haciz Durumları</SelectItem>
                 <SelectItem value="Hacizli Araç">Hacizli Araç</SelectItem>
-                <SelectItem value="Yakalamalı">Yakalamalı</SelectItem>
-                <SelectItem value="Hacizli Gayrimenkul">Hacizli Gayrimenkul</SelectItem>
+                <SelectItem value="Rehinli Araç">Rehinli Araç</SelectItem>
+                <SelectItem value="Yakalamalı / Şatış">Yakalamalı / Şatış</SelectItem>
+                <SelectItem value="İpotekli / Gayrimenkul">İpotekli / Gayrimenkul</SelectItem>
+                <SelectItem value="Hacizli / Gayrimenkul">Hacizli / Gayrimenkul</SelectItem>
               </SelectContent>
             </Select>
             <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
