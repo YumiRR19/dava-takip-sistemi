@@ -102,11 +102,11 @@ export default function Executions() {
       case 'Derdest':
         return 'default'
       case 'İnfaz':
-        return 'secondary'
+        return 'destructive'
       case 'Haricen Tahsil':
         return 'destructive'
       case 'İtirazlı':
-        return 'destructive'
+        return 'outline'
       case 'İcranın Geri Bırakılması':
         return 'secondary'
       case 'Davalı':
