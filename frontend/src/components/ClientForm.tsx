@@ -162,6 +162,16 @@ export default function ClientForm() {
                   required
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vekalet_ofis_no">Vekalet Ofis No</Label>
+                <Input
+                  id="vekalet_ofis_no"
+                  value={formData.vekalet_ofis_no}
+                  onChange={(e) => handleChange('vekalet_ofis_no', e.target.value)}
+                  placeholder="Vekalet ofis numarası girin"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -171,16 +181,6 @@ export default function ClientForm() {
                 value={formData.tax_id}
                 onChange={(e) => handleChange('tax_id', e.target.value)}
                 placeholder="T.C. Kimlik No veya Vergi No girin"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="vekalet_ofis_no">Vekalet Ofis No</Label>
-              <Input
-                id="vekalet_ofis_no"
-                value={formData.vekalet_ofis_no}
-                onChange={(e) => handleChange('vekalet_ofis_no', e.target.value)}
-                placeholder="Vekalet ofis numarası girin"
               />
             </div>
 
