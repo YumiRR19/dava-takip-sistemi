@@ -132,7 +132,6 @@ export default function Cases() {
             <SelectItem value="Kısmen Kabul Kısmen Red">Kısmen Kabul Kısmen Red</SelectItem>
             <SelectItem value="Kabul">Kabul</SelectItem>
             <SelectItem value="Red">Red</SelectItem>
-            <SelectItem value="İnfaz">İnfaz</SelectItem>
             <SelectItem value="Temyiz">Temyiz</SelectItem>
             <SelectItem value="İstinaf">İstinaf</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>

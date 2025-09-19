@@ -429,7 +429,6 @@ export default function CaseSearch() {
                   <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
                   <SelectItem value="Kabul">Kabul</SelectItem>
                   <SelectItem value="Red">Red</SelectItem>
-                  <SelectItem value="İnfaz">İnfaz</SelectItem>
                   <SelectItem value="Temyiz">Temyiz</SelectItem>
                   <SelectItem value="İstinaf">İstinaf</SelectItem>
                   <SelectItem value="İtirazlı">İtirazlı</SelectItem>
