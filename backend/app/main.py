@@ -54,36 +54,31 @@ async def startup_event():
         print("❌ DATABASE_URL not set!")
         raise ValueError("DATABASE_URL environment variable is required")
     
-    def create_tables_async():
-        try:
-            create_tables()
-            print("✅ Database tables created successfully")
-        except Exception as table_error:
-            print(f"⚠️ Table creation failed: {table_error}")
-            print("✅ Backend starting without table creation - tables may already exist")
-        
-        try:
-            from app.database import engine
-            from sqlalchemy.orm import sessionmaker
-            from sqlalchemy import text
-            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-            with SessionLocal() as db:
-                try:
-                    db.execute(text("SELECT vekalet_ofis_no FROM clients LIMIT 1"))
-                    print("✅ vekalet_ofis_no column already exists")
-                except Exception:
-                    print("🔧 Adding vekalet_ofis_no column to clients table...")
-                    db.execute(text("ALTER TABLE clients ADD COLUMN vekalet_ofis_no VARCHAR"))
-                    db.commit()
-                    print("✅ Successfully added vekalet_ofis_no column")
-        except Exception as migration_error:
-            print(f"⚠️ Migration error: {migration_error}")
+    try:
+        create_tables()
+        print("✅ Database tables created successfully")
+    except Exception as table_error:
+        print(f"⚠️ Table creation failed: {table_error}")
+        print("✅ Backend starting without table creation - tables may already exist")
     
-    thread = threading.Thread(target=create_tables_async)
-    thread.daemon = True
-    thread.start()
+    try:
+        from app.database import engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import text
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        with SessionLocal() as db:
+            try:
+                db.execute(text("SELECT vekalet_ofis_no FROM clients LIMIT 1"))
+                print("✅ vekalet_ofis_no column already exists")
+            except Exception:
+                print("🔧 Adding vekalet_ofis_no column to clients table...")
+                db.execute(text("ALTER TABLE clients ADD COLUMN vekalet_ofis_no VARCHAR"))
+                db.commit()
+                print("✅ Successfully added vekalet_ofis_no column")
+    except Exception as migration_error:
+        print(f"⚠️ Migration error: {migration_error}")
     
-    print("✅ Backend startup completed - table creation and migration running in background")
+    print("✅ Backend startup completed - table creation and migration completed")
 
 class Client(BaseModel):
     id: str
