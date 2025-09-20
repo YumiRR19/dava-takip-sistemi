@@ -35,14 +35,21 @@ export default function ClientForm() {
   const loadClient = async (clientId: string) => {
     try {
       const clientData = await api.clients.getById(clientId)
-      setFormData({
+      console.log('API Response for client:', clientData)
+      console.log('vekalet_ofis_no from API:', clientData.vekalet_ofis_no)
+      console.log('tax_id from API:', clientData.tax_id)
+      
+      const formDataToSet = {
         name: clientData.name,
         email: clientData.email,
         phone: clientData.phone,
         address: clientData.address,
         tax_id: clientData.tax_id || '',
         vekalet_ofis_no: clientData.vekalet_ofis_no || ''
-      })
+      }
+      
+      console.log('Form data being set:', formDataToSet)
+      setFormData(formDataToSet)
       setCurrentVersion(clientData.version)
     } catch (error) {
       toast({
