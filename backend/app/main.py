@@ -63,6 +63,7 @@ async def startup_event():
             print("✅ Backend starting without table creation - tables may already exist")
         
         try:
+            from app.database import get_db, engine
             from sqlalchemy.orm import sessionmaker
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
             with SessionLocal() as db:
