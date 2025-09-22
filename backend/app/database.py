@@ -31,8 +31,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=3600,
     connect_args={
-        "application_name": "lexcloud-backend",
-        "sslmode": "disable"
+        "application_name": "lexcloud-backend"
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
