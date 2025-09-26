@@ -492,20 +492,35 @@ export default function ExecutionForm() {
                     <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                     <SelectItem value="Davalı">Davalı</SelectItem>
                     <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
+                    <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="execution_type">İcra Türü</Label>
-                <Input
-                  id="execution_type"
-                  name="execution_type"
-                  value={formData.execution_type}
-                  onChange={(e) => handleChange('execution_type', e.target.value)}
-                  placeholder="İcra türü"
-                  readOnly
-                />
+                <Label htmlFor="execution_type">İcra Türü *</Label>
+                <Select value={formData.execution_type} onValueChange={(value) => handleChange('execution_type', value)} name="execution_type">
+                  <SelectTrigger>
+                    <SelectValue placeholder="İcra türü seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="İlamsız Kredi Kartı">İlamsız Kredi Kartı</SelectItem>
+                    <SelectItem value="İlamsız İhtiyaç Kartı">İlamsız İhtiyaç Kartı</SelectItem>
+                    <SelectItem value="İlamsız GKS">İlamsız GKS</SelectItem>
+                    <SelectItem value="Kambiyo / Bono">Kambiyo / Bono</SelectItem>
+                    <SelectItem value="Kambiyo / Çek">Kambiyo / Çek</SelectItem>
+                    <SelectItem value="İlamsız / Çek">İlamsız / Çek</SelectItem>
+                    <SelectItem value="Rehin – Örnek 8">Rehin – Örnek 8</SelectItem>
+                    <SelectItem value="İpotek – Örnek 6">İpotek – Örnek 6</SelectItem>
+                    <SelectItem value="İpotek – Örnek 9">İpotek – Örnek 9</SelectItem>
+                    <SelectItem value="Örnek 4-5">Örnek 4-5</SelectItem>
+                    <SelectItem value="İlamsız Fatura">İlamsız Fatura</SelectItem>
+                    <SelectItem value="Nafaka – Örnek 49">Nafaka – Örnek 49</SelectItem>
+                    <SelectItem value="İhtiyat-İ Tedbir">İhtiyat-İ Tedbir</SelectItem>
+                    <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">Adi Kira ve Hasılat Kirası – Örnek 13</SelectItem>
+                    <SelectItem value="Tahliye – Örnek 14">Tahliye – Örnek 14</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

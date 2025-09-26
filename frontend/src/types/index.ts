@@ -103,6 +103,8 @@ export interface CaseSearchParams {
 export interface DashboardData {
   total_cases: number
   total_clients: number
+  total_executions: number
+  total_compensation_letters: number
   status_counts: Record<string, number>
   upcoming_hearings: Array<{
     case_id: string

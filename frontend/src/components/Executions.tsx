@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -14,11 +13,11 @@ export default function Executions() {
   const [executions, setExecutions] = useState<Execution[]>([])
   const [filteredExecutions, setFilteredExecutions] = useState<Execution[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hacizFilter, setHacizFilter] = useState<string>('all')
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('all')
   const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('all')
+  const [executionTypeFilter, setExecutionTypeFilter] = useState<string>('all')
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -28,7 +27,7 @@ export default function Executions() {
 
   useEffect(() => {
     filterExecutions()
-  }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter])
+  }, [executions, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter])
 
   const loadExecutions = async () => {
     try {
@@ -48,15 +47,6 @@ export default function Executions() {
   const filterExecutions = () => {
     let filtered = executions
 
-    if (searchTerm) {
-      filtered = filtered.filter(execution =>
-        execution.execution_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        execution.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        execution.defendant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (execution.haciz_durumu && execution.haciz_durumu.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    }
-
     if (statusFilter !== 'all') {
       filtered = filtered.filter(execution => execution.status === statusFilter)
     }
@@ -71,6 +61,10 @@ export default function Executions() {
 
     if (görevlendirenFilter !== 'all') {
       filtered = filtered.filter(execution => (execution as any).görevlendiren === görevlendirenFilter)
+    }
+
+    if (executionTypeFilter !== 'all') {
+      filtered = filtered.filter(execution => execution.execution_type === executionTypeFilter)
     }
 
     setFilteredExecutions(filtered)
@@ -113,6 +107,8 @@ export default function Executions() {
         return 'default'
       case 'Ödeme Sözü':
         return 'secondary'
+      case 'Bilirkişi':
+        return 'outline'
       default:
         return 'default'
     }
@@ -147,17 +143,6 @@ export default function Executions() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="İcra dosya no, müvekkil, karşı taraf veya haciz durumu ara..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Durum filtrele" />
@@ -171,6 +156,31 @@ export default function Executions() {
                 <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                 <SelectItem value="Davalı">Davalı</SelectItem>
                 <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
+                <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={executionTypeFilter} onValueChange={setExecutionTypeFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="İcra türü filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm İcra Türleri</SelectItem>
+                <SelectItem value="İlamsız Kredi Kartı">İlamsız Kredi Kartı</SelectItem>
+                <SelectItem value="İlamsız İhtiyaç Kartı">İlamsız İhtiyaç Kartı</SelectItem>
+                <SelectItem value="İlamsız GKS">İlamsız GKS</SelectItem>
+                <SelectItem value="Kambiyo / Bono">Kambiyo / Bono</SelectItem>
+                <SelectItem value="Kambiyo / Çek">Kambiyo / Çek</SelectItem>
+                <SelectItem value="İlamsız / Çek">İlamsız / Çek</SelectItem>
+                <SelectItem value="Rehin – Örnek 8">Rehin – Örnek 8</SelectItem>
+                <SelectItem value="İpotek – Örnek 6">İpotek – Örnek 6</SelectItem>
+                <SelectItem value="İpotek – Örnek 9">İpotek – Örnek 9</SelectItem>
+                <SelectItem value="Örnek 4-5">Örnek 4-5</SelectItem>
+                <SelectItem value="İlamsız Fatura">İlamsız Fatura</SelectItem>
+                <SelectItem value="Nafaka – Örnek 49">Nafaka – Örnek 49</SelectItem>
+                <SelectItem value="İhtiyat-İ Tedbir">İhtiyat-İ Tedbir</SelectItem>
+                <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">Adi Kira ve Hasılat Kirası – Örnek 13</SelectItem>
+                <SelectItem value="Tahliye – Örnek 14">Tahliye – Örnek 14</SelectItem>
               </SelectContent>
             </Select>
             <Select value={hacizFilter} onValueChange={setHacizFilter}>
@@ -239,7 +249,7 @@ export default function Executions() {
                 {filteredExecutions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      {searchTerm || statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' ? 'Arama kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
+                      {statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' || executionTypeFilter !== 'all' ? 'Filtreleme kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -607,6 +607,14 @@ async def backup_data(db: Session = Depends(get_db), token: str = Depends(verify
 @app.post("/api/restore")
 async def restore_data(backup: dict, db: Session = Depends(get_db), token: str = Depends(verify_token)):
     try:
+        if not backup or not isinstance(backup, dict):
+            raise HTTPException(status_code=400, detail="Invalid backup data format")
+        
+        required_sections = ['clients', 'cases', 'executions', 'compensation_letters']
+        has_valid_sections = any(section in backup for section in required_sections)
+        if not has_valid_sections:
+            raise HTTPException(status_code=400, detail="Backup file does not contain valid data sections")
+        
         db.query(ClientDB).filter(ClientDB.is_deleted == False).update({"is_deleted": True})
         db.query(CaseDB).filter(CaseDB.is_deleted == False).update({"is_deleted": True})
         db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).update({"is_deleted": True})
@@ -614,56 +622,77 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
         
         if "clients" in backup:
             for client_id, client_data in backup["clients"].items():
-                client_data["created_at"] = datetime.fromisoformat(client_data["created_at"])
-                if "updated_at" in client_data:
-                    client_data["updated_at"] = datetime.fromisoformat(client_data["updated_at"])
-                else:
-                    client_data["updated_at"] = client_data["created_at"]
-                
-                db_client = ClientDB(**client_data)
-                db.add(db_client)
+                try:
+                    client_data["created_at"] = datetime.fromisoformat(client_data["created_at"])
+                    if "updated_at" in client_data:
+                        client_data["updated_at"] = datetime.fromisoformat(client_data["updated_at"])
+                    else:
+                        client_data["updated_at"] = client_data["created_at"]
+                    
+                    db_client = ClientDB(**client_data)
+                    db.add(db_client)
+                except Exception as e:
+                    print(f"Error processing client {client_id}: {e}")
+                    continue
         
         if "cases" in backup:
             for case_id, case_data in backup["cases"].items():
-                case_data["created_at"] = datetime.fromisoformat(case_data["created_at"])
-                case_data["updated_at"] = datetime.fromisoformat(case_data["updated_at"])
-                case_data["start_date"] = date.fromisoformat(case_data["start_date"])
-                if case_data.get("next_hearing_date"):
-                    case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
-                if case_data.get("reminder_date"):
-                    case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
-                
-                db_case = CaseDB(**case_data)
-                db.add(db_case)
+                try:
+                    case_data["created_at"] = datetime.fromisoformat(case_data["created_at"])
+                    case_data["updated_at"] = datetime.fromisoformat(case_data["updated_at"])
+                    case_data["start_date"] = date.fromisoformat(case_data["start_date"])
+                    if case_data.get("next_hearing_date"):
+                        case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
+                    if case_data.get("reminder_date"):
+                        case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
+                    
+                    db_case = CaseDB(**case_data)
+                    db.add(db_case)
+                except Exception as e:
+                    print(f"Error processing case {case_id}: {e}")
+                    continue
         
         if "compensation_letters" in backup:
             for letter_id, letter_data in backup["compensation_letters"].items():
-                letter_data["created_at"] = datetime.fromisoformat(letter_data["created_at"])
-                letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
-                
-                db_letter = CompensationLetterDB(**letter_data)
-                db.add(db_letter)
+                try:
+                    letter_data["created_at"] = datetime.fromisoformat(letter_data["created_at"])
+                    letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
+                    if letter_data.get("reminder_date"):
+                        letter_data["reminder_date"] = date.fromisoformat(letter_data["reminder_date"])
+                    
+                    db_letter = CompensationLetterDB(**letter_data)
+                    db.add(db_letter)
+                except Exception as e:
+                    print(f"Error processing compensation letter {letter_id}: {e}")
+                    continue
         
         if "executions" in backup:
             for execution_id, execution_data in backup["executions"].items():
-                execution_data["created_at"] = datetime.fromisoformat(execution_data["created_at"])
-                execution_data["updated_at"] = datetime.fromisoformat(execution_data["updated_at"])
-                execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
-                if execution_data.get("reminder_date"):
-                    execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
-                
-                db_execution = ExecutionDB(**execution_data)
-                db.add(db_execution)
+                try:
+                    execution_data["created_at"] = datetime.fromisoformat(execution_data["created_at"])
+                    execution_data["updated_at"] = datetime.fromisoformat(execution_data["updated_at"])
+                    execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
+                    if execution_data.get("reminder_date"):
+                        execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
+                    
+                    db_execution = ExecutionDB(**execution_data)
+                    db.add(db_execution)
+                except Exception as e:
+                    print(f"Error processing execution {execution_id}: {e}")
+                    continue
         
         db.commit()
         
         await manager.broadcast_data_change("restore", "all", "system", {"message": "Data restored successfully"})
         
         return {"message": "Data restored successfully"}
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         print(f"Error restoring data: {e}")
-        raise HTTPException(status_code=500, detail="Failed to restore data")
+        raise HTTPException(status_code=500, detail=f"Failed to restore data: {str(e)}")
 
 @app.get("/health/backup")
 async def backup_health(db: Session = Depends(get_db)):
@@ -1004,6 +1033,8 @@ async def health_check():
 async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
     total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
     total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
+    total_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).count()
+    total_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).count()
     
     upcoming_reminders = []
     
@@ -1083,6 +1114,8 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
     return {
         "total_cases": total_cases,
         "total_clients": total_clients,
+        "total_executions": total_executions,
+        "total_compensation_letters": total_compensation_letters,
         "status_counts": status_counts,
         "upcoming_reminders": upcoming_reminders
     }

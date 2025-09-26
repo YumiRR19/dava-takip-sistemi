@@ -95,6 +95,16 @@ export default function Settings() {
       const text = await file.text()
       const backupData = JSON.parse(text)
       
+      if (!backupData || typeof backupData !== 'object') {
+        throw new Error('Invalid backup file format')
+      }
+      
+      const requiredSections = ['clients', 'cases', 'executions', 'compensation_letters']
+      const hasValidSections = requiredSections.some(section => backupData[section])
+      if (!hasValidSections) {
+        throw new Error('Backup file does not contain valid data sections')
+      }
+      
       await api.backup.import(backupData)
       toast({
         title: "Başarılı",
@@ -104,10 +114,21 @@ export default function Settings() {
       setTimeout(() => {
         window.location.reload()
       }, 1000)
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Restore error:', error)
+      let errorMessage = "Geri yükleme başarısız. Dosya formatını kontrol edin."
+      
+      if (error.message === 'Invalid backup file format') {
+        errorMessage = "Geçersiz yedek dosya formatı. JSON dosyası seçtiğinizden emin olun."
+      } else if (error.message === 'Backup file does not contain valid data sections') {
+        errorMessage = "Yedek dosyası geçerli veri bölümleri içermiyor."
+      } else if (error.status === 500) {
+        errorMessage = "Sunucu hatası. Lütfen daha sonra tekrar deneyin."
+      }
+      
       toast({
         title: "Hata",
-        description: "Geri yükleme başarısız. Dosya formatını kontrol edin.",
+        description: errorMessage,
         variant: "destructive",
       })
     }
