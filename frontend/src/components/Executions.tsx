@@ -147,21 +147,21 @@ export default function Executions() {
       <Card>
         <CardHeader>
           <CardTitle>İcra Listesi</CardTitle>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Müvekkil, karşı taraf veya icra dosya no ile ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           <CardDescription>
             Tüm icra kayıtlarınızı görüntüleyin ve yönetin.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Müvekkil, karşı taraf veya icra dosya no ile ara..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Durum filtrele" />
@@ -249,8 +249,9 @@ export default function Executions() {
             </Select>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
+          <div className="overflow-x-auto">
+            <div className="rounded-md border">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>İcra</TableHead>
@@ -334,7 +335,8 @@ export default function Executions() {
                   ))
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

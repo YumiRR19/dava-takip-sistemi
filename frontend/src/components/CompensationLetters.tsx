@@ -171,7 +171,8 @@ export default function CompensationLetters() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Mektup No</TableHead>
@@ -214,7 +215,8 @@ export default function CompensationLetters() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
