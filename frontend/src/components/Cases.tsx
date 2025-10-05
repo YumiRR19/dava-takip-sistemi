@@ -138,6 +138,7 @@ export default function Cases() {
             <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
             <SelectItem value="Gerekli Karar Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
             <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+            <SelectItem value="Konkordato">Konkordato</SelectItem>
           </SelectContent>
         </Select>
         <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
@@ -192,55 +193,57 @@ export default function Cases() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mahkeme</TableHead>
-                  <TableHead>Dosya No</TableHead>
-                  <TableHead>Müvekkil</TableHead>
-                  <TableHead>Karşı Taraf</TableHead>
-                  <TableHead>Dava Adı</TableHead>
-                  <TableHead>Hatırlatma Tarihi</TableHead>
-                  <TableHead>Hatırlatma Metni</TableHead>
-                  <TableHead>İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCases.map((caseItem) => (
-                  <TableRow key={caseItem.id}>
-                    <TableCell className="font-medium">{caseItem.court}</TableCell>
-                    <TableCell>{caseItem.case_number}</TableCell>
-                    <TableCell>{caseItem.client_name}</TableCell>
-                    <TableCell>{caseItem.defendant}</TableCell>
-                    <TableCell>{caseItem.case_name || '-'}</TableCell>
-                    <TableCell>
-                      {caseItem.reminder_date 
-                        ? new Date(caseItem.reminder_date).toLocaleDateString('tr-TR')
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{caseItem.description || '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/cases/${caseItem.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(caseItem.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mahkeme</TableHead>
+                    <TableHead>Dosya No</TableHead>
+                    <TableHead>Müvekkil</TableHead>
+                    <TableHead>Karşı Taraf</TableHead>
+                    <TableHead>Dava Adı</TableHead>
+                    <TableHead>Hatırlatma Tarihi</TableHead>
+                    <TableHead>Hatırlatma Metni</TableHead>
+                    <TableHead>İşlemler</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredCases.map((caseItem) => (
+                    <TableRow key={caseItem.id}>
+                      <TableCell className="font-medium">{caseItem.court}</TableCell>
+                      <TableCell>{caseItem.case_number}</TableCell>
+                      <TableCell>{caseItem.client_name}</TableCell>
+                      <TableCell>{caseItem.defendant}</TableCell>
+                      <TableCell>{caseItem.case_name || '-'}</TableCell>
+                      <TableCell>
+                        {caseItem.reminder_date 
+                          ? new Date(caseItem.reminder_date).toLocaleDateString('tr-TR')
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{caseItem.description || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={`/cases/${caseItem.id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(caseItem.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

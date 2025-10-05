@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff, Database, Server, Filter } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Link } from 'react-router-dom'
+import { FileText, Users, Wifi, WifiOff, Database, Server } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api, DashboardData, request } from '@/lib/api'
@@ -16,9 +16,7 @@ export default function Dashboard() {
     websocket: false,
     database: true
   })
-  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
   const { toast } = useToast()
-  const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
 
   useEffect(() => {
@@ -71,10 +69,6 @@ export default function Dashboard() {
     }
   }
 
-  const filteredReminders = (data?.upcoming_reminders || []).filter(reminder => {
-    if (reminderFilter === 'all') return true
-    return reminder.type === reminderFilter
-  })
 
   if (loading) {
     return (
@@ -194,135 +188,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Hatırlatmalar</CardTitle>
-                <CardDescription>Önümüzdeki 7 gün içindeki hatırlatmalar</CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <div className="flex space-x-1">
-                  <Button
-                    variant={reminderFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('all')}
-                  >
-                    Tümü
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'case' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('case')}
-                  >
-                    Dava Dosyaları
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'execution' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('execution')}
-                  >
-                    İcra Takipleri
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'compensation_letter' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('compensation_letter')}
-                  >
-                    Teminat Mektupları
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {filteredReminders.slice(0, 5).map((reminder) => (
-                <div 
-                  key={reminder.type === 'case' ? reminder.case_id : reminder.execution_id} 
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                  onDoubleClick={() => {
-                    if (reminder.type === 'case') {
-                      navigate(`/cases/${reminder.case_id}/edit`)
-                    } else if (reminder.type === 'execution') {
-                      navigate(`/executions/${reminder.execution_id}/edit`)
-                    } else if (reminder.type === 'compensation_letter') {
-                      navigate(`/compensation-letters/${reminder.compensation_letter_id}/edit`)
-                    }
-                  }}
-                >
-                  <div className="flex-1">
-                    {reminder.type === 'case' ? (
-                      <>
-                        <p className="text-sm font-medium text-blue-600">Dosya No: {reminder.case_number}</p>
-                        {reminder.case_name && (
-                          <p className="text-xs text-gray-700 font-medium">Dava Adı: {reminder.case_name}</p>
-                        )}
-                        <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
-                        <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
-                        {reminder.description && (
-                          <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
-                        )}
-                      </>
-                    ) : reminder.type === 'execution' ? (
-                      <>
-                        <p className="text-sm font-medium text-blue-600">İcra Dosya No: {reminder.execution_number}</p>
-                        <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
-                        {reminder.reminder_text && (
-                          <p className="text-xs text-gray-500 mt-1">Hatırlatma Metni: {reminder.reminder_text}</p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium text-blue-600">Mahkeme: {reminder.court}</p>
-                        <p className="text-xs text-gray-700 font-medium">Dosya No: {reminder.case_number}</p>
-                        <p className="text-xs text-gray-700 font-medium">Müşteri: {reminder.customer}</p>
-                        <p className="text-xs text-gray-700 font-medium">Mektup No: {reminder.letter_number}</p>
-                        {reminder.reminder_text && (
-                          <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.reminder_text}</p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {reminder.görevlendiren && (
-                      <p className="text-sm font-medium text-blue-600 mb-1">
-                        Görevlendiren: {reminder.görevlendiren}
-                      </p>
-                    )}
-                    {reminder.responsible_person && (
-                      <p className="text-sm font-medium text-red-600 mb-1">
-                        İlgili/Sorumlu: {reminder.responsible_person}
-                      </p>
-                    )}
-                    <p className="text-sm font-medium text-red-600">
-                      {new Date(reminder.reminder_date).toLocaleDateString('tr-TR')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {filteredReminders.length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500 mb-2">
-                    {reminderFilter === 'all' 
-                      ? 'Yaklaşan hatırlatma bulunmuyor.' 
-                      : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için yaklaşan hatırlatma bulunmuyor.`
-                    }
-                  </p>
-                  {data.total_cases === 0 && data.total_clients === 0 && (
-                    <p className="text-xs text-gray-400">Dava ve müvekkil ekleyerek başlayın.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
     </div>
   )
 }

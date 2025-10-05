@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -13,6 +14,7 @@ export default function Executions() {
   const [executions, setExecutions] = useState<Execution[]>([])
   const [filteredExecutions, setFilteredExecutions] = useState<Execution[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hacizFilter, setHacizFilter] = useState<string>('all')
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('all')
@@ -27,7 +29,7 @@ export default function Executions() {
 
   useEffect(() => {
     filterExecutions()
-  }, [executions, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter])
+  }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter])
 
   const loadExecutions = async () => {
     try {
@@ -46,6 +48,14 @@ export default function Executions() {
 
   const filterExecutions = () => {
     let filtered = executions
+
+    if (searchTerm) {
+      filtered = filtered.filter(execution => 
+        execution.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        execution.defendant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        execution.execution_number.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter(execution => execution.status === statusFilter)
@@ -143,6 +153,15 @@ export default function Executions() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Müvekkil, karşı taraf veya icra dosya no ile ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Durum filtrele" />

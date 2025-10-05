@@ -422,6 +422,7 @@ export default function CaseForm() {
                     <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
                     <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
                     <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+                    <SelectItem value="Konkordato">Konkordato</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

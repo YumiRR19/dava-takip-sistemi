@@ -772,7 +772,7 @@ async def create_client(client: ClientCreate, db: Session = Depends(get_db), tok
 @app.get("/api/clients", response_model=List[Client])
 async def get_clients(
     page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
+    limit: int = Query(1000, ge=1, le=10000),
     db: Session = Depends(get_db), 
     token: str = Depends(verify_token)
 ):
