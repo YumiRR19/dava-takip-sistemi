@@ -886,7 +886,7 @@ async def get_cases(
     responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
+    limit: int = Query(1000, ge=1, le=10000),
     db: Session = Depends(get_db), 
     token: str = Depends(verify_token)
 ):
@@ -1172,7 +1172,7 @@ async def get_compensation_letters(
     client_id: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
+    limit: int = Query(1000, ge=1, le=10000),
     db: Session = Depends(get_db),
     token: str = Depends(verify_token)
 ):
@@ -1302,7 +1302,7 @@ async def get_executions(
     responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
+    limit: int = Query(1000, ge=1, le=10000),
     db: Session = Depends(get_db),
     token: str = Depends(verify_token)
 ):
