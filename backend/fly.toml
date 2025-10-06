@@ -1,4 +1,4 @@
-app = "lexcloud-backend-fixed"
+app = "lexcloud-backend"
 primary_region = "iad"
 
 [build]
