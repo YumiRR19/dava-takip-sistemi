@@ -246,7 +246,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {filteredReminders.slice(0, 5).map((reminder) => (
+              {filteredReminders.slice(0, 500).map((reminder) => (
                 <div 
                   key={reminder.type === 'case' ? reminder.case_id : reminder.execution_id} 
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"

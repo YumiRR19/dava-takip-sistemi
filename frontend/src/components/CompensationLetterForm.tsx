@@ -342,6 +342,7 @@ export default function CompensationLetterForm() {
                   <SelectContent>
                     <SelectItem value="TÜRKİYE VAKIFLAR BANKASI T.A.O.">TÜRKİYE VAKIFLAR BANKASI T.A.O.</SelectItem>
                     <SelectItem value="TÜRKİYE GARANTİ BANKASI A.Ş.">TÜRKİYE GARANTİ BANKASI A.Ş.</SelectItem>
+                    <SelectItem value="ŞEKERBANK T.A.Ş.">ŞEKERBANK T.A.Ş.</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
