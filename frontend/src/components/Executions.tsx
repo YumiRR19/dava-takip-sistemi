@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, Execution } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Executions() {
   const [executions, setExecutions] = useState<Execution[]>([])
@@ -22,6 +23,7 @@ export default function Executions() {
   const [executionTypeFilter, setExecutionTypeFilter] = useState<string>('all')
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     loadExecutions()
@@ -31,14 +33,20 @@ export default function Executions() {
     filterExecutions()
   }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter])
 
+  const getDateLocale = () => {
+    if (language === 'tr') return 'tr-TR'
+    if (language === 'de') return 'de-DE'
+    return 'en-US'
+  }
+
   const loadExecutions = async () => {
     try {
       const executionsData = await api.executions.getAll()
       setExecutions(executionsData)
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "İcra Takipleri yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.executions.executionsLoadError,
         variant: "destructive",
       })
     } finally {
@@ -81,21 +89,21 @@ export default function Executions() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bu icrayı silmek istediğinizden emin misiniz?')) {
+    if (!confirm(t.executions.confirmDelete)) {
       return
     }
 
     try {
       await api.executions.delete(id)
       toast({
-        title: "Başarılı",
-        description: "İcra başarıyla silindi.",
+        title: t.common.success,
+        description: t.executions.executionDeleted,
       })
       loadExecutions()
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "İcra silinirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.executions.executionDeleteError,
         variant: "destructive",
       })
     }
@@ -135,116 +143,116 @@ export default function Executions() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">İcra Takipleri</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t.executions.title}</h1>
         <Button asChild>
           <Link to="/executions/new">
             <Plus className="h-4 w-4 mr-2" />
-            Yeni İcra
+            {t.executions.newExecution}
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>İcra Listesi</CardTitle>
+          <CardTitle>{t.executions.executionList}</CardTitle>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Müvekkil, karşı taraf veya icra dosya no ile ara..."
+              placeholder={t.executions.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
           <CardDescription>
-            Tüm icra kayıtlarınızı görüntüleyin ve yönetin.
+            {t.executions.viewAndManageExecutions}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Durum filtrele" />
+                <SelectValue placeholder={t.executions.statusFilter} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Durumlar</SelectItem>
-                <SelectItem value="Derdest">Derdest</SelectItem>
-                <SelectItem value="İnfaz">İnfaz</SelectItem>
-                <SelectItem value="Haricen Tahsil">Haricen Tahsil</SelectItem>
-                <SelectItem value="İtirazlı">İtirazlı</SelectItem>
-                <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
-                <SelectItem value="Davalı">Davalı</SelectItem>
-                <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
-                <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+                <SelectItem value="all">{t.executions.allStatuses}</SelectItem>
+                <SelectItem value="Derdest">{t.executionStatuses.pending}</SelectItem>
+                <SelectItem value="İnfaz">{t.executionStatuses.enforcement}</SelectItem>
+                <SelectItem value="Haricen Tahsil">{t.executionStatuses.externalCollection}</SelectItem>
+                <SelectItem value="İtirazlı">{t.executionStatuses.objected}</SelectItem>
+                <SelectItem value="İcranın Geri Bırakılması">{t.executionStatuses.executionPostponed}</SelectItem>
+                <SelectItem value="Davalı">{t.executionStatuses.sued}</SelectItem>
+                <SelectItem value="Ödeme Sözü">{t.executionStatuses.paymentPromise}</SelectItem>
+                <SelectItem value="Bilirkişi">{t.executionStatuses.expert}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={executionTypeFilter} onValueChange={setExecutionTypeFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="İcra türü filtrele" />
+                <SelectValue placeholder={t.executions.executionTypeFilter} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm İcra Türleri</SelectItem>
-                <SelectItem value="İlamsız Kredi Kartı">İlamsız Kredi Kartı</SelectItem>
-                <SelectItem value="İlamsız İhtiyaç Kartı">İlamsız İhtiyaç Kartı</SelectItem>
-                <SelectItem value="İlamsız GKS">İlamsız GKS</SelectItem>
-                <SelectItem value="Kambiyo / Bono">Kambiyo / Bono</SelectItem>
-                <SelectItem value="Kambiyo / Çek">Kambiyo / Çek</SelectItem>
-                <SelectItem value="İlamsız / Çek">İlamsız / Çek</SelectItem>
-                <SelectItem value="Rehin – Örnek 8">Rehin – Örnek 8</SelectItem>
-                <SelectItem value="İpotek – Örnek 6">İpotek – Örnek 6</SelectItem>
-                <SelectItem value="İpotek – Örnek 9">İpotek – Örnek 9</SelectItem>
-                <SelectItem value="Örnek 4-5">Örnek 4-5</SelectItem>
-                <SelectItem value="İlamsız Fatura">İlamsız Fatura</SelectItem>
-                <SelectItem value="Nafaka – Örnek 49">Nafaka – Örnek 49</SelectItem>
-                <SelectItem value="İhtiyat-İ Tedbir">İhtiyat-İ Tedbir</SelectItem>
-                <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">Adi Kira ve Hasılat Kirası – Örnek 13</SelectItem>
-                <SelectItem value="Tahliye – Örnek 14">Tahliye – Örnek 14</SelectItem>
+                <SelectItem value="all">{t.executions.allExecutionTypes}</SelectItem>
+                <SelectItem value="İlamsız Kredi Kartı">{t.executionTypes.creditCardNoJudgment}</SelectItem>
+                <SelectItem value="İlamsız İhtiyaç Kartı">{t.executionTypes.consumerLoanNoJudgment}</SelectItem>
+                <SelectItem value="İlamsız GKS">{t.executionTypes.gksNoJudgment}</SelectItem>
+                <SelectItem value="Kambiyo / Bono">{t.executionTypes.billOfExchange}</SelectItem>
+                <SelectItem value="Kambiyo / Çek">{t.executionTypes.check}</SelectItem>
+                <SelectItem value="İlamsız / Çek">{t.executionTypes.checkNoJudgment}</SelectItem>
+                <SelectItem value="Rehin – Örnek 8">{t.executionTypes.pledgeSample8}</SelectItem>
+                <SelectItem value="İpotek – Örnek 6">{t.executionTypes.mortgageSample6}</SelectItem>
+                <SelectItem value="İpotek – Örnek 9">{t.executionTypes.mortgageSample9}</SelectItem>
+                <SelectItem value="Örnek 4-5">{t.executionTypes.sample45}</SelectItem>
+                <SelectItem value="İlamsız Fatura">{t.executionTypes.invoiceNoJudgment}</SelectItem>
+                <SelectItem value="Nafaka – Örnek 49">{t.executionTypes.alimonySample49}</SelectItem>
+                <SelectItem value="İhtiyat-İ Tedbir">{t.executionTypes.precautionaryMeasure}</SelectItem>
+                <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">{t.executionTypes.ordinaryRentSample13}</SelectItem>
+                <SelectItem value="Tahliye – Örnek 14">{t.executionTypes.evictionSample14}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={hacizFilter} onValueChange={setHacizFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Haciz durumu filtrele" />
+                <SelectValue placeholder={t.executions.seizureStatusFilter} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Haciz Durumları</SelectItem>
-                <SelectItem value="Hacizli Araç">Hacizli Araç</SelectItem>
-                <SelectItem value="Rehinli Araç">Rehinli Araç</SelectItem>
-                <SelectItem value="Yakalamalı / Şatış">Yakalamalı / Şatış</SelectItem>
-                <SelectItem value="İpotekli / Gayrimenkul">İpotekli / Gayrimenkul</SelectItem>
-                <SelectItem value="Hacizli / Gayrimenkul">Hacizli / Gayrimenkul</SelectItem>
+                <SelectItem value="all">{t.executions.allSeizureStatuses}</SelectItem>
+                <SelectItem value="Hacizli Araç">{t.seizureStatuses.seizedVehicle}</SelectItem>
+                <SelectItem value="Rehinli Araç">{t.seizureStatuses.pledgedVehicle}</SelectItem>
+                <SelectItem value="Yakalamalı / Şatış">{t.seizureStatuses.wantedForSale}</SelectItem>
+                <SelectItem value="İpotekli / Gayrimenkul">{t.seizureStatuses.mortgagedRealEstate}</SelectItem>
+                <SelectItem value="Hacizli / Gayrimenkul">{t.seizureStatuses.seizedRealEstate}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="İlgili/Sorumlu Filtrele" />
+                <SelectValue placeholder={t.executions.responsiblePersonFilter} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
-                <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                <SelectItem value="all">{t.executions.allResponsiblePersons}</SelectItem>
+                <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+                <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+                <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+                <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+                <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+                <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+                <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+                <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={görevlendirenFilter} onValueChange={setGörevlendirenFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Görevlendiren Filtrele" />
+                <SelectValue placeholder={t.executions.assignedByFilter} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Görevlendirenler</SelectItem>
-                <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                <SelectItem value="all">{t.executions.allAssignedBy}</SelectItem>
+                <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+                <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+                <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+                <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+                <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+                <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+                <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+                <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -254,22 +262,22 @@ export default function Executions() {
               <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>İcra</TableHead>
-                  <TableHead>İcra Dosya No</TableHead>
-                  <TableHead>Müvekkil</TableHead>
-                  <TableHead>Karşı Taraf</TableHead>
-                  <TableHead>Durum</TableHead>
-                  <TableHead>Haciz Durumu</TableHead>
-                  <TableHead>Açılış Tarihi</TableHead>
-                  <TableHead>Hatırlatma</TableHead>
-                  <TableHead className="text-right">İşlemler</TableHead>
+                  <TableHead>{t.executions.execution}</TableHead>
+                  <TableHead>{t.executions.executionFileNo}</TableHead>
+                  <TableHead>{t.executions.client}</TableHead>
+                  <TableHead>{t.executions.defendant}</TableHead>
+                  <TableHead>{t.executions.status}</TableHead>
+                  <TableHead>{t.executions.seizureStatus}</TableHead>
+                  <TableHead>{t.executions.openingDate}</TableHead>
+                  <TableHead>{t.executions.reminder}</TableHead>
+                  <TableHead className="text-right">{t.executions.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExecutions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      {statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' || executionTypeFilter !== 'all' ? 'Filtreleme kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
+                      {statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' || executionTypeFilter !== 'all' ? t.executions.noExecutionsMatchingCriteria : t.executions.noExecutionsFound}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -294,13 +302,13 @@ export default function Executions() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(execution.start_date).toLocaleDateString('tr-TR')}
+                        {new Date(execution.start_date).toLocaleDateString(getDateLocale())}
                       </TableCell>
                       <TableCell>
                         {execution.reminder_date ? (
                           <div className="text-sm">
                             <div className="font-medium text-red-600">
-                              {new Date(execution.reminder_date).toLocaleDateString('tr-TR')}
+                              {new Date(execution.reminder_date).toLocaleDateString(getDateLocale())}
                             </div>
                             {execution.reminder_text && (
                               <div className="text-gray-500 truncate max-w-32">

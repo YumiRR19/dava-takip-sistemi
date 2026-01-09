@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const { login, loading } = useAuth()
+  const { t } = useLanguage()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,8 +21,8 @@ export default function Login() {
     const success = await login(password)
     if (!success) {
       toast({
-        title: "Hata",
-        description: "Şifre yanlış. Lütfen tekrar deneyin.",
+        title: t.common.error,
+        description: t.login.wrongPassword,
         variant: "destructive",
       })
       setPassword('')
@@ -34,22 +36,22 @@ export default function Login() {
           <div className="flex items-center justify-center mb-4">
             <Lock className="h-12 w-12 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold">LexCloud</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t.login.title}</CardTitle>
           <CardDescription>
-            Dava takip sistemine giriş yapın
+            {t.login.subtitle}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Şifre</Label>
+              <Label htmlFor="password">{t.login.password}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Şifrenizi girin"
+                  placeholder={t.login.passwordPlaceholder}
                   required
                   className="pr-10"
                 />
@@ -63,7 +65,7 @@ export default function Login() {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+              {loading ? t.login.loggingIn : t.login.loginButton}
             </Button>
           </form>
         </CardContent>

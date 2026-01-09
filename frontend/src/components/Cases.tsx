@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { api, Case } from '@/lib/api'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Cases() {
   const [cases, setCases] = useState<Case[]>([])
@@ -21,6 +22,7 @@ export default function Cases() {
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
   const debouncedSearchTerm = useDebouncedSearch(searchTerm, 300)
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     loadCases()
@@ -32,6 +34,12 @@ export default function Cases() {
       clearDataChanges()
     }
   }, [hasChangesForEntity, clearDataChanges])
+
+  const getDateLocale = () => {
+    if (language === 'tr') return 'tr-TR'
+    if (language === 'de') return 'de-DE'
+    return 'en-US'
+  }
 
   const loadCases = async () => {
     try {
@@ -52,8 +60,8 @@ export default function Cases() {
       setCases(casesData)
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Dava Dosyaları yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.cases.casesLoadError,
         variant: "destructive",
       })
     } finally {
@@ -62,7 +70,7 @@ export default function Cases() {
   }
 
   const handleDelete = async (caseId: string) => {
-    if (!confirm('Bu davayı silmek istediğinizden emin misiniz?')) {
+    if (!confirm(t.cases.confirmDelete)) {
       return
     }
 
@@ -70,13 +78,13 @@ export default function Cases() {
       await api.cases.delete(caseId)
       setCases(cases.filter(c => c.id !== caseId))
       toast({
-        title: "Başarılı",
-        description: "Dava başarıyla silindi.",
+        title: t.common.success,
+        description: t.cases.caseDeleted,
       })
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Dava silinirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.cases.caseDeleteError,
         variant: "destructive",
       })
     }
@@ -101,11 +109,11 @@ export default function Cases() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dava Dosyaları</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t.cases.title}</h1>
         <Button asChild>
           <Link to="/cases/new">
             <Plus className="h-4 w-4 mr-2" />
-            Yeni Dava
+            {t.cases.newCase}
           </Link>
         </Button>
       </div>
@@ -114,7 +122,7 @@ export default function Cases() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Dava başlığı, müvekkil adı, dava numarası, dava adı veya karşı taraf ile ara..."
+            placeholder={t.cases.searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -123,56 +131,56 @@ export default function Cases() {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Durum filtrele" />
+            <SelectValue placeholder={t.cases.statusFilter} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tüm Durumlar</SelectItem>
-            <SelectItem value="Beraat">Beraat</SelectItem>
-            <SelectItem value="Ceza">Ceza</SelectItem>
-            <SelectItem value="Kısmen Kabul Kısmen Red">Kısmen Kabul Kısmen Red</SelectItem>
-            <SelectItem value="Kabul">Kabul</SelectItem>
-            <SelectItem value="Red">Red</SelectItem>
-            <SelectItem value="Temyiz">Temyiz</SelectItem>
-            <SelectItem value="İstinaf">İstinaf</SelectItem>
-            <SelectItem value="Derdest">Derdest</SelectItem>
-            <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-            <SelectItem value="Gerekli Karar Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-            <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
-            <SelectItem value="Konkordato">Konkordato</SelectItem>
+            <SelectItem value="all">{t.cases.allStatuses}</SelectItem>
+            <SelectItem value="Beraat">{t.caseStatuses.acquittal}</SelectItem>
+            <SelectItem value="Ceza">{t.caseStatuses.penalty}</SelectItem>
+            <SelectItem value="Kısmen Kabul Kısmen Red">{t.caseStatuses.partialAcceptPartialReject}</SelectItem>
+            <SelectItem value="Kabul">{t.caseStatuses.accepted}</SelectItem>
+            <SelectItem value="Red">{t.caseStatuses.rejected}</SelectItem>
+            <SelectItem value="Temyiz">{t.caseStatuses.appeal}</SelectItem>
+            <SelectItem value="İstinaf">{t.caseStatuses.regionalAppeal}</SelectItem>
+            <SelectItem value="Derdest">{t.caseStatuses.pending}</SelectItem>
+            <SelectItem value="Kesinleştirme">{t.caseStatuses.finalization}</SelectItem>
+            <SelectItem value="Gerekli Karar Bekleniyor">{t.caseStatuses.awaitingDecision}</SelectItem>
+            <SelectItem value="Bilirkişi">{t.caseStatuses.expert}</SelectItem>
+            <SelectItem value="Konkordato">{t.caseStatuses.concordat}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="İlgili/Sorumlu Filtrele" />
+            <SelectValue placeholder={t.cases.responsiblePersonFilter} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
-            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+            <SelectItem value="all">{t.cases.allResponsiblePersons}</SelectItem>
+            <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+            <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+            <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+            <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+            <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+            <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+            <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+            <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={görevlendirenFilter} onValueChange={setGörevlendirenFilter}>
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Görevlendiren Filtrele" />
+            <SelectValue placeholder={t.cases.assignedByFilter} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tüm Görevlendirenler</SelectItem>
-            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+            <SelectItem value="all">{t.cases.allAssignedBy}</SelectItem>
+            <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+            <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+            <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+            <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+            <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+            <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+            <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+            <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -181,11 +189,11 @@ export default function Cases() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm || (statusFilter && statusFilter !== 'all') || (responsiblePersonFilter && responsiblePersonFilter !== 'all') || (görevlendirenFilter && görevlendirenFilter !== 'all') ? 'Arama kriterlerinize uygun dava bulunamadı.' : 'Henüz dava bulunmuyor.'}
+              {searchTerm || (statusFilter && statusFilter !== 'all') || (responsiblePersonFilter && responsiblePersonFilter !== 'all') || (görevlendirenFilter && görevlendirenFilter !== 'all') ? t.cases.noCasesMatchingCriteria : t.cases.noCasesFound}
             </p>
             {!searchTerm && (!statusFilter || statusFilter === 'all') && (!responsiblePersonFilter || responsiblePersonFilter === 'all') && (!görevlendirenFilter || görevlendirenFilter === 'all') && (
               <Button asChild className="mt-4">
-                <Link to="/cases/new">İlk Davayı Oluştur</Link>
+                <Link to="/cases/new">{t.cases.createFirstCase}</Link>
               </Button>
             )}
           </CardContent>
@@ -197,14 +205,14 @@ export default function Cases() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mahkeme</TableHead>
-                    <TableHead>Dosya No</TableHead>
-                    <TableHead>Müvekkil</TableHead>
-                    <TableHead>Karşı Taraf</TableHead>
-                    <TableHead>Dava Adı</TableHead>
-                    <TableHead>Hatırlatma Tarihi</TableHead>
-                    <TableHead>Hatırlatma Metni</TableHead>
-                    <TableHead>İşlemler</TableHead>
+                    <TableHead>{t.cases.court}</TableHead>
+                    <TableHead>{t.cases.fileNo}</TableHead>
+                    <TableHead>{t.cases.client}</TableHead>
+                    <TableHead>{t.cases.defendant}</TableHead>
+                    <TableHead>{t.cases.caseName}</TableHead>
+                    <TableHead>{t.cases.reminderDate}</TableHead>
+                    <TableHead>{t.cases.reminderText}</TableHead>
+                    <TableHead>{t.cases.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -217,7 +225,7 @@ export default function Cases() {
                       <TableCell>{caseItem.case_name || '-'}</TableCell>
                       <TableCell>
                         {caseItem.reminder_date 
-                          ? new Date(caseItem.reminder_date).toLocaleDateString('tr-TR')
+                          ? new Date(caseItem.reminder_date).toLocaleDateString(getDateLocale())
                           : '-'
                         }
                       </TableCell>

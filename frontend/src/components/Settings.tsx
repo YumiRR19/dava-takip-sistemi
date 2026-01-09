@@ -1,14 +1,17 @@
 import React, { useState } from 'react'
-import { Save, Download, Moon, Sun, LogOut } from 'lucide-react'
+import { Save, Download, Moon, Sun, LogOut, Globe } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { useToast } from '@/hooks/use-toast'
 import { api } from '@/lib/api'
+import { Language } from '@/i18n/translations'
 
 export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -17,15 +20,24 @@ export default function Settings() {
   const [darkMode, setDarkMode] = useState(true)
   const [loading, setLoading] = useState(false)
   const { logout } = useAuth()
+  const { language, setLanguage, t } = useLanguage()
   const { toast } = useToast()
+
+  const handleLanguageChange = (newLanguage: Language) => {
+    setLanguage(newLanguage)
+    toast({
+      title: t.settings.languageChanged,
+      description: t.languages[newLanguage === 'tr' ? 'turkish' : newLanguage === 'en' ? 'english' : 'german'],
+    })
+  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Hata",
-        description: "Yeni şifreler eşleşmiyor.",
+        title: t.common.error,
+        description: t.settings.passwordMismatch,
         variant: "destructive",
       })
       return
@@ -33,8 +45,8 @@ export default function Settings() {
 
     if (newPassword.length < 6) {
       toast({
-        title: "Hata", 
-        description: "Yeni şifre en az 6 karakter olmalıdır.",
+        title: t.common.error, 
+        description: t.settings.passwordTooShort,
         variant: "destructive",
       })
       return
@@ -44,16 +56,16 @@ export default function Settings() {
     try {
       await api.auth.changePassword(currentPassword, newPassword)
       toast({
-        title: "Başarılı",
-        description: "Şifre başarıyla değiştirildi.",
+        title: t.common.success,
+        description: t.settings.passwordChanged,
       })
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.",
+        title: t.common.error,
+        description: t.settings.passwordChangeError,
         variant: "destructive",
       })
     } finally {
@@ -75,13 +87,13 @@ export default function Settings() {
       URL.revokeObjectURL(url)
       
       toast({
-        title: "Başarılı",
-        description: "Yedekleme dosyası indirildi.",
+        title: t.common.success,
+        description: t.settings.backupDownloaded,
       })
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Yedekleme oluşturulamadı.",
+        title: t.common.error,
+        description: t.settings.backupError,
         variant: "destructive",
       })
     }
@@ -107,8 +119,8 @@ export default function Settings() {
       
       await api.backup.import(backupData)
       toast({
-        title: "Başarılı",
-        description: "Veriler başarıyla geri yüklendi.",
+        title: t.common.success,
+        description: t.settings.dataRestored,
       })
       
       setTimeout(() => {
@@ -116,18 +128,18 @@ export default function Settings() {
       }, 1000)
     } catch (error: any) {
       console.error('Restore error:', error)
-      let errorMessage = "Geri yükleme başarısız. Dosya formatını kontrol edin."
+      let errorMessage = t.settings.restoreError
       
       if (error.message === 'Invalid backup file format') {
-        errorMessage = "Geçersiz yedek dosya formatı. JSON dosyası seçtiğinizden emin olun."
+        errorMessage = t.settings.invalidBackupFormat
       } else if (error.message === 'Backup file does not contain valid data sections') {
-        errorMessage = "Yedek dosyası geçerli veri bölümleri içermiyor."
+        errorMessage = t.settings.invalidBackupSections
       } else if (error.status === 500) {
-        errorMessage = "Sunucu hatası. Lütfen daha sonra tekrar deneyin."
+        errorMessage = t.settings.serverError
       }
       
       toast({
-        title: "Hata",
+        title: t.common.error,
         description: errorMessage,
         variant: "destructive",
       })
@@ -147,9 +159,15 @@ export default function Settings() {
     }
     
     toast({
-      title: "Tema Değiştirildi",
-      description: darkMode ? "Açık tema aktif edildi." : "Koyu tema aktif edildi.",
+      title: t.settings.themeChanged,
+      description: darkMode ? t.settings.lightThemeEnabled : t.settings.darkThemeEnabled,
     })
+  }
+
+  const getDateLocale = () => {
+    if (language === 'tr') return 'tr-TR'
+    if (language === 'de') return 'de-DE'
+    return 'en-US'
   }
 
   React.useEffect(() => {
@@ -167,25 +185,25 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Ayarlar</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t.settings.title}</h1>
         <Button variant="outline" onClick={logout}>
           <LogOut className="h-4 w-4 mr-2" />
-          Çıkış Yap
+          {t.settings.logout}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Şifre Değiştir</CardTitle>
+            <CardTitle>{t.settings.changePassword}</CardTitle>
             <CardDescription>
-              Hesap güvenliğiniz için şifrenizi düzenli olarak değiştirin
+              {t.settings.changePasswordDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="current-password">Mevcut Şifre</Label>
+                <Label htmlFor="current-password">{t.settings.currentPassword}</Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -195,7 +213,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">Yeni Şifre</Label>
+                <Label htmlFor="new-password">{t.settings.newPassword}</Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -205,7 +223,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Yeni Şifre (Tekrar)</Label>
+                <Label htmlFor="confirm-password">{t.settings.confirmNewPassword}</Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -216,7 +234,7 @@ export default function Settings() {
               </div>
               <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : 'Şifreyi Değiştir'}
+                {loading ? t.common.saving : t.settings.savePassword}
               </Button>
             </form>
           </CardContent>
@@ -224,21 +242,21 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Yedekleme & Geri Yükleme</CardTitle>
+            <CardTitle>{t.settings.backupRestore}</CardTitle>
             <CardDescription>
-              Verilerinizi yedekleyin veya önceki bir yedekten geri yükleyin
+              {t.settings.backupRestoreDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button onClick={handleBackup} className="w-full">
               <Download className="h-4 w-4 mr-2" />
-              Yedekleme İndir
+              {t.settings.downloadBackup}
             </Button>
             
             <Separator />
             
             <div className="space-y-2">
-              <Label htmlFor="restore-file">Yedek Dosyası Seç</Label>
+              <Label htmlFor="restore-file">{t.settings.selectBackupFile}</Label>
               <Input
                 id="restore-file"
                 type="file"
@@ -248,24 +266,24 @@ export default function Settings() {
             </div>
             
             <div className="text-sm text-gray-500">
-              <p>⚠️ Geri yükleme işlemi mevcut tüm verileri değiştirecektir.</p>
+              <p>{t.settings.restoreWarning}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Görünüm Ayarları</CardTitle>
+            <CardTitle>{t.settings.appearance}</CardTitle>
             <CardDescription>
-              Arayüz temasını ve görünüm seçeneklerini ayarlayın
+              {t.settings.appearanceDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Koyu Tema</Label>
+                <Label>{t.settings.darkTheme}</Label>
                 <p className="text-sm text-gray-500">
-                  Koyu renk temasını etkinleştirin
+                  {t.settings.enableDarkTheme}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -282,25 +300,54 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Otomatik Yedekleme</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              {t.settings.language}
+            </CardTitle>
             <CardDescription>
-              Verileriniz otomatik olarak yedeklenir
+              {t.settings.languageDescription}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t.settings.selectLanguage}</Label>
+                <Select value={language} onValueChange={(value) => handleLanguageChange(value as Language)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tr">{t.languages.turkish}</SelectItem>
+                    <SelectItem value="en">{t.languages.english}</SelectItem>
+                    <SelectItem value="de">{t.languages.german}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.settings.autoBackup}</CardTitle>
+            <CardDescription>
+              {t.settings.autoBackupDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Otomatik Yedekleme</Label>
+                  <Label>{t.settings.autoBackupEnabled}</Label>
                   <p className="text-sm text-gray-500">
-                    Günlük otomatik yedekleme aktif
+                    {t.settings.dailyAutoBackupActive}
                   </p>
                 </div>
                 <Switch checked={true} disabled />
               </div>
               <div className="text-sm text-gray-500">
-                <p>✅ Son yedekleme: {new Date().toLocaleDateString('tr-TR')}</p>
-                <p>📅 Sonraki yedekleme: {new Date(Date.now() + 24*60*60*1000).toLocaleDateString('tr-TR')}</p>
+                <p>{t.settings.lastBackup}: {new Date().toLocaleDateString(getDateLocale())}</p>
+                <p>{t.settings.nextBackup}: {new Date(Date.now() + 24*60*60*1000).toLocaleDateString(getDateLocale())}</p>
               </div>
             </div>
           </CardContent>

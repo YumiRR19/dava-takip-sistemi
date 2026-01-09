@@ -10,23 +10,25 @@ import {
   Mail
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface SidebarProps {
   open: boolean
   setOpen: (open: boolean) => void
 }
 
-const navigation = [
-  { name: 'Anasayfa', href: '/', icon: Home },
-  { name: 'Dava Dosyaları', href: '/cases', icon: FileText },
-  { name: 'İcra Takipleri', href: '/executions', icon: Scale },
-  { name: 'Teminat Mektupları', href: '/compensation-letters', icon: Mail },
-  { name: 'Müvekkiller', href: '/clients', icon: Users },
-  { name: 'Ayarlar', href: '/settings', icon: Settings },
-]
-
 export default function Sidebar({ open, setOpen }: SidebarProps) {
   const location = useLocation()
+  const { t } = useLanguage()
+
+  const navigation = [
+    { name: t.nav.home, href: '/', icon: Home },
+    { name: t.nav.cases, href: '/cases', icon: FileText },
+    { name: t.nav.executions, href: '/executions', icon: Scale },
+    { name: t.nav.compensationLetters, href: '/compensation-letters', icon: Mail },
+    { name: t.nav.clients, href: '/clients', icon: Users },
+    { name: t.nav.settings, href: '/settings', icon: Settings },
+  ]
 
   return (
     <>
