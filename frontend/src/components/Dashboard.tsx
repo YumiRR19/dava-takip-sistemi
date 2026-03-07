@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff, Database, Server, Filter } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +17,14 @@ export default function Dashboard() {
     database: true
   })
   const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
+  const [starredReminders, setStarredReminders] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('starred_reminders')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -77,11 +85,38 @@ export default function Dashboard() {
     return today.toDateString() === reminderDate.toDateString()
   })
 
-  const filteredReminders = todayReminders.filter(reminder => {
-    if (reminderFilter === 'all') return true
-    return reminder.type === reminderFilter
-  })
+  const getReminderKey = useCallback((reminder: DashboardData['upcoming_reminders'][number]): string => {
+    if (reminder.type === 'case') return `case-${reminder.case_id}`
+    if (reminder.type === 'execution') return `execution-${reminder.execution_id}`
+    return `compensation_letter-${reminder.compensation_letter_id}`
+  }, [])
 
+  const toggleStar = useCallback((reminderKey: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setStarredReminders(prev => {
+      const next = new Set(prev)
+      if (next.has(reminderKey)) {
+        next.delete(reminderKey)
+      } else {
+        next.add(reminderKey)
+      }
+      localStorage.setItem('starred_reminders', JSON.stringify([...next]))
+      return next
+    })
+  }, [])
+
+  const filteredReminders = todayReminders
+    .filter(reminder => {
+      if (reminderFilter === 'all') return true
+      return reminder.type === reminderFilter
+    })
+    .sort((a, b) => {
+      const aStarred = starredReminders.has(getReminderKey(a))
+      const bStarred = starredReminders.has(getReminderKey(b))
+      if (aStarred && !bStarred) return -1
+      if (!aStarred && bStarred) return 1
+      return 0
+    })
 
   if (loading) {
     return (
@@ -246,9 +281,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {filteredReminders.slice(0, 500).map((reminder) => (
+              {filteredReminders.slice(0, 500).map((reminder) => {
+                const reminderKey = getReminderKey(reminder)
+                const isStarred = starredReminders.has(reminderKey)
+                return (
                 <div 
-                  key={reminder.type === 'case' ? reminder.case_id : reminder.execution_id} 
+                  key={reminderKey} 
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
                   onDoubleClick={() => {
                     if (reminder.type === 'case') {
@@ -260,6 +298,20 @@ export default function Dashboard() {
                     }
                   }}
                 >
+                  <button
+                    type="button"
+                    onClick={(e) => toggleStar(reminderKey, e)}
+                    className="flex-shrink-0 mr-3 focus:outline-none"
+                    title={isStarred ? 'Yıldızı kaldır' : 'Yıldızla'}
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        isStarred
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                    />
+                  </button>
                   <div className="flex-1">
                     {reminder.type === 'case' ? (
                       <>
@@ -311,7 +363,8 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-              ))}
+              )})
+              }
               {filteredReminders.length === 0 && (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-500 mb-2">

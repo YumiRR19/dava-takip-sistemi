@@ -209,7 +209,11 @@ export default function Cases() {
                 </TableHeader>
                 <TableBody>
                   {filteredCases.map((caseItem) => (
-                    <TableRow key={caseItem.id}>
+                    <TableRow 
+                      key={caseItem.id}
+                      className={caseItem.status === 'Kesinleştirme' ? 'bg-red-100 hover:bg-red-200' : ''}
+                      style={caseItem.status === 'Kesinleştirme' ? { color: 'black' } : undefined}
+                    >
                       <TableCell className="font-medium">{caseItem.court}</TableCell>
                       <TableCell>{caseItem.case_number}</TableCell>
                       <TableCell>{caseItem.client_name}</TableCell>
