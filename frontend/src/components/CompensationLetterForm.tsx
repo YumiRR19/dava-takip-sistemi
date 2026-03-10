@@ -199,6 +199,7 @@ export default function CompensationLetterForm() {
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
           görevlendiren: formData.görevlendiren || undefined,
+          is_starred: formData.is_starred || undefined,
           version: currentVersion
         }
         await api.compensationLetters.update(id, updateData)
@@ -441,8 +442,7 @@ export default function CompensationLetterForm() {
                 </Select>
               </div>
 
-              {!isEdit && (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label>Hatırlatmalarda Yıldızla</Label>
                   <button
                     type="button"
@@ -459,7 +459,6 @@ export default function CompensationLetterForm() {
                     <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
                   </button>
                 </div>
-              )}
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="status">Durumu *</Label>

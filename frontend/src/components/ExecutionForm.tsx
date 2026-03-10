@@ -615,8 +615,7 @@ export default function ExecutionForm() {
               </Select>
             </div>
 
-            {!isEdit && (
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <Label>Hatırlatmalarda Yıldızla</Label>
                 <button
                   type="button"
@@ -633,7 +632,6 @@ export default function ExecutionForm() {
                   <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
                 </button>
               </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="reminder_text">Hatırlatma Metni</Label>

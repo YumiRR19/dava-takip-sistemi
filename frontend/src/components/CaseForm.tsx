@@ -532,8 +532,7 @@ export default function CaseForm() {
                 </Select>
               </div>
 
-              {!isEdit && (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label>Hatırlatmalarda Yıldızla</Label>
                   <button
                     type="button"
@@ -550,7 +549,6 @@ export default function CaseForm() {
                     <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
                   </button>
                 </div>
-              )}
             </div>
 
 
