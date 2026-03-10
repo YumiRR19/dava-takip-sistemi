@@ -1439,6 +1439,7 @@ async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db),
     
     db_item.is_starred = not db_item.is_starred
     db_item.updated_at = datetime.now()
+    db_item.version += 1
     
     try:
         db.commit()
