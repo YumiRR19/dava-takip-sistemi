@@ -223,7 +223,7 @@ export default function CaseForm() {
       office_archive_no: formData.office_archive_no,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
-      is_starred: formData.is_starred || undefined
+      is_starred: formData.is_starred
     }
 
     console.log('Form data before submission:', submissionData)

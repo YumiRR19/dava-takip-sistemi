@@ -267,7 +267,7 @@ export default function ExecutionForm() {
       haciz_durumu: formData.haciz_durumu || undefined,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
-      is_starred: formData.is_starred || undefined
+      is_starred: formData.is_starred
     }
 
     try {

@@ -199,7 +199,7 @@ export default function CompensationLetterForm() {
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
           görevlendiren: formData.görevlendiren || undefined,
-          is_starred: formData.is_starred || undefined,
+          is_starred: formData.is_starred,
           version: currentVersion
         }
         await api.compensationLetters.update(id, updateData)
@@ -222,7 +222,7 @@ export default function CompensationLetterForm() {
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
           görevlendiren: formData.görevlendiren || undefined,
-          is_starred: formData.is_starred || undefined
+          is_starred: formData.is_starred
         }
         await api.compensationLetters.create(createData)
         toast({
