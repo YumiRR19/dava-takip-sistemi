@@ -78,6 +78,26 @@ async def startup_event():
     except Exception as migration_error:
         print(f"⚠️ Migration error: {migration_error}")
     
+    # Migration: add is_starred column to cases, executions, compensation_letters
+    try:
+        from app.database import engine
+        from sqlalchemy.orm import sessionmaker as sm2
+        from sqlalchemy import text as text2
+        SL2 = sm2(autocommit=False, autoflush=False, bind=engine)
+        with SL2() as db:
+            for table_name in ['cases', 'executions', 'compensation_letters']:
+                try:
+                    db.execute(text2(f"SELECT is_starred FROM {table_name} LIMIT 1"))
+                    print(f"✅ is_starred column already exists in {table_name}")
+                except Exception:
+                    db.rollback()
+                    print(f"🔧 Adding is_starred column to {table_name}...")
+                    db.execute(text2(f"ALTER TABLE {table_name} ADD COLUMN is_starred BOOLEAN DEFAULT false NOT NULL"))
+                    db.commit()
+                    print(f"✅ Successfully added is_starred column to {table_name}")
+    except Exception as starred_migration_error:
+        print(f"⚠️ is_starred migration error: {starred_migration_error}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
 
 class Client(BaseModel):
@@ -128,6 +148,7 @@ class Case(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
@@ -149,6 +170,7 @@ class CaseCreate(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -167,6 +189,7 @@ class CaseUpdate(BaseModel):
     office_archive_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class CompensationLetter(BaseModel):
@@ -185,8 +208,8 @@ class CompensationLetter(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
-    responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
@@ -205,6 +228,7 @@ class CompensationLetterCreate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -220,6 +244,7 @@ class CompensationLetterUpdate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -239,6 +264,7 @@ class Execution(BaseModel):
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
@@ -258,6 +284,7 @@ class ExecutionCreate(BaseModel):
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -274,6 +301,7 @@ class ExecutionUpdate(BaseModel):
     haciz_durumu: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
@@ -374,6 +402,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         office_archive_no=db_case.office_archive_no,
         responsible_person=db_case.responsible_person,
         görevlendiren=db_case.görevlendiren,
+        is_starred=db_case.is_starred if db_case.is_starred is not None else False,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
         version=db_case.version
@@ -397,6 +426,7 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         reminder_text=db_letter.reminder_text,
         responsible_person=db_letter.responsible_person,
         görevlendiren=db_letter.görevlendiren,
+        is_starred=db_letter.is_starred if db_letter.is_starred is not None else False,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -420,6 +450,7 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         haciz_durumu=db_execution.haciz_durumu,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
+        is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
         created_at=db_execution.created_at,
         updated_at=db_execution.updated_at,
         version=db_execution.version
@@ -859,6 +890,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         office_archive_no=case.office_archive_no,
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
+        is_starred=case.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1057,6 +1089,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "description": case.description,
                     "responsible_person": case.responsible_person,
                     "görevlendiren": case.görevlendiren,
+                    "is_starred": case.is_starred if case.is_starred is not None else False,
                     "days_until": days_until
                 })
     
@@ -1078,6 +1111,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "reminder_text": execution.reminder_text,
                     "responsible_person": execution.responsible_person,
                     "görevlendiren": execution.görevlendiren,
+                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
                     "days_until": days_until
                 })
     
@@ -1100,6 +1134,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "reminder_text": letter.reminder_text,
                     "responsible_person": letter.responsible_person,
                     "görevlendiren": letter.görevlendiren,
+                    "is_starred": letter.is_starred if letter.is_starred is not None else False,
                     "days_until": days_until
                 })
     
@@ -1146,6 +1181,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         reminder_text=letter.reminder_text,
         responsible_person=letter.responsible_person,
         görevlendiren=letter.görevlendiren,
+        is_starred=letter.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1274,6 +1310,7 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         haciz_durumu=execution.haciz_durumu,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
+        is_starred=execution.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1381,3 +1418,40 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     await manager.broadcast_data_change("delete", "execution", execution_id, {})
     
     return {"message": "Execution deleted successfully"}
+
+class ToggleStarRequest(BaseModel):
+    entity_type: str  # "case", "execution", "compensation_letter"
+    entity_id: str
+
+@app.post("/api/reminders/toggle-star")
+async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    if request.entity_type == "case":
+        db_item = db.query(CaseDB).filter(CaseDB.id == request.entity_id, CaseDB.is_deleted == False).first()
+    elif request.entity_type == "execution":
+        db_item = db.query(ExecutionDB).filter(ExecutionDB.id == request.entity_id, ExecutionDB.is_deleted == False).first()
+    elif request.entity_type == "compensation_letter":
+        db_item = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == request.entity_id, CompensationLetterDB.is_deleted == False).first()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    db_item.is_starred = not db_item.is_starred
+    db_item.updated_at = datetime.now()
+    
+    try:
+        db.commit()
+        db.refresh(db_item)
+        
+        await manager.broadcast_data_change("update", "star", request.entity_id, {
+            "entity_type": request.entity_type,
+            "entity_id": request.entity_id,
+            "is_starred": db_item.is_starred
+        })
+        
+        return {"entity_type": request.entity_type, "entity_id": request.entity_id, "is_starred": db_item.is_starred}
+    except Exception as e:
+        db.rollback()
+        print(f"Error toggling star: {e}")
+        raise HTTPException(status_code=500, detail="Failed to toggle star")

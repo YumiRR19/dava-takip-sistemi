@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Star } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +38,8 @@ export default function CaseForm() {
     reminder_date: '',
     office_archive_no: '',
     responsible_person: '',
-    görevlendiren: ''
+    görevlendiren: '',
+    is_starred: false
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -168,7 +169,8 @@ export default function CaseForm() {
         reminder_date: caseData.reminder_date ? new Date(caseData.reminder_date).toISOString().split('T')[0] : '',
         office_archive_no: caseData.office_archive_no || '',
         responsible_person: caseData.responsible_person || '',
-        görevlendiren: caseData.görevlendiren || ''
+        görevlendiren: caseData.görevlendiren || '',
+        is_starred: caseData.is_starred || false
       })
       setCurrentVersion(caseData.version)
     } catch (error) {
@@ -220,7 +222,8 @@ export default function CaseForm() {
       reminder_date: formData.reminder_date,
       office_archive_no: formData.office_archive_no,
       responsible_person: formData.responsible_person || undefined,
-      görevlendiren: formData.görevlendiren || undefined
+      görevlendiren: formData.görevlendiren || undefined,
+      is_starred: formData.is_starred || undefined
     }
 
     console.log('Form data before submission:', submissionData)
@@ -528,6 +531,26 @@ export default function CaseForm() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {!isEdit && (
+                <div className="space-y-2">
+                  <Label>Hatırlatmalarda Yıldızla</Label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_starred: !prev.is_starred }))}
+                    className="flex items-center space-x-2 p-2 rounded-md border hover:bg-gray-50 transition-colors w-full"
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        formData.is_starred
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                    />
+                    <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
 

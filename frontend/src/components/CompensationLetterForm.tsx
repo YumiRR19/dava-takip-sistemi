@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,8 @@ export default function CompensationLetterForm() {
     reminder_date: '',
     reminder_text: '',
     responsible_person: '',
-    görevlendiren: ''
+    görevlendiren: '',
+    is_starred: false
   })
   const [clients, setClients] = useState<any[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
@@ -164,7 +165,8 @@ export default function CompensationLetterForm() {
         reminder_date: letter.reminder_date ? new Date(letter.reminder_date).toISOString().split('T')[0] : '',
         reminder_text: letter.reminder_text || '',
         responsible_person: letter.responsible_person || '',
-        görevlendiren: letter.görevlendiren || ''
+        görevlendiren: letter.görevlendiren || '',
+        is_starred: letter.is_starred || false
       })
       setCurrentVersion(letter.version)
     } catch (error) {
@@ -218,7 +220,8 @@ export default function CompensationLetterForm() {
           reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
-          görevlendiren: formData.görevlendiren || undefined
+          görevlendiren: formData.görevlendiren || undefined,
+          is_starred: formData.is_starred || undefined
         }
         await api.compensationLetters.create(createData)
         toast({
@@ -437,6 +440,26 @@ export default function CompensationLetterForm() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {!isEdit && (
+                <div className="space-y-2">
+                  <Label>Hatırlatmalarda Yıldızla</Label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_starred: !prev.is_starred }))}
+                    className="flex items-center space-x-2 p-2 rounded-md border hover:bg-gray-50 transition-colors w-full"
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        formData.is_starred
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                    />
+                    <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="status">Durumu *</Label>

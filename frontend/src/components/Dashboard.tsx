@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, DashboardData, request } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
@@ -17,14 +18,7 @@ export default function Dashboard() {
     database: true
   })
   const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
-  const [starredReminders, setStarredReminders] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem('starred_reminders')
-      return stored ? new Set(JSON.parse(stored)) : new Set()
-    } catch {
-      return new Set()
-    }
-  })
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -53,7 +47,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
-        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
+        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution') ||
+        hasChangesForEntity('star')) {
       loadDashboardData()
       clearDataChanges()
     }
@@ -91,28 +86,50 @@ export default function Dashboard() {
     return `compensation_letter-${reminder.compensation_letter_id}`
   }, [])
 
-  const toggleStar = useCallback((reminderKey: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setStarredReminders(prev => {
-      const next = new Set(prev)
-      if (next.has(reminderKey)) {
-        next.delete(reminderKey)
-      } else {
-        next.add(reminderKey)
-      }
-      localStorage.setItem('starred_reminders', JSON.stringify([...next]))
-      return next
-    })
+  const getEntityInfo = useCallback((reminderKey: string): { entityType: string; entityId: string } => {
+    const parts = reminderKey.split('-')
+    if (reminderKey.startsWith('compensation_letter-')) {
+      return { entityType: 'compensation_letter', entityId: parts.slice(1).join('-') }
+    }
+    return { entityType: parts[0], entityId: parts.slice(1).join('-') }
   }, [])
+
+  const toggleStar = useCallback(async (reminderKey: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { entityType, entityId } = getEntityInfo(reminderKey)
+    try {
+      await api.reminders.toggleStar(entityType, entityId)
+      loadDashboardData()
+    } catch (error) {
+      console.error('Error toggling star:', error)
+      toast({
+        title: "Hata",
+        description: "Yıldız durumu güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    }
+  }, [getEntityInfo, toast])
+
+  // Collect unique responsible persons from reminders for filter
+  const responsiblePersons = useMemo(() => {
+    const persons = new Set<string>()
+    todayReminders.forEach(reminder => {
+      if (reminder.responsible_person) {
+        persons.add(reminder.responsible_person)
+      }
+    })
+    return Array.from(persons).sort()
+  }, [todayReminders])
 
   const filteredReminders = todayReminders
     .filter(reminder => {
-      if (reminderFilter === 'all') return true
-      return reminder.type === reminderFilter
+      if (reminderFilter !== 'all' && reminder.type !== reminderFilter) return false
+      if (responsibleFilter !== 'all' && reminder.responsible_person !== responsibleFilter) return false
+      return true
     })
     .sort((a, b) => {
-      const aStarred = starredReminders.has(getReminderKey(a))
-      const bStarred = starredReminders.has(getReminderKey(b))
+      const aStarred = a.is_starred === true
+      const bStarred = b.is_starred === true
       if (aStarred && !bStarred) return -1
       if (!aStarred && bStarred) return 1
       return 0
@@ -167,6 +184,9 @@ export default function Dashboard() {
         <div className="flex space-x-3">
           <Button asChild>
             <Link to="/cases/new">Yeni Dava</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/executions/new">Yeni İcra</Link>
           </Button>
           <Button variant="outline" asChild>
             <Link to="/clients/new">Yeni Müvekkil</Link>
@@ -245,6 +265,19 @@ export default function Dashboard() {
                 <CardDescription>Bugün için hatırlatmalar</CardDescription>
               </div>
               <div className="flex items-center space-x-2">
+                <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="İlgili / Sorumlu Seç" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Sorumlular</SelectItem>
+                    {responsiblePersons.map((person) => (
+                      <SelectItem key={person} value={person}>
+                        {person}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Filter className="h-4 w-4 text-gray-500" />
                 <div className="flex space-x-1">
                   <Button
@@ -283,7 +316,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {filteredReminders.slice(0, 500).map((reminder) => {
                 const reminderKey = getReminderKey(reminder)
-                const isStarred = starredReminders.has(reminderKey)
+                const isStarred = reminder.is_starred === true
                 return (
                 <div 
                   key={reminderKey} 

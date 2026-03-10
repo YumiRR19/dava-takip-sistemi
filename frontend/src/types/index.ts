@@ -49,6 +49,7 @@ export interface Case {
   office_archive_no: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
@@ -71,6 +72,7 @@ export interface CaseCreate {
   office_archive_no: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface CaseUpdate {
@@ -89,6 +91,7 @@ export interface CaseUpdate {
   office_archive_no?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }
 
@@ -136,6 +139,7 @@ export interface DashboardData {
     reminder_text?: string
     responsible_person?: string
     görevlendiren?: string
+    is_starred?: boolean
   }>
 }
 
@@ -156,6 +160,7 @@ export interface CompensationLetter {
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
@@ -175,6 +180,7 @@ export interface CompensationLetterCreate {
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface CompensationLetterUpdate {
@@ -191,6 +197,7 @@ export interface CompensationLetterUpdate {
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }
 
@@ -211,6 +218,7 @@ export interface Execution {
   haciz_durumu?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
@@ -231,6 +239,7 @@ export interface ExecutionCreate {
   haciz_durumu?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface ExecutionUpdate {
@@ -246,5 +255,6 @@ export interface ExecutionUpdate {
   haciz_durumu?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }

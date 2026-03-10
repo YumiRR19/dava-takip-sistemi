@@ -110,6 +110,13 @@ export const api = {
     getData: () => apiRequest<DashboardData>('/api/dashboard'),
   },
   
+  reminders: {
+    toggleStar: (entityType: string, entityId: string) => apiRequest<{ entity_type: string; entity_id: string; is_starred: boolean }>('/api/reminders/toggle-star', {
+      method: 'POST',
+      body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
+    }),
+  },
+  
   auth: {
     changePassword: (currentPassword: string, newPassword: string) => 
       apiRequest<{ message: string }>('/api/auth/change-password', {
