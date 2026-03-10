@@ -1445,7 +1445,7 @@ async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db),
         db.commit()
         db.refresh(db_item)
         
-        await manager.broadcast_data_change("update", "star", request.entity_id, {
+        await manager.broadcast_data_change("update", request.entity_type, request.entity_id, {
             "entity_type": request.entity_type,
             "entity_id": request.entity_id,
             "is_starred": db_item.is_starred

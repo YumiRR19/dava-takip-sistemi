@@ -47,8 +47,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
-        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution') ||
-        hasChangesForEntity('star')) {
+        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
       loadDashboardData()
       clearDataChanges()
     }
