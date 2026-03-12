@@ -1062,21 +1062,35 @@ async def health_check():
         raise HTTPException(status_code=503, detail="Service unavailable")
 
 @app.get("/api/dashboard")
-async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
+async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token), reminder_date: Optional[str] = Query(None, description="Filter reminders by specific date (YYYY-MM-DD). If not provided, shows reminders for today and next 7 days.")):
     total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
     total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
     total_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).count()
     total_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).count()
+    
+    # Parse the optional reminder_date filter
+    filter_date = None
+    if reminder_date:
+        try:
+            filter_date = date.fromisoformat(reminder_date)
+        except ValueError:
+            pass  # Invalid date format, fall back to default behavior
     
     upcoming_reminders = []
     
     db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None), CaseDB.is_deleted == False).all()
     for case in db_cases:
         if case.reminder_date:
-            reminder_date = case.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = case.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "case",
                     "case_id": case.id,
@@ -1085,7 +1099,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "court": case.court,
                     "client_name": case.client_name,
                     "defendant": case.defendant,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "description": case.description,
                     "responsible_person": case.responsible_person,
                     "görevlendiren": case.görevlendiren,
@@ -1096,10 +1110,16 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
     db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
     for execution in db_executions:
         if execution.reminder_date:
-            reminder_date = execution.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = execution.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "execution",
                     "execution_id": execution.id,
@@ -1107,7 +1127,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "execution_office": execution.execution_office,
                     "client_name": execution.client_name,
                     "defendant": execution.defendant,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "reminder_text": execution.reminder_text,
                     "responsible_person": execution.responsible_person,
                     "görevlendiren": execution.görevlendiren,
@@ -1118,10 +1138,16 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
     db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
     for letter in db_compensation_letters:
         if letter.reminder_date:
-            reminder_date = letter.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = letter.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "compensation_letter",
                     "compensation_letter_id": letter.id,
@@ -1130,7 +1156,7 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "case_number": letter.case_number,
                     "customer": letter.customer,
                     "client_name": letter.client_name,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "reminder_text": letter.reminder_text,
                     "responsible_person": letter.responsible_person,
                     "görevlendiren": letter.görevlendiren,

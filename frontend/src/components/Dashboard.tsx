@@ -1,13 +1,25 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star, CalendarIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { api, DashboardData, request } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
+
+const RESPONSIBLE_PERSONS_ORDER = [
+  'Av.M.Şerif Bey',
+  'Ömer Bey',
+  'Av.İbrahim Bey',
+  'Av.Kenan Bey',
+  'İsmail Bey',
+  'Ebru Hanım',
+  'Zeynep Hanım',
+  'Yaren Hanım',
+]
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -19,6 +31,7 @@ export default function Dashboard() {
   })
   const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -27,6 +40,10 @@ export default function Dashboard() {
     loadDashboardData()
     checkHealthStatus()
   }, [])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [selectedDate])
 
   const checkHealthStatus = async () => {
     try {
@@ -55,7 +72,8 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const dashboardData = await api.dashboard.getData()
+      const params = selectedDate ? { reminder_date: selectedDate } : undefined
+      const dashboardData = await api.dashboard.getData(params)
       setData(dashboardData)
       console.log('Dashboard data loaded:', dashboardData)
     } catch (error) {
@@ -73,11 +91,22 @@ export default function Dashboard() {
     }
   }
 
-  const todayReminders = (data?.upcoming_reminders || []).filter(reminder => {
+  // When a date is selected, the backend already filters by that date.
+  // When no date is selected, the backend returns reminders for today+7 days,
+  // and we further filter to show only today's reminders by default.
+  const displayReminders = useMemo(() => {
+    const reminders = data?.upcoming_reminders || []
+    if (selectedDate) {
+      // Backend already filtered by the selected date
+      return reminders
+    }
+    // Default: show only today's reminders
     const today = new Date()
-    const reminderDate = new Date(reminder.reminder_date)
-    return today.toDateString() === reminderDate.toDateString()
-  })
+    return reminders.filter(reminder => {
+      const reminderDate = new Date(reminder.reminder_date)
+      return today.toDateString() === reminderDate.toDateString()
+    })
+  }, [data?.upcoming_reminders, selectedDate])
 
   const getReminderKey = useCallback((reminder: DashboardData['upcoming_reminders'][number]): string => {
     if (reminder.type === 'case') return `case-${reminder.case_id}`
@@ -109,18 +138,10 @@ export default function Dashboard() {
     }
   }, [getEntityInfo, toast])
 
-  // Collect unique responsible persons from reminders for filter
-  const responsiblePersons = useMemo(() => {
-    const persons = new Set<string>()
-    todayReminders.forEach(reminder => {
-      if (reminder.responsible_person) {
-        persons.add(reminder.responsible_person)
-      }
-    })
-    return Array.from(persons).sort()
-  }, [todayReminders])
+  // Fixed ordered list of responsible persons
+  const responsiblePersons = RESPONSIBLE_PERSONS_ORDER
 
-  const filteredReminders = todayReminders
+  const filteredReminders = displayReminders
     .filter(reminder => {
       if (reminderFilter !== 'all' && reminder.type !== reminderFilter) return false
       if (responsibleFilter !== 'all' && reminder.responsible_person !== responsibleFilter) return false
@@ -261,9 +282,33 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Hatırlatmalar</CardTitle>
-                <CardDescription>Bugün için hatırlatmalar</CardDescription>
+                <CardDescription>
+                  {selectedDate
+                    ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} için hatırlatmalar`
+                    : 'Bugün için hatırlatmalar'}
+                </CardDescription>
               </div>
               <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-[160px] h-9 text-sm"
+                    placeholder="Tarih Seç"
+                  />
+                  {selectedDate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedDate('')}
+                      className="h-9 px-2 text-xs"
+                    >
+                      Bugün
+                    </Button>
+                  )}
+                </div>
                 <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="İlgili / Sorumlu Seç" />
@@ -400,9 +445,13 @@ export default function Dashboard() {
               {filteredReminders.length === 0 && (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-500 mb-2">
-                    {reminderFilter === 'all' 
-                      ? 'Bugün için hatırlatma bulunmuyor.' 
-                      : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`
+                    {selectedDate
+                      ? (reminderFilter === 'all'
+                          ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} için hatırlatma bulunmuyor.`
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
+                      : (reminderFilter === 'all' 
+                          ? 'Bugün için hatırlatma bulunmuyor.' 
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
                     }
                   </p>
                   {data.total_cases === 0 && data.total_clients === 0 && (

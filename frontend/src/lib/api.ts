@@ -107,7 +107,12 @@ export const api = {
   },
   
   dashboard: {
-    getData: () => apiRequest<DashboardData>('/api/dashboard'),
+    getData: (params?: { reminder_date?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.reminder_date) searchParams.append('reminder_date', params.reminder_date)
+      const query = searchParams.toString()
+      return apiRequest<DashboardData>(`/api/dashboard${query ? `?${query}` : ''}`)
+    },
   },
   
   reminders: {
