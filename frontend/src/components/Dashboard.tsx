@@ -322,37 +322,18 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Filter className="h-4 w-4 text-gray-500" />
-                <div className="flex space-x-1">
-                  <Button
-                    variant={reminderFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('all')}
-                  >
-                    Tümü
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'case' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('case')}
-                  >
-                    Dava Dosyaları
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'execution' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('execution')}
-                  >
-                    İcra Takipleri
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'compensation_letter' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('compensation_letter')}
-                  >
-                    Teminat Mektupları
-                  </Button>
-                </div>
+                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter') => setReminderFilter(value)}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="h-4 w-4 text-gray-500 mr-1" />
+                    <SelectValue placeholder="Filtre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="case">Dava Dosyaları</SelectItem>
+                    <SelectItem value="execution">İcra Takipleri</SelectItem>
+                    <SelectItem value="compensation_letter">Teminat Mektupları</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
