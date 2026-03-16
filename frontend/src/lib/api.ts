@@ -30,7 +30,14 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       let errorMessage = response.statusText
       try {
         const errorData = JSON.parse(errorText)
-        errorMessage = errorData.detail || errorMessage
+        const detail = errorData.detail
+        if (typeof detail === 'string') {
+          errorMessage = detail
+        } else if (Array.isArray(detail) && detail.length > 0) {
+          errorMessage = detail.map((e: any) => e.msg || String(e)).join(', ')
+        } else if (detail) {
+          errorMessage = String(detail)
+        }
       } catch {
         errorMessage = errorText || errorMessage
       }

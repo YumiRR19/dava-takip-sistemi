@@ -123,6 +123,9 @@ export default function CaseForm() {
         if (!updateData.next_hearing_date) {
           delete updateData.next_hearing_date
         }
+        if (!updateData.reminder_date) {
+          delete updateData.reminder_date
+        }
         console.log('Update data:', updateData)
         await api.cases.update(id, updateData)
         toast({
@@ -157,7 +160,10 @@ export default function CaseForm() {
           loadCase(id)
         }
       } else {
-        const errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
+        let errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
+        if (typeof errorMessage === 'object') {
+          errorMessage = isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu."
+        }
         toast({
           title: "Hata",
           description: errorMessage,

@@ -971,8 +971,9 @@ async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depen
     
     update_data = case_update.dict(exclude_unset=True, exclude={"version"})
     
-    # Handle client_name: if client_id is provided, look up client name; otherwise use client_name directly
-    if case_update.client_id:
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and case_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
         if db_client:
             update_data['client_name'] = db_client.name
