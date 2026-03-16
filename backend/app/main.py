@@ -157,7 +157,8 @@ class CaseCreate(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: str
     status: str
     court: str
@@ -177,6 +178,7 @@ class CaseUpdate(BaseModel):
     case_name: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: Optional[str] = None
     status: Optional[str] = None
     court: Optional[str] = None
@@ -867,17 +869,24 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
     case_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Determine client_name: from client_id lookup or directly provided
+    resolved_client_id = case.client_id or ""
+    resolved_client_name = case.client_name or ""
+    if case.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Client name is required")
     
     db_case = CaseDB(
         id=case_id,
         title=case.title,
         case_name=case.case_name,
         description=case.description,
-        client_id=case.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         case_type=case.case_type,
         status=case.status,
         court=case.court,
@@ -933,7 +942,10 @@ async def get_cases(
         db_query = db_query.filter(
             or_(
                 CaseDB.title.ilike(f"%{query}%"),
-                CaseDB.defendant.ilike(f"%{query}%")
+                CaseDB.defendant.ilike(f"%{query}%"),
+                CaseDB.client_name.ilike(f"%{query}%"),
+                CaseDB.case_number.ilike(f"%{query}%"),
+                CaseDB.case_name.ilike(f"%{query}%")
             )
         )
     
@@ -957,18 +969,16 @@ async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depen
     if case_update.version is not None and db_case.version != case_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
+    update_data = case_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_id is provided, look up client name; otherwise use client_name directly
     if case_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
+        if db_client:
+            update_data['client_name'] = db_client.name
     
-    update_data = case_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_case, field, value)
-    
-    if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        db_case.client_name = db_client.name
     
     db_case.updated_at = datetime.now()
     db_case.version += 1

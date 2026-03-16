@@ -114,7 +114,7 @@ export default function Cases() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Dava başlığı, müvekkil adı, dava numarası, dava adı veya karşı taraf ile ara..."
+            placeholder="Dava adı, davacı, davalı veya dosya no ile ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -199,8 +199,8 @@ export default function Cases() {
                   <TableRow>
                     <TableHead>Mahkeme</TableHead>
                     <TableHead>Dosya No</TableHead>
-                    <TableHead>Müvekkil</TableHead>
-                    <TableHead>Karşı Taraf</TableHead>
+                    <TableHead>Davacı</TableHead>
+                    <TableHead>Davalı</TableHead>
                     <TableHead>Dava Adı</TableHead>
                     <TableHead>Hatırlatma Tarihi</TableHead>
                     <TableHead>Hatırlatma Metni</TableHead>

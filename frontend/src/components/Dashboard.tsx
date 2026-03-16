@@ -17,7 +17,7 @@ const RESPONSIBLE_PERSONS_ORDER = [
   'Av.Kenan Bey',
   'İsmail Bey',
   'Ebru Hanım',
-  'Zeynep Hanım',
+  'Pınar Hanım',
   'Yaren Hanım',
 ]
 

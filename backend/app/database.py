@@ -54,7 +54,7 @@ class CaseDB(Base):
     title = Column(String, nullable=False)
     case_name = Column(String, nullable=True)
     description = Column(Text, nullable=True)
-    client_id = Column(String, nullable=False)
+    client_id = Column(String, nullable=True, default="")
     client_name = Column(String, nullable=False)
     case_type = Column(String, nullable=False)
     status = Column(String, nullable=False)

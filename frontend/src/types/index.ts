@@ -59,7 +59,8 @@ export interface CaseCreate {
   title: string
   case_name?: string
   description?: string
-  client_id: string
+  client_id?: string
+  client_name?: string
   case_type: string
   status: string
   court: string
@@ -79,6 +80,8 @@ export interface CaseUpdate {
   title?: string
   case_name?: string
   description?: string
+  client_id?: string
+  client_name?: string
   case_type?: string
   status?: string
   court?: string
