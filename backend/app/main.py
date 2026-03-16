@@ -134,7 +134,7 @@ class Case(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = ""
     client_name: str
     case_type: str
     status: str
@@ -390,7 +390,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         title=db_case.title,
         case_name=db_case.case_name,
         description=db_case.description,
-        client_id=db_case.client_id,
+        client_id=db_case.client_id if db_case.client_id is not None else "",
         client_name=db_case.client_name,
         case_type=db_case.case_type,
         status=db_case.status,
