@@ -36,14 +36,23 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
 
-  useEffect(() => {
-    loadDashboardData()
-    checkHealthStatus()
-  }, [])
-
-  useEffect(() => {
-    loadDashboardData()
-  }, [selectedDate])
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const params = selectedDate ? { reminder_date: selectedDate } : undefined
+      const dashboardData = await api.dashboard.getData(params)
+      setData(dashboardData)
+      console.log('Dashboard data loaded:', dashboardData)
+    } catch (error) {
+      console.error('Dashboard loading error:', error)
+      toast({
+        title: "Hata",
+        description: "Dashboard verileri yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedDate, toast])
 
   const checkHealthStatus = async () => {
     try {
@@ -63,33 +72,17 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    loadDashboardData()
+    checkHealthStatus()
+  }, [loadDashboardData])
+
+  useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
         hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
       loadDashboardData()
       clearDataChanges()
     }
-  }, [hasChangesForEntity, clearDataChanges])
-
-  const loadDashboardData = async () => {
-    try {
-      const params = selectedDate ? { reminder_date: selectedDate } : undefined
-      const dashboardData = await api.dashboard.getData(params)
-      setData(dashboardData)
-      console.log('Dashboard data loaded:', dashboardData)
-    } catch (error) {
-      console.error('Dashboard loading error:', error)
-      toast({
-        title: "Hata",
-        description: "Dashboard verileri yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      })
-      setTimeout(() => {
-        loadDashboardData()
-      }, 2000)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [hasChangesForEntity, clearDataChanges, loadDashboardData])
 
   // When a date is selected, the backend already filters by that date.
   // When no date is selected, the backend returns reminders for today+7 days,
@@ -136,7 +129,7 @@ export default function Dashboard() {
         variant: "destructive",
       })
     }
-  }, [getEntityInfo, toast])
+  }, [getEntityInfo, toast, loadDashboardData])
 
   // Fixed ordered list of responsible persons
   const responsiblePersons = RESPONSIBLE_PERSONS_ORDER
