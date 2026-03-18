@@ -122,7 +122,7 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution' | 'compensation_letter'
+    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'
     case_id?: string
     case_title?: string
     case_name?: string
@@ -140,6 +140,7 @@ export interface DashboardData {
     defendant?: string
     description?: string
     reminder_text?: string
+    haciz_durumu?: string
     responsible_person?: string
     görevlendiren?: string
     is_starred?: boolean
@@ -219,6 +220,9 @@ export interface Execution {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -240,6 +244,9 @@ export interface ExecutionCreate {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -256,6 +263,9 @@ export interface ExecutionUpdate {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean

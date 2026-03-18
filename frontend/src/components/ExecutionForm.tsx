@@ -33,6 +33,9 @@ export default function ExecutionForm() {
     reminder_text: '',
     notes: '',
     haciz_durumu: '',
+    haciz_reminder_date: '',
+    haciz_reminder_text: '',
+    related_case_id: '',
     responsible_person: '',
     görevlendiren: '',
     is_starred: false
@@ -205,6 +208,9 @@ export default function ExecutionForm() {
         reminder_text: executionData.reminder_text || '',
         notes: executionData.notes || '',
         haciz_durumu: executionData.haciz_durumu || '',
+        haciz_reminder_date: executionData.haciz_reminder_date ? new Date(executionData.haciz_reminder_date).toISOString().split('T')[0] : '',
+        haciz_reminder_text: executionData.haciz_reminder_text || '',
+        related_case_id: executionData.related_case_id || '',
         responsible_person: executionData.responsible_person || '',
         görevlendiren: executionData.görevlendiren || '',
         is_starred: executionData.is_starred || false
@@ -265,6 +271,9 @@ export default function ExecutionForm() {
       reminder_text: formData.reminder_text || undefined,
       notes: formData.notes || undefined,
       haciz_durumu: formData.haciz_durumu || undefined,
+      haciz_reminder_date: formData.haciz_reminder_date || undefined,
+      haciz_reminder_text: formData.haciz_reminder_text || undefined,
+      related_case_id: formData.related_case_id || undefined,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred
@@ -348,9 +357,10 @@ export default function ExecutionForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Row 1: Alacaklı / Borçlu */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="client_id">Müvekkil *</Label>
+                <Label htmlFor="client_id">Alacaklı *</Label>
                 <Select 
                   key={`client-select-${clientsLoading}-${clients.length}-${!!clientsError}`}
                   value={formData.client_id} 
@@ -359,10 +369,10 @@ export default function ExecutionForm() {
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={
-                      clientsLoading ? "Müvekkiller yükleniyor..." :
+                      clientsLoading ? "Alacaklılar yükleniyor..." :
                       clientsError ? "Hata oluştu" :
-                      clients.length === 0 ? "Müvekkil bulunamadı" :
-                      "Müvekkil seçin"
+                      clients.length === 0 ? "Alacaklı bulunamadı" :
+                      "Alacaklı seçin"
                     } />
                   </SelectTrigger>
                   <SelectContent>
@@ -380,13 +390,13 @@ export default function ExecutionForm() {
                       </div>
                     ) : clients.length === 0 && !clientsLoading ? (
                       <div className="p-4 text-center">
-                        <p className="text-sm text-gray-600 mb-2">Henüz müvekkil eklenmemiş</p>
+                        <p className="text-sm text-gray-600 mb-2">Henüz alacaklı eklenmemiş</p>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => navigate('/clients/new')}
                         >
-                          Müvekkil Ekle
+                          Alacaklı Ekle
                         </Button>
                       </div>
                     ) : (
@@ -399,19 +409,21 @@ export default function ExecutionForm() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="defendant">Karşı Taraf *</Label>
+                <Label htmlFor="defendant">Borçlu *</Label>
                 <Input
                   id="defendant"
                   name="defendant"
                   value={formData.defendant}
                   onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Karşı taraf adını girin"
+                  placeholder="Borçlu adını girin"
                   required
                 />
               </div>
+            </div>
 
+            {/* Row 2: İcra / İcra Dosya No */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="execution_office">İcra *</Label>
                 <Popover open={executionOfficeOpen} onOpenChange={setExecutionOfficeOpen}>
@@ -468,7 +480,6 @@ export default function ExecutionForm() {
                   </PopoverContent>
                 </Popover>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="execution_number">İcra Dosya No *</Label>
                 <Input
@@ -480,7 +491,10 @@ export default function ExecutionForm() {
                   required
                 />
               </div>
+            </div>
 
+            {/* Row 3: Durum / İcra Türü */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="status">Durum *</Label>
                 <Select value={formData.status} onValueChange={(value) => handleChange('status', value)} name="status">
@@ -499,7 +513,6 @@ export default function ExecutionForm() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="execution_type">İcra Türü *</Label>
                 <Select value={formData.execution_type} onValueChange={(value) => handleChange('execution_type', value)} name="execution_type">
@@ -525,7 +538,10 @@ export default function ExecutionForm() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            {/* Row 4: Açılış Tarihi / Ofis Arşiv No */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Açılış Tarihi *</Label>
                 <Input
@@ -537,7 +553,6 @@ export default function ExecutionForm() {
                   required
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="office_archive_no">Ofis Arşiv No</Label>
                 <Input
@@ -548,18 +563,50 @@ export default function ExecutionForm() {
                   placeholder="Ofis arşiv numarasını girin"
                 />
               </div>
+            </div>
 
+            {/* Row 5: Görevlendiren / İlgili / Sorumlu */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="reminder_date">Hatırlatma Tarihi</Label>
-                <Input
-                  id="reminder_date"
-                  name="reminder_date"
-                  type="date"
-                  value={formData.reminder_date}
-                  onChange={(e) => handleChange('reminder_date', e.target.value)}
-                />
+                <Label htmlFor="görevlendiren">Görevlendiren</Label>
+                <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Görevlendiren seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsible_person">İlgili / Sorumlu</Label>
+                <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
+                  <SelectTrigger>
+                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
+                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
+                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
+                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
+                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
+                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
+            {/* Row 6: Haciz Durumu / Hatırlatmalarda Yıldızla */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="haciz_durumu">Haciz Durumu</Label>
                 <Select value={formData.haciz_durumu} onValueChange={(value) => handleChange('haciz_durumu', value)} name="haciz_durumu">
@@ -575,47 +622,7 @@ export default function ExecutionForm() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="görevlendiren">Görevlendiren</Label>
-              <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
-                <SelectTrigger>
-                  <SelectValue placeholder="Görevlendiren seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                  <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                  <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                  <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                  <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                  <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                  <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                  <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
-              <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
-                <SelectTrigger>
-                  <SelectValue placeholder="İlgili/Sorumlu seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                  <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                  <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                  <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                  <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                  <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                  <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                  <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label>Hatırlatmalarda Yıldızla</Label>
                 <button
                   type="button"
@@ -632,19 +639,59 @@ export default function ExecutionForm() {
                   <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
                 </button>
               </div>
+            </div>
 
+            {/* Full-width: İşlem Hatırlatma Tarihi */}
             <div className="space-y-2">
-              <Label htmlFor="reminder_text">Hatırlatma Metni</Label>
+              <Label htmlFor="reminder_date">İşlem Hatırlatma Tarihi</Label>
+              <Input
+                id="reminder_date"
+                name="reminder_date"
+                type="date"
+                value={formData.reminder_date}
+                onChange={(e) => handleChange('reminder_date', e.target.value)}
+              />
+            </div>
+
+            {/* Full-width: İşlem Hatırlatma Metni */}
+            <div className="space-y-2">
+              <Label htmlFor="reminder_text">İşlem Hatırlatma Metni</Label>
               <Textarea
                 id="reminder_text"
                 name="reminder_text"
                 value={formData.reminder_text}
                 onChange={(e) => handleChange('reminder_text', e.target.value)}
-                placeholder="Hatırlatma metni girin"
-                rows={4}
+                placeholder="İşlem hatırlatma metni girin"
+                rows={3}
               />
             </div>
 
+            {/* Full-width: Haciz Hatırlatma Tarihi */}
+            <div className="space-y-2">
+              <Label htmlFor="haciz_reminder_date">Haciz Hatırlatma Tarihi</Label>
+              <Input
+                id="haciz_reminder_date"
+                name="haciz_reminder_date"
+                type="date"
+                value={formData.haciz_reminder_date}
+                onChange={(e) => handleChange('haciz_reminder_date', e.target.value)}
+              />
+            </div>
+
+            {/* Full-width: Haciz Hatırlatma Metni */}
+            <div className="space-y-2">
+              <Label htmlFor="haciz_reminder_text">Haciz Hatırlatma Metni</Label>
+              <Textarea
+                id="haciz_reminder_text"
+                name="haciz_reminder_text"
+                value={formData.haciz_reminder_text}
+                onChange={(e) => handleChange('haciz_reminder_text', e.target.value)}
+                placeholder="Haciz hatırlatma metni girin"
+                rows={3}
+              />
+            </div>
+
+            {/* Full-width: Özel Notlar */}
             <div className="space-y-2">
               <Label htmlFor="notes">Özel Notlar</Label>
               <Textarea
@@ -654,6 +701,18 @@ export default function ExecutionForm() {
                 onChange={(e) => handleChange('notes', e.target.value)}
                 placeholder="İcra ile ilgili özel notlarınızı buraya yazabilirsiniz"
                 rows={3}
+              />
+            </div>
+
+            {/* Full-width: İlgili Dava */}
+            <div className="space-y-2">
+              <Label htmlFor="related_case_id">İlgili Dava</Label>
+              <Input
+                id="related_case_id"
+                name="related_case_id"
+                value={formData.related_case_id}
+                onChange={(e) => handleChange('related_case_id', e.target.value)}
+                placeholder="İlgili dava ID'sini girin"
               />
             </div>
 

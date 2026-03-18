@@ -29,7 +29,7 @@ export default function Dashboard() {
     websocket: false,
     database: true
   })
-  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
+  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'>('all')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<string>('')
   const { toast } = useToast()
@@ -104,6 +104,7 @@ export default function Dashboard() {
   const getReminderKey = useCallback((reminder: DashboardData['upcoming_reminders'][number]): string => {
     if (reminder.type === 'case') return `case-${reminder.case_id}`
     if (reminder.type === 'execution') return `execution-${reminder.execution_id}`
+    if (reminder.type === 'haciz_reminder') return `haciz_reminder-${reminder.execution_id}`
     return `compensation_letter-${reminder.compensation_letter_id}`
   }, [])
 
@@ -111,6 +112,9 @@ export default function Dashboard() {
     const parts = reminderKey.split('-')
     if (reminderKey.startsWith('compensation_letter-')) {
       return { entityType: 'compensation_letter', entityId: parts.slice(1).join('-') }
+    }
+    if (reminderKey.startsWith('haciz_reminder-')) {
+      return { entityType: 'execution', entityId: parts.slice(1).join('-') }
     }
     return { entityType: parts[0], entityId: parts.slice(1).join('-') }
   }, [])
@@ -136,7 +140,11 @@ export default function Dashboard() {
 
   const filteredReminders = displayReminders
     .filter(reminder => {
-      if (reminderFilter !== 'all' && reminder.type !== reminderFilter) return false
+      if (reminderFilter !== 'all') {
+        if (reminderFilter === 'haciz_reminder') {
+          if (reminder.type !== 'haciz_reminder') return false
+        } else if (reminder.type !== reminderFilter) return false
+      }
       if (responsibleFilter !== 'all' && reminder.responsible_person !== responsibleFilter) return false
       return true
     })
@@ -315,7 +323,7 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter') => setReminderFilter(value)}>
+                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder') => setReminderFilter(value)}>
                   <SelectTrigger className="w-[200px]">
                     <Filter className="h-4 w-4 text-gray-500 mr-1" />
                     <SelectValue placeholder="Filtre" />
@@ -324,6 +332,7 @@ export default function Dashboard() {
                     <SelectItem value="all">Tümü</SelectItem>
                     <SelectItem value="case">Dava Dosyaları</SelectItem>
                     <SelectItem value="execution">İcra Takipleri</SelectItem>
+                    <SelectItem value="haciz_reminder">Haciz Hatırlatma</SelectItem>
                     <SelectItem value="compensation_letter">Teminat Mektupları</SelectItem>
                   </SelectContent>
                 </Select>
@@ -342,7 +351,7 @@ export default function Dashboard() {
                   onDoubleClick={() => {
                     if (reminder.type === 'case') {
                       navigate(`/cases/${reminder.case_id}/edit`)
-                    } else if (reminder.type === 'execution') {
+                    } else if (reminder.type === 'execution' || reminder.type === 'haciz_reminder') {
                       navigate(`/executions/${reminder.execution_id}/edit`)
                     } else if (reminder.type === 'compensation_letter') {
                       navigate(`/compensation-letters/${reminder.compensation_letter_id}/edit`)
@@ -371,8 +380,8 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-700 font-medium">Dava Adı: {reminder.case_name}</p>
                         )}
                         <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
-                        <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        <p className="text-xs text-gray-600">Davacı: {reminder.client_name}</p>
+                        <p className="text-xs text-gray-600">Davalı: {reminder.defendant}</p>
                         {reminder.description && (
                           <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
                         )}
@@ -381,9 +390,21 @@ export default function Dashboard() {
                       <>
                         <p className="text-sm font-medium text-blue-600">İcra Dosya No: {reminder.execution_number}</p>
                         <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
                         {reminder.reminder_text && (
-                          <p className="text-xs text-gray-500 mt-1">Hatırlatma Metni: {reminder.reminder_text}</p>
+                          <p className="text-xs text-gray-500 mt-1">İşlem Hatırlatma: {reminder.reminder_text}</p>
+                        )}
+                      </>
+                    ) : reminder.type === 'haciz_reminder' ? (
+                      <>
+                        <p className="text-sm font-medium text-orange-600">Haciz Hatırlatma - İcra No: {reminder.execution_number}</p>
+                        <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
+                        <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
+                        {reminder.haciz_durumu && (
+                          <p className="text-xs text-gray-600">Haciz Durumu: {reminder.haciz_durumu}</p>
+                        )}
+                        {reminder.reminder_text && (
+                          <p className="text-xs text-gray-500 mt-1">Haciz Hatırlatma: {reminder.reminder_text}</p>
                         )}
                       </>
                     ) : (
@@ -422,10 +443,10 @@ export default function Dashboard() {
                     {selectedDate
                       ? (reminderFilter === 'all'
                           ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} için hatırlatma bulunmuyor.`
-                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
                       : (reminderFilter === 'all' 
                           ? 'Bugün için hatırlatma bulunmuyor.' 
-                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
                     }
                   </p>
                   {data.total_cases === 0 && data.total_clients === 0 && (

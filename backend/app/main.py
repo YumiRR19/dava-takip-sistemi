@@ -98,6 +98,26 @@ async def startup_event():
     except Exception as starred_migration_error:
         print(f"⚠️ is_starred migration error: {starred_migration_error}")
     
+    # Migration: add haciz_reminder_date, haciz_reminder_text, related_case_id columns to executions
+    try:
+        from app.database import engine as eng3
+        from sqlalchemy.orm import sessionmaker as sm3
+        from sqlalchemy import text as text3
+        SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
+        with SL3() as db:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR')]:
+                try:
+                    db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
+                    print(f"Column {col_name} already exists in executions")
+                except Exception:
+                    db.rollback()
+                    print(f"Adding {col_name} column to executions...")
+                    db.execute(text3(f"ALTER TABLE executions ADD COLUMN {col_name} {col_type}"))
+                    db.commit()
+                    print(f"Successfully added {col_name} column to executions")
+    except Exception as haciz_migration_error:
+        print(f"haciz migration error: {haciz_migration_error}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
 
 class Client(BaseModel):
@@ -264,6 +284,9 @@ class Execution(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -284,6 +307,9 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -301,6 +327,9 @@ class ExecutionUpdate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: Optional[bool] = None
@@ -450,6 +479,9 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         reminder_text=db_execution.reminder_text,
         notes=db_execution.notes,
         haciz_durumu=db_execution.haciz_durumu,
+        haciz_reminder_date=db_execution.haciz_reminder_date,
+        haciz_reminder_text=db_execution.haciz_reminder_text,
+        related_case_id=db_execution.related_case_id,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
         is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
@@ -1146,6 +1178,36 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "days_until": days_until
                 })
     
+    # Haciz reminders from executions with haciz_reminder_date
+    db_haciz_executions = db.query(ExecutionDB).filter(ExecutionDB.haciz_reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
+    for execution in db_haciz_executions:
+        if execution.haciz_reminder_date:
+            r_date = execution.haciz_reminder_date
+            days_until = (r_date - date.today()).days
+            
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
+                upcoming_reminders.append({
+                    "type": "haciz_reminder",
+                    "execution_id": execution.id,
+                    "execution_number": execution.execution_number,
+                    "execution_office": execution.execution_office,
+                    "client_name": execution.client_name,
+                    "defendant": execution.defendant,
+                    "reminder_date": r_date.isoformat(),
+                    "reminder_text": execution.haciz_reminder_text,
+                    "haciz_durumu": execution.haciz_durumu,
+                    "responsible_person": execution.responsible_person,
+                    "görevlendiren": execution.görevlendiren,
+                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                    "days_until": days_until
+                })
+    
     db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
     for letter in db_compensation_letters:
         if letter.reminder_date:
@@ -1345,6 +1407,9 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         reminder_text=execution.reminder_text,
         notes=execution.notes,
         haciz_durumu=execution.haciz_durumu,
+        haciz_reminder_date=execution.haciz_reminder_date,
+        haciz_reminder_text=execution.haciz_reminder_text,
+        related_case_id=execution.related_case_id,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
         is_starred=execution.is_starred,
