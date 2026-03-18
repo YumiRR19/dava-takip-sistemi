@@ -150,7 +150,7 @@ export default function Executions() {
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Müvekkil, karşı taraf veya icra dosya no ile ara..."
+              placeholder="Alacaklı, borçlu veya icra dosya no ile ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -256,8 +256,8 @@ export default function Executions() {
                 <TableRow>
                   <TableHead>İcra</TableHead>
                   <TableHead>İcra Dosya No</TableHead>
-                  <TableHead>Müvekkil</TableHead>
-                  <TableHead>Karşı Taraf</TableHead>
+                  <TableHead>Alacaklı</TableHead>
+                  <TableHead>Borçlu</TableHead>
                   <TableHead>Durum</TableHead>
                   <TableHead>Haciz Durumu</TableHead>
                   <TableHead>Açılış Tarihi</TableHead>

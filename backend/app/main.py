@@ -78,6 +78,63 @@ async def startup_event():
     except Exception as migration_error:
         print(f"⚠️ Migration error: {migration_error}")
     
+    # Migration: add is_starred column to cases, executions, compensation_letters
+    try:
+        from app.database import engine
+        from sqlalchemy.orm import sessionmaker as sm2
+        from sqlalchemy import text as text2
+        SL2 = sm2(autocommit=False, autoflush=False, bind=engine)
+        with SL2() as db:
+            for table_name in ['cases', 'executions', 'compensation_letters']:
+                try:
+                    db.execute(text2(f"SELECT is_starred FROM {table_name} LIMIT 1"))
+                    print(f"✅ is_starred column already exists in {table_name}")
+                except Exception:
+                    db.rollback()
+                    print(f"🔧 Adding is_starred column to {table_name}...")
+                    db.execute(text2(f"ALTER TABLE {table_name} ADD COLUMN is_starred BOOLEAN DEFAULT false NOT NULL"))
+                    db.commit()
+                    print(f"✅ Successfully added is_starred column to {table_name}")
+    except Exception as starred_migration_error:
+        print(f"⚠️ is_starred migration error: {starred_migration_error}")
+    
+    # Migration: add haciz_reminder_date, haciz_reminder_text, related_case_id columns to executions
+    try:
+        from app.database import engine as eng3
+        from sqlalchemy.orm import sessionmaker as sm3
+        from sqlalchemy import text as text3
+        SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
+        with SL3() as db:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR')]:
+                try:
+                    db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
+                    print(f"Column {col_name} already exists in executions")
+                except Exception:
+                    db.rollback()
+                    print(f"Adding {col_name} column to executions...")
+                    db.execute(text3(f"ALTER TABLE executions ADD COLUMN {col_name} {col_type}"))
+                    db.commit()
+                    print(f"Successfully added {col_name} column to executions")
+    except Exception as haciz_migration_error:
+        print(f"haciz migration error: {haciz_migration_error}")
+    
+    # Migration: make client_id nullable in cases table
+    try:
+        from app.database import engine as eng4
+        from sqlalchemy.orm import sessionmaker as sm4
+        from sqlalchemy import text as text4
+        SL4 = sm4(autocommit=False, autoflush=False, bind=eng4)
+        with SL4() as db:
+            try:
+                db.execute(text4("ALTER TABLE cases ALTER COLUMN client_id DROP NOT NULL"))
+                db.commit()
+                print("Successfully made client_id nullable")
+            except Exception:
+                db.rollback()
+                print("client_id is already nullable or migration not needed")
+    except Exception as e:
+        print(f"client_id migration error: {e}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
 
 class Client(BaseModel):
@@ -114,7 +171,7 @@ class Case(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = ""
     client_name: str
     case_type: str
     status: str
@@ -128,6 +185,7 @@ class Case(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
@@ -136,7 +194,8 @@ class CaseCreate(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: str
     status: str
     court: str
@@ -149,12 +208,14 @@ class CaseCreate(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
     case_name: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: Optional[str] = None
     status: Optional[str] = None
     court: Optional[str] = None
@@ -167,6 +228,7 @@ class CaseUpdate(BaseModel):
     office_archive_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class CompensationLetter(BaseModel):
@@ -185,14 +247,15 @@ class CompensationLetter(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
-    responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
 
 class CompensationLetterCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: str
     bank: str
     customer_number: str
@@ -205,9 +268,11 @@ class CompensationLetterCreate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: Optional[str] = None
     bank: Optional[str] = None
     customer_number: Optional[str] = None
@@ -220,6 +285,7 @@ class CompensationLetterUpdate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -237,14 +303,19 @@ class Execution(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
 
 class ExecutionCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: str
     execution_office: str
     execution_number: str
@@ -256,11 +327,16 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: Optional[str] = None
     execution_office: Optional[str] = None
     execution_number: Optional[str] = None
@@ -272,8 +348,12 @@ class ExecutionUpdate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
@@ -360,7 +440,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         title=db_case.title,
         case_name=db_case.case_name,
         description=db_case.description,
-        client_id=db_case.client_id,
+        client_id=db_case.client_id if db_case.client_id is not None else "",
         client_name=db_case.client_name,
         case_type=db_case.case_type,
         status=db_case.status,
@@ -374,6 +454,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         office_archive_no=db_case.office_archive_no,
         responsible_person=db_case.responsible_person,
         görevlendiren=db_case.görevlendiren,
+        is_starred=db_case.is_starred if db_case.is_starred is not None else False,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
         version=db_case.version
@@ -397,6 +478,7 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         reminder_text=db_letter.reminder_text,
         responsible_person=db_letter.responsible_person,
         görevlendiren=db_letter.görevlendiren,
+        is_starred=db_letter.is_starred if db_letter.is_starred is not None else False,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -418,8 +500,12 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         reminder_text=db_execution.reminder_text,
         notes=db_execution.notes,
         haciz_durumu=db_execution.haciz_durumu,
+        haciz_reminder_date=db_execution.haciz_reminder_date,
+        haciz_reminder_text=db_execution.haciz_reminder_text,
+        related_case_id=db_execution.related_case_id,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
+        is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
         created_at=db_execution.created_at,
         updated_at=db_execution.updated_at,
         version=db_execution.version
@@ -836,17 +922,24 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
     case_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_id = case.client_id or ""
+    resolved_client_name = case.client_name or ""
+    if not resolved_client_name and case.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Client name is required")
     
     db_case = CaseDB(
         id=case_id,
         title=case.title,
         case_name=case.case_name,
         description=case.description,
-        client_id=case.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         case_type=case.case_type,
         status=case.status,
         court=case.court,
@@ -859,6 +952,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         office_archive_no=case.office_archive_no,
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
+        is_starred=case.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -901,7 +995,10 @@ async def get_cases(
         db_query = db_query.filter(
             or_(
                 CaseDB.title.ilike(f"%{query}%"),
-                CaseDB.defendant.ilike(f"%{query}%")
+                CaseDB.defendant.ilike(f"%{query}%"),
+                CaseDB.client_name.ilike(f"%{query}%"),
+                CaseDB.case_number.ilike(f"%{query}%"),
+                CaseDB.case_name.ilike(f"%{query}%")
             )
         )
     
@@ -925,18 +1022,17 @@ async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depen
     if case_update.version is not None and db_case.version != case_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
-    
     update_data = case_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and case_update.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            update_data['client_name'] = db_client.name
+    
     for field, value in update_data.items():
         setattr(db_case, field, value)
-    
-    if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        db_case.client_name = db_client.name
     
     db_case.updated_at = datetime.now()
     db_case.version += 1
@@ -1030,21 +1126,35 @@ async def health_check():
         raise HTTPException(status_code=503, detail="Service unavailable")
 
 @app.get("/api/dashboard")
-async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
+async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token), reminder_date: Optional[str] = Query(None, description="Filter reminders by specific date (YYYY-MM-DD). If not provided, shows reminders for today and next 7 days.")):
     total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
     total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
     total_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).count()
     total_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).count()
+    
+    # Parse the optional reminder_date filter
+    filter_date = None
+    if reminder_date:
+        try:
+            filter_date = date.fromisoformat(reminder_date)
+        except ValueError:
+            pass  # Invalid date format, fall back to default behavior
     
     upcoming_reminders = []
     
     db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None), CaseDB.is_deleted == False).all()
     for case in db_cases:
         if case.reminder_date:
-            reminder_date = case.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = case.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "case",
                     "case_id": case.id,
@@ -1053,20 +1163,27 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "court": case.court,
                     "client_name": case.client_name,
                     "defendant": case.defendant,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "description": case.description,
                     "responsible_person": case.responsible_person,
                     "görevlendiren": case.görevlendiren,
+                    "is_starred": case.is_starred if case.is_starred is not None else False,
                     "days_until": days_until
                 })
     
     db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
     for execution in db_executions:
         if execution.reminder_date:
-            reminder_date = execution.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = execution.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "execution",
                     "execution_id": execution.id,
@@ -1074,20 +1191,57 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "execution_office": execution.execution_office,
                     "client_name": execution.client_name,
                     "defendant": execution.defendant,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "reminder_text": execution.reminder_text,
                     "responsible_person": execution.responsible_person,
                     "görevlendiren": execution.görevlendiren,
+                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                    "days_until": days_until
+                })
+    
+    # Haciz reminders from executions with haciz_reminder_date
+    db_haciz_executions = db.query(ExecutionDB).filter(ExecutionDB.haciz_reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
+    for execution in db_haciz_executions:
+        if execution.haciz_reminder_date:
+            r_date = execution.haciz_reminder_date
+            days_until = (r_date - date.today()).days
+            
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
+                upcoming_reminders.append({
+                    "type": "haciz_reminder",
+                    "execution_id": execution.id,
+                    "execution_number": execution.execution_number,
+                    "execution_office": execution.execution_office,
+                    "client_name": execution.client_name,
+                    "defendant": execution.defendant,
+                    "reminder_date": r_date.isoformat(),
+                    "reminder_text": execution.haciz_reminder_text,
+                    "haciz_durumu": execution.haciz_durumu,
+                    "responsible_person": execution.responsible_person,
+                    "görevlendiren": execution.görevlendiren,
+                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
                     "days_until": days_until
                 })
     
     db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
     for letter in db_compensation_letters:
         if letter.reminder_date:
-            reminder_date = letter.reminder_date
-            days_until = (reminder_date - date.today()).days
+            r_date = letter.reminder_date
+            days_until = (r_date - date.today()).days
             
-            if 0 <= days_until <= 7:
+            include = False
+            if filter_date:
+                include = (r_date == filter_date)
+            else:
+                include = (0 <= days_until <= 7)
+            
+            if include:
                 upcoming_reminders.append({
                     "type": "compensation_letter",
                     "compensation_letter_id": letter.id,
@@ -1096,10 +1250,11 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
                     "case_number": letter.case_number,
                     "customer": letter.customer,
                     "client_name": letter.client_name,
-                    "reminder_date": reminder_date.isoformat(),
+                    "reminder_date": r_date.isoformat(),
                     "reminder_text": letter.reminder_text,
                     "responsible_person": letter.responsible_person,
                     "görevlendiren": letter.görevlendiren,
+                    "is_starred": letter.is_starred if letter.is_starred is not None else False,
                     "days_until": days_until
                 })
     
@@ -1125,15 +1280,22 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
     letter_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = letter.client_name or ""
+    resolved_client_id = letter.client_id or ""
+    if not resolved_client_name and letter.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_letter = CompensationLetterDB(
         id=letter_id,
         title=f"Teminat Mektubu - {letter.letter_number}",
-        client_id=letter.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         letter_number=letter.letter_number,
         bank=letter.bank,
         customer_number=letter.customer_number,
@@ -1146,6 +1308,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         reminder_text=letter.reminder_text,
         responsible_person=letter.responsible_person,
         görevlendiren=letter.görevlendiren,
+        is_starred=letter.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1204,18 +1367,17 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
     if letter_update.version is not None and db_letter.version != letter_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if letter_update.client_id:
+    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
+    if letter_update.client_name:
+        pass  # Will be set via update_data below
+    elif letter_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
+        if db_client:
+            letter_update.client_name = db_client.name
     
     update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_letter, field, value)
-    
-    if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        db_letter.client_name = db_client.name
     
     db_letter.updated_at = datetime.now()
     db_letter.version += 1
@@ -1253,14 +1415,21 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
     execution_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = execution.client_name or ""
+    resolved_client_id = execution.client_id or ""
+    if not resolved_client_name and execution.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_execution = ExecutionDB(
         id=execution_id,
-        client_id=execution.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         defendant=execution.defendant,
         execution_office=execution.execution_office,
         execution_number=execution.execution_number,
@@ -1272,8 +1441,12 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         reminder_text=execution.reminder_text,
         notes=execution.notes,
         haciz_durumu=execution.haciz_durumu,
+        haciz_reminder_date=execution.haciz_reminder_date,
+        haciz_reminder_text=execution.haciz_reminder_text,
+        related_case_id=execution.related_case_id,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
+        is_starred=execution.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1338,18 +1511,17 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
     if execution_update.version is not None and db_execution.version != execution_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if execution_update.client_id:
+    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
+    if execution_update.client_name:
+        pass  # Will be set via update_data below
+    elif execution_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
+        if db_client:
+            execution_update.client_name = db_client.name
     
     update_data = execution_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_execution, field, value)
-    
-    if execution_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        db_execution.client_name = db_client.name
     
     db_execution.updated_at = datetime.now()
     db_execution.version += 1
@@ -1381,3 +1553,41 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     await manager.broadcast_data_change("delete", "execution", execution_id, {})
     
     return {"message": "Execution deleted successfully"}
+
+class ToggleStarRequest(BaseModel):
+    entity_type: str  # "case", "execution", "compensation_letter"
+    entity_id: str
+
+@app.post("/api/reminders/toggle-star")
+async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    if request.entity_type == "case":
+        db_item = db.query(CaseDB).filter(CaseDB.id == request.entity_id, CaseDB.is_deleted == False).first()
+    elif request.entity_type == "execution":
+        db_item = db.query(ExecutionDB).filter(ExecutionDB.id == request.entity_id, ExecutionDB.is_deleted == False).first()
+    elif request.entity_type == "compensation_letter":
+        db_item = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == request.entity_id, CompensationLetterDB.is_deleted == False).first()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    db_item.is_starred = not db_item.is_starred
+    db_item.updated_at = datetime.now()
+    db_item.version += 1
+    
+    try:
+        db.commit()
+        db.refresh(db_item)
+        
+        await manager.broadcast_data_change("update", request.entity_type, request.entity_id, {
+            "entity_type": request.entity_type,
+            "entity_id": request.entity_id,
+            "is_starred": db_item.is_starred
+        })
+        
+        return {"entity_type": request.entity_type, "entity_id": request.entity_id, "is_starred": db_item.is_starred}
+    except Exception as e:
+        db.rollback()
+        print(f"Error toggling star: {e}")
+        raise HTTPException(status_code=500, detail="Failed to toggle star")

@@ -1,12 +1,25 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star, CalendarIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { api, DashboardData, request } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
+
+const RESPONSIBLE_PERSONS_ORDER = [
+  'Av.M.Şerif Bey',
+  'Ömer Bey',
+  'Av.İbrahim Bey',
+  'Av.Kenan Bey',
+  'İsmail Bey',
+  'Ebru Hanım',
+  'Pınar Hanım',
+  'Yaren Hanım',
+]
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -16,23 +29,30 @@ export default function Dashboard() {
     websocket: false,
     database: true
   })
-  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter'>('all')
-  const [starredReminders, setStarredReminders] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem('starred_reminders')
-      return stored ? new Set(JSON.parse(stored)) : new Set()
-    } catch {
-      return new Set()
-    }
-  })
+  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'>('all')
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
 
-  useEffect(() => {
-    loadDashboardData()
-    checkHealthStatus()
-  }, [])
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const params = selectedDate ? { reminder_date: selectedDate } : undefined
+      const dashboardData = await api.dashboard.getData(params)
+      setData(dashboardData)
+      console.log('Dashboard data loaded:', dashboardData)
+    } catch (error) {
+      console.error('Dashboard loading error:', error)
+      toast({
+        title: "Hata",
+        description: "Dashboard verileri yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedDate, toast])
 
   const checkHealthStatus = async () => {
     try {
@@ -52,67 +72,85 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    loadDashboardData()
+    checkHealthStatus()
+  }, [loadDashboardData])
+
+  useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
         hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
       loadDashboardData()
       clearDataChanges()
     }
-  }, [hasChangesForEntity, clearDataChanges])
+  }, [hasChangesForEntity, clearDataChanges, loadDashboardData])
 
-  const loadDashboardData = async () => {
-    try {
-      const dashboardData = await api.dashboard.getData()
-      setData(dashboardData)
-      console.log('Dashboard data loaded:', dashboardData)
-    } catch (error) {
-      console.error('Dashboard loading error:', error)
-      toast({
-        title: "Hata",
-        description: "Dashboard verileri yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      })
-      setTimeout(() => {
-        loadDashboardData()
-      }, 2000)
-    } finally {
-      setLoading(false)
+  // When a date is selected, the backend already filters by that date.
+  // When no date is selected, the backend returns reminders for today+7 days,
+  // and we further filter to show only today's reminders by default.
+  const displayReminders = useMemo(() => {
+    const reminders = data?.upcoming_reminders || []
+    if (selectedDate) {
+      // Backend already filtered by the selected date
+      return reminders
     }
-  }
-
-  const todayReminders = (data?.upcoming_reminders || []).filter(reminder => {
+    // Default: show only today's reminders
     const today = new Date()
-    const reminderDate = new Date(reminder.reminder_date)
-    return today.toDateString() === reminderDate.toDateString()
-  })
+    return reminders.filter(reminder => {
+      const reminderDate = new Date(reminder.reminder_date)
+      return today.toDateString() === reminderDate.toDateString()
+    })
+  }, [data?.upcoming_reminders, selectedDate])
 
   const getReminderKey = useCallback((reminder: DashboardData['upcoming_reminders'][number]): string => {
     if (reminder.type === 'case') return `case-${reminder.case_id}`
     if (reminder.type === 'execution') return `execution-${reminder.execution_id}`
+    if (reminder.type === 'haciz_reminder') return `haciz_reminder-${reminder.execution_id}`
     return `compensation_letter-${reminder.compensation_letter_id}`
   }, [])
 
-  const toggleStar = useCallback((reminderKey: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setStarredReminders(prev => {
-      const next = new Set(prev)
-      if (next.has(reminderKey)) {
-        next.delete(reminderKey)
-      } else {
-        next.add(reminderKey)
-      }
-      localStorage.setItem('starred_reminders', JSON.stringify([...next]))
-      return next
-    })
+  const getEntityInfo = useCallback((reminderKey: string): { entityType: string; entityId: string } => {
+    const parts = reminderKey.split('-')
+    if (reminderKey.startsWith('compensation_letter-')) {
+      return { entityType: 'compensation_letter', entityId: parts.slice(1).join('-') }
+    }
+    if (reminderKey.startsWith('haciz_reminder-')) {
+      return { entityType: 'execution', entityId: parts.slice(1).join('-') }
+    }
+    return { entityType: parts[0], entityId: parts.slice(1).join('-') }
   }, [])
 
-  const filteredReminders = todayReminders
+  const toggleStar = useCallback(async (reminderKey: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { entityType, entityId } = getEntityInfo(reminderKey)
+    try {
+      await api.reminders.toggleStar(entityType, entityId)
+      loadDashboardData()
+    } catch (error) {
+      console.error('Error toggling star:', error)
+      toast({
+        title: "Hata",
+        description: "Yıldız durumu güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    }
+  }, [getEntityInfo, toast, loadDashboardData])
+
+  // Fixed ordered list of responsible persons
+  const responsiblePersons = RESPONSIBLE_PERSONS_ORDER
+
+  const filteredReminders = displayReminders
     .filter(reminder => {
-      if (reminderFilter === 'all') return true
-      return reminder.type === reminderFilter
+      if (reminderFilter !== 'all') {
+        if (reminderFilter === 'haciz_reminder') {
+          if (reminder.type !== 'haciz_reminder') return false
+        } else if (reminder.type !== reminderFilter) return false
+      }
+      if (responsibleFilter !== 'all' && reminder.responsible_person !== responsibleFilter) return false
+      return true
     })
     .sort((a, b) => {
-      const aStarred = starredReminders.has(getReminderKey(a))
-      const bStarred = starredReminders.has(getReminderKey(b))
+      const aStarred = a.is_starred === true
+      const bStarred = b.is_starred === true
       if (aStarred && !bStarred) return -1
       if (!aStarred && bStarred) return 1
       return 0
@@ -167,6 +205,9 @@ export default function Dashboard() {
         <div className="flex space-x-3">
           <Button asChild>
             <Link to="/cases/new">Yeni Dava</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/executions/new">Yeni İcra</Link>
           </Button>
           <Button variant="outline" asChild>
             <Link to="/clients/new">Yeni Müvekkil</Link>
@@ -242,40 +283,59 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Hatırlatmalar</CardTitle>
-                <CardDescription>Bugün için hatırlatmalar</CardDescription>
+                <CardDescription>
+                  {selectedDate
+                    ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} için hatırlatmalar`
+                    : 'Bugün için hatırlatmalar'}
+                </CardDescription>
               </div>
               <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <div className="flex space-x-1">
-                  <Button
-                    variant={reminderFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('all')}
-                  >
-                    Tümü
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'case' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('case')}
-                  >
-                    Dava Dosyaları
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'execution' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('execution')}
-                  >
-                    İcra Takipleri
-                  </Button>
-                  <Button
-                    variant={reminderFilter === 'compensation_letter' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setReminderFilter('compensation_letter')}
-                  >
-                    Teminat Mektupları
-                  </Button>
+                <div className="flex items-center space-x-1">
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-[160px] h-9 text-sm"
+                    placeholder="Tarih Seç"
+                  />
+                  {selectedDate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedDate('')}
+                      className="h-9 px-2 text-xs"
+                    >
+                      Bugün
+                    </Button>
+                  )}
                 </div>
+                <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="İlgili / Sorumlu Seç" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Sorumlular</SelectItem>
+                    {responsiblePersons.map((person) => (
+                      <SelectItem key={person} value={person}>
+                        {person}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder') => setReminderFilter(value)}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="h-4 w-4 text-gray-500 mr-1" />
+                    <SelectValue placeholder="Filtre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tümü</SelectItem>
+                    <SelectItem value="case">Dava Dosyaları</SelectItem>
+                    <SelectItem value="execution">İcra Takipleri</SelectItem>
+                    <SelectItem value="haciz_reminder">Haciz Hatırlatma</SelectItem>
+                    <SelectItem value="compensation_letter">Teminat Mektupları</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -283,7 +343,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {filteredReminders.slice(0, 500).map((reminder) => {
                 const reminderKey = getReminderKey(reminder)
-                const isStarred = starredReminders.has(reminderKey)
+                const isStarred = reminder.is_starred === true
                 return (
                 <div 
                   key={reminderKey} 
@@ -291,7 +351,7 @@ export default function Dashboard() {
                   onDoubleClick={() => {
                     if (reminder.type === 'case') {
                       navigate(`/cases/${reminder.case_id}/edit`)
-                    } else if (reminder.type === 'execution') {
+                    } else if (reminder.type === 'execution' || reminder.type === 'haciz_reminder') {
                       navigate(`/executions/${reminder.execution_id}/edit`)
                     } else if (reminder.type === 'compensation_letter') {
                       navigate(`/compensation-letters/${reminder.compensation_letter_id}/edit`)
@@ -320,8 +380,8 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-700 font-medium">Dava Adı: {reminder.case_name}</p>
                         )}
                         <p className="text-xs text-gray-700 font-medium">Mahkeme: {reminder.court}</p>
-                        <p className="text-xs text-gray-600">Müvekkil: {reminder.client_name}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        <p className="text-xs text-gray-600">Davacı: {reminder.client_name}</p>
+                        <p className="text-xs text-gray-600">Davalı: {reminder.defendant}</p>
                         {reminder.description && (
                           <p className="text-xs text-gray-500 mt-1">Hatırlatma: {reminder.description}</p>
                         )}
@@ -330,9 +390,21 @@ export default function Dashboard() {
                       <>
                         <p className="text-sm font-medium text-blue-600">İcra Dosya No: {reminder.execution_number}</p>
                         <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
-                        <p className="text-xs text-gray-600">Karşı Taraf: {reminder.defendant}</p>
+                        <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
                         {reminder.reminder_text && (
-                          <p className="text-xs text-gray-500 mt-1">Hatırlatma Metni: {reminder.reminder_text}</p>
+                          <p className="text-xs text-gray-500 mt-1">İşlem Hatırlatma: {reminder.reminder_text}</p>
+                        )}
+                      </>
+                    ) : reminder.type === 'haciz_reminder' ? (
+                      <>
+                        <p className="text-sm font-medium text-orange-600">HACİZ HATIRLATMA - İCRA NO: {reminder.execution_number}</p>
+                        <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
+                        <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
+                        {reminder.haciz_durumu && (
+                          <p className="text-xs text-gray-600">Haciz Durumu: {reminder.haciz_durumu}</p>
+                        )}
+                        {reminder.reminder_text && (
+                          <p className="text-xs text-gray-500 mt-1">Haciz Hatırlatma: {reminder.reminder_text}</p>
                         )}
                       </>
                     ) : (
@@ -368,9 +440,13 @@ export default function Dashboard() {
               {filteredReminders.length === 0 && (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-500 mb-2">
-                    {reminderFilter === 'all' 
-                      ? 'Bugün için hatırlatma bulunmuyor.' 
-                      : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`
+                    {selectedDate
+                      ? (reminderFilter === 'all'
+                          ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} için hatırlatma bulunmuyor.`
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
+                      : (reminderFilter === 'all' 
+                          ? 'Bugün için hatırlatma bulunmuyor.' 
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
                     }
                   </p>
                   {data.total_cases === 0 && data.total_clients === 0 && (
