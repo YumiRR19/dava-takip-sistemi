@@ -254,7 +254,8 @@ class CompensationLetter(BaseModel):
     version: int
 
 class CompensationLetterCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: str
     bank: str
     customer_number: str
@@ -271,6 +272,7 @@ class CompensationLetterCreate(BaseModel):
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: Optional[str] = None
     bank: Optional[str] = None
     customer_number: Optional[str] = None
@@ -312,7 +314,8 @@ class Execution(BaseModel):
     version: int
 
 class ExecutionCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: str
     execution_office: str
     execution_number: str
@@ -333,6 +336,7 @@ class ExecutionCreate(BaseModel):
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: Optional[str] = None
     execution_office: Optional[str] = None
     execution_number: Optional[str] = None
@@ -1276,15 +1280,22 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
     letter_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = letter.client_name or ""
+    resolved_client_id = letter.client_id or ""
+    if not resolved_client_name and letter.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_letter = CompensationLetterDB(
         id=letter_id,
         title=f"Teminat Mektubu - {letter.letter_number}",
-        client_id=letter.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         letter_number=letter.letter_number,
         bank=letter.bank,
         customer_number=letter.customer_number,
@@ -1356,18 +1367,17 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
     if letter_update.version is not None and db_letter.version != letter_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if letter_update.client_id:
+    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
+    if letter_update.client_name:
+        pass  # Will be set via update_data below
+    elif letter_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
+        if db_client:
+            letter_update.client_name = db_client.name
     
     update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_letter, field, value)
-    
-    if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        db_letter.client_name = db_client.name
     
     db_letter.updated_at = datetime.now()
     db_letter.version += 1
@@ -1405,14 +1415,21 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
     execution_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = execution.client_name or ""
+    resolved_client_id = execution.client_id or ""
+    if not resolved_client_name and execution.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_execution = ExecutionDB(
         id=execution_id,
-        client_id=execution.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         defendant=execution.defendant,
         execution_office=execution.execution_office,
         execution_number=execution.execution_number,
@@ -1494,18 +1511,17 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
     if execution_update.version is not None and db_execution.version != execution_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if execution_update.client_id:
+    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
+    if execution_update.client_name:
+        pass  # Will be set via update_data below
+    elif execution_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
+        if db_client:
+            execution_update.client_name = db_client.name
     
     update_data = execution_update.dict(exclude_unset=True, exclude={"version"})
     for field, value in update_data.items():
         setattr(db_execution, field, value)
-    
-    if execution_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        db_execution.client_name = db_client.name
     
     db_execution.updated_at = datetime.now()
     db_execution.version += 1

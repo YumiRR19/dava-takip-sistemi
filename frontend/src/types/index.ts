@@ -171,7 +171,8 @@ export interface CompensationLetter {
 }
 
 export interface CompensationLetterCreate {
-  client_id: string
+  client_id?: string
+  client_name?: string
   letter_number: string
   bank: string
   customer_number: string
@@ -189,6 +190,7 @@ export interface CompensationLetterCreate {
 
 export interface CompensationLetterUpdate {
   client_id?: string
+  client_name?: string
   letter_number?: string
   bank?: string
   customer_number?: string
@@ -232,7 +234,8 @@ export interface Execution {
 }
 
 export interface ExecutionCreate {
-  client_id: string
+  client_id?: string
+  client_name?: string
   defendant: string
   execution_office: string
   execution_number: string
@@ -253,6 +256,8 @@ export interface ExecutionCreate {
 }
 
 export interface ExecutionUpdate {
+  client_id?: string
+  client_name?: string
   defendant?: string
   execution_office?: string
   execution_number?: string

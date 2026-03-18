@@ -397,7 +397,7 @@ export default function Dashboard() {
                       </>
                     ) : reminder.type === 'haciz_reminder' ? (
                       <>
-                        <p className="text-sm font-medium text-orange-600">Haciz Hatırlatma - İcra No: {reminder.execution_number}</p>
+                        <p className="text-sm font-medium text-orange-600">HACİZ HATIRLATMA - İCRA NO: {reminder.execution_number}</p>
                         <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
                         <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
                         {reminder.haciz_durumu && (
