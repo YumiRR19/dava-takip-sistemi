@@ -120,11 +120,11 @@ export default function ExecutionForm() {
       execution_type: formData.execution_type,
       start_date: formData.start_date,
       office_archive_no: formData.office_archive_no,
-      reminder_date: formData.reminder_date || undefined,
+      reminder_date: formData.reminder_date || null,
       reminder_text: formData.reminder_text || undefined,
       notes: formData.notes || undefined,
       haciz_durumu: formData.haciz_durumu || undefined,
-      haciz_reminder_date: formData.haciz_reminder_date || undefined,
+      haciz_reminder_date: formData.haciz_reminder_date || null,
       haciz_reminder_text: formData.haciz_reminder_text || undefined,
       related_case_id: formData.related_case_id || undefined,
       responsible_person: formData.responsible_person || undefined,
@@ -139,7 +139,10 @@ export default function ExecutionForm() {
           version: currentVersion
         }
         if (!updateData.reminder_date) {
-          delete updateData.reminder_date
+          (updateData as any).reminder_date = null
+        }
+        if (!updateData.haciz_reminder_date) {
+          (updateData as any).haciz_reminder_date = null
         }
         await api.executions.update(id, updateData)
         toast({

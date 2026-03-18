@@ -243,11 +243,11 @@ export interface ExecutionCreate {
   execution_type: string
   start_date: string
   office_archive_no: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
-  haciz_reminder_date?: string
+  haciz_reminder_date?: string | null
   haciz_reminder_text?: string
   related_case_id?: string
   responsible_person?: string
@@ -264,11 +264,11 @@ export interface ExecutionUpdate {
   status?: string
   start_date?: string
   office_archive_no?: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
-  haciz_reminder_date?: string
+  haciz_reminder_date?: string | null
   haciz_reminder_text?: string
   related_case_id?: string
   responsible_person?: string
