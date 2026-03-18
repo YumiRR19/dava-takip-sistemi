@@ -922,10 +922,10 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
     case_id = str(uuid.uuid4())
     now = datetime.now()
     
-    # Determine client_name: from client_id lookup or directly provided
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
     resolved_client_id = case.client_id or ""
     resolved_client_name = case.client_name or ""
-    if case.client_id:
+    if not resolved_client_name and case.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
         if db_client:
             resolved_client_name = db_client.name

@@ -199,7 +199,7 @@ export interface CompensationLetterUpdate {
   case_number?: string
   status?: string
   description_text?: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string

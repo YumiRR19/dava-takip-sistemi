@@ -96,6 +96,9 @@ export default function CompensationLetterForm() {
           is_starred: formData.is_starred,
           version: currentVersion
         }
+        if (!updateData.reminder_date) {
+          (updateData as any).reminder_date = null
+        }
         await api.compensationLetters.update(id, updateData)
         toast({
           title: "Başarılı",
