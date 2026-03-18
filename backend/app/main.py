@@ -118,6 +118,23 @@ async def startup_event():
     except Exception as haciz_migration_error:
         print(f"haciz migration error: {haciz_migration_error}")
     
+    # Migration: make client_id nullable in cases table
+    try:
+        from app.database import engine as eng4
+        from sqlalchemy.orm import sessionmaker as sm4
+        from sqlalchemy import text as text4
+        SL4 = sm4(autocommit=False, autoflush=False, bind=eng4)
+        with SL4() as db:
+            try:
+                db.execute(text4("ALTER TABLE cases ALTER COLUMN client_id DROP NOT NULL"))
+                db.commit()
+                print("Successfully made client_id nullable")
+            except Exception:
+                db.rollback()
+                print("client_id is already nullable or migration not needed")
+    except Exception as e:
+        print(f"client_id migration error: {e}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
 
 class Client(BaseModel):

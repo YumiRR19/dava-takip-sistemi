@@ -89,8 +89,8 @@ export interface CaseUpdate {
   defendant?: string
   notes?: string
   start_date?: string
-  next_hearing_date?: string
-  reminder_date?: string
+  next_hearing_date?: string | null
+  reminder_date?: string | null
   office_archive_no?: string
   responsible_person?: string
   görevlendiren?: string

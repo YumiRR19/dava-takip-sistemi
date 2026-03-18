@@ -121,10 +121,10 @@ export default function CaseForm() {
           version: currentVersion
         }
         if (!updateData.next_hearing_date) {
-          delete updateData.next_hearing_date
+          (updateData as any).next_hearing_date = null
         }
         if (!updateData.reminder_date) {
-          delete updateData.reminder_date
+          (updateData as any).reminder_date = null
         }
         console.log('Update data:', updateData)
         await api.cases.update(id, updateData)
