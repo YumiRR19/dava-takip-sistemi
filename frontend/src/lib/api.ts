@@ -110,6 +110,10 @@ export const api = {
     getData: () => apiRequest<DashboardData>('/api/dashboard'),
   },
   
+  reports: {
+    getData: () => apiRequest<ReportsData>('/api/reports'),
+  },
+  
   auth: {
     changePassword: (currentPassword: string, newPassword: string) => 
       apiRequest<{ message: string }>('/api/auth/change-password', {
@@ -176,6 +180,7 @@ export const api = {
   },
 }
 
-import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate } from '../types'
+import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate, ReportsData } from '../types'
 
 export type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate }
+export type { ReportsData } from '../types'

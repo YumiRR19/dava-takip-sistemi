@@ -233,6 +233,27 @@ export interface ExecutionCreate {
   görevlendiren?: string
 }
 
+export interface ReportsData {
+  totals: {
+    cases: number
+    executions: number
+    compensation_letters: number
+    clients: number
+  }
+  case_status_counts: Record<string, number>
+  execution_status_counts: Record<string, number>
+  letter_status_counts: Record<string, number>
+  monthly_trends: Array<{
+    month: string
+    cases: number
+    executions: number
+    compensation_letters: number
+  }>
+  responsible_person_counts: Record<string, number>
+  case_type_counts: Record<string, number>
+  court_counts: Record<string, number>
+}
+
 export interface ExecutionUpdate {
   defendant?: string
   execution_office?: string

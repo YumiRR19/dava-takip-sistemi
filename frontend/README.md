@@ -1,50 +1,116 @@
-# React + TypeScript + Vite
+# LexCloud Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for the LexCloud case tracking system (Dava Takip Sistemi).
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui (Radix UI primitives)
+- **Charts**: Recharts
+- **Forms**: React Hook Form + Zod validation
+- **Routing**: React Router v7
+- **Testing**: Jest + React Testing Library
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **Dashboard**: Overview with stats, real-time reminders, and system health indicators
+- **Case Management**: Full CRUD for legal cases with status tracking, court info, reminders
+- **Execution Tracking**: Manage enforcement proceedings with filtering and search
+- **Compensation Letters**: Track bank guarantee letters
+- **Client Management**: Manage client information with contact details
+- **Reports & Analytics**: Interactive charts showing:
+  - Monthly trends (bar charts)
+  - Case status distribution (pie charts)
+  - Execution status distribution
+  - Responsible person workload
+  - Case type breakdown
+  - Court distribution (top 10)
+- **Settings**: Password management, backup/restore, theme switching
+- **Real-time Updates**: WebSocket-based live data synchronization with polling fallback
+- **Responsive Design**: Mobile-friendly with collapsible sidebar
+- **PDF Export**: Generate PDF documents (via jsPDF)
+- **Form Auto-save**: Draft recovery for unsaved form data
 
-- Configure the top-level `parserOptions` property like this:
+## Setup
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### Prerequisites
+- Node.js 20+
+- npm
+
+### Environment Variables
+```env
+VITE_API_URL=http://localhost:8000
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Installation
+```bash
+# Install dependencies
+npm install
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+# Start development server
+npm run dev
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Running Tests
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Linting
+```bash
+npm run lint
+```
+
+## Project Structure
+```
+frontend/
+  src/
+    components/
+      ui/             # shadcn/ui components
+      __tests__/      # Component tests
+      Dashboard.tsx   # Main dashboard with stats & reminders
+      Cases.tsx       # Case listing page
+      CaseForm.tsx    # Case create/edit form
+      Clients.tsx     # Client listing page
+      ClientForm.tsx  # Client create/edit form
+      Executions.tsx  # Execution listing page
+      ExecutionForm.tsx
+      CompensationLetters.tsx
+      CompensationLetterForm.tsx
+      Reports.tsx     # Analytics & charts page
+      Login.tsx       # Authentication page
+      Settings.tsx    # App settings
+      Sidebar.tsx     # Navigation sidebar
+    contexts/
+      AuthContext.tsx  # Authentication state management
+    hooks/
+      use-toast.ts           # Toast notifications
+      use-real-time-data.ts  # WebSocket data sync
+      use-websocket.ts       # WebSocket connection
+      use-polling-fallback.ts
+      use-debounced-search.ts
+      use-form-autosave.ts
+      use-before-unload.ts
+    lib/
+      api.ts          # API client with typed endpoints
+      utils.ts        # Utility functions
+    types/
+      index.ts        # TypeScript type definitions
+    App.tsx           # Main app with routing
+    main.tsx          # Entry point
 ```

@@ -185,7 +185,6 @@ class CompensationLetter(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
-    responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -1381,3 +1380,92 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     await manager.broadcast_data_change("delete", "execution", execution_id, {})
     
     return {"message": "Execution deleted successfully"}
+
+@app.get("/api/reports")
+async def get_reports(db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    """Analytics and reporting endpoint for charts and statistics."""
+    from collections import defaultdict
+    
+    db_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).all()
+    db_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).all()
+    db_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).all()
+    db_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).all()
+    
+    case_status_counts: Dict[str, int] = defaultdict(int)
+    for case in db_cases:
+        case_status_counts[case.status] += 1
+    
+    execution_status_counts: Dict[str, int] = defaultdict(int)
+    for execution in db_executions:
+        execution_status_counts[execution.status] += 1
+    
+    letter_status_counts: Dict[str, int] = defaultdict(int)
+    for letter in db_letters:
+        letter_status_counts[letter.status] += 1
+    
+    monthly_cases: Dict[str, int] = defaultdict(int)
+    for case in db_cases:
+        if case.created_at:
+            month_key = case.created_at.strftime("%Y-%m")
+            monthly_cases[month_key] += 1
+    
+    monthly_executions: Dict[str, int] = defaultdict(int)
+    for execution in db_executions:
+        if execution.created_at:
+            month_key = execution.created_at.strftime("%Y-%m")
+            monthly_executions[month_key] += 1
+    
+    monthly_letters: Dict[str, int] = defaultdict(int)
+    for letter in db_letters:
+        if letter.created_at:
+            month_key = letter.created_at.strftime("%Y-%m")
+            monthly_letters[month_key] += 1
+    
+    all_months = sorted(set(
+        list(monthly_cases.keys()) + 
+        list(monthly_executions.keys()) + 
+        list(monthly_letters.keys())
+    ))
+    
+    monthly_trends = []
+    for month in all_months:
+        monthly_trends.append({
+            "month": month,
+            "cases": monthly_cases.get(month, 0),
+            "executions": monthly_executions.get(month, 0),
+            "compensation_letters": monthly_letters.get(month, 0)
+        })
+    
+    responsible_person_counts: Dict[str, int] = defaultdict(int)
+    for case in db_cases:
+        if case.responsible_person:
+            responsible_person_counts[case.responsible_person] += 1
+    for execution in db_executions:
+        if execution.responsible_person:
+            responsible_person_counts[execution.responsible_person] += 1
+    
+    case_type_counts: Dict[str, int] = defaultdict(int)
+    for case in db_cases:
+        if case.case_type:
+            case_type_counts[case.case_type] += 1
+    
+    court_counts: Dict[str, int] = defaultdict(int)
+    for case in db_cases:
+        if case.court:
+            court_counts[case.court] += 1
+    
+    return {
+        "totals": {
+            "cases": len(db_cases),
+            "executions": len(db_executions),
+            "compensation_letters": len(db_letters),
+            "clients": len(db_clients)
+        },
+        "case_status_counts": dict(case_status_counts),
+        "execution_status_counts": dict(execution_status_counts),
+        "letter_status_counts": dict(letter_status_counts),
+        "monthly_trends": monthly_trends,
+        "responsible_person_counts": dict(responsible_person_counts),
+        "case_type_counts": dict(case_type_counts),
+        "court_counts": dict(court_counts)
+    }
