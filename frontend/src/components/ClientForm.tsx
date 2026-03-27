@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { api, ClientCreate, ClientUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function ClientForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
   const { toast } = useToast()
+  const { t } = useLanguage()
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -53,8 +55,8 @@ export default function ClientForm() {
       setCurrentVersion(clientData.version)
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Müvekkil bilgileri yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.clients.clientLoadError,
         variant: "destructive",
       })
       navigate('/clients')
@@ -74,8 +76,8 @@ export default function ClientForm() {
         }
         await api.clients.update(id, updateData)
         toast({
-          title: "Başarılı",
-          description: "Müvekkil başarıyla güncellendi.",
+          title: t.common.success,
+          description: t.clients.clientUpdated,
         })
         navigate('/clients')
       } else {
@@ -85,16 +87,16 @@ export default function ClientForm() {
         }
         await api.clients.create(createData)
         toast({
-          title: "Başarılı",
-          description: "Müvekkil başarıyla oluşturuldu.",
+          title: t.common.success,
+          description: t.clients.clientCreated,
         })
         navigate('/clients')
       }
     } catch (error: any) {
       if (error.status === 409) {
         toast({
-          title: "Çakışma Hatası",
-          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          title: t.clients.conflictError,
+          description: t.clients.conflictErrorDescription,
           variant: "destructive",
         })
         if (isEdit && id) {
@@ -102,8 +104,8 @@ export default function ClientForm() {
         }
       } else {
         toast({
-          title: "Hata",
-          description: isEdit ? "Müvekkil güncellenirken bir hata oluştu." : "Müvekkil oluşturulurken bir hata oluştu.",
+          title: t.common.error,
+          description: isEdit ? t.clients.clientUpdateError : t.clients.clientCreateError,
           variant: "destructive",
         })
       }
@@ -121,83 +123,83 @@ export default function ClientForm() {
       <div className="flex items-center space-x-4">
         <Button variant="outline" onClick={() => navigate('/clients')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Geri
+          {t.common.back}
         </Button>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isEdit ? 'Müvekkil Düzenle' : 'Yeni Müvekkil'}
+          {isEdit ? t.clients.editClient : t.clients.newClient}
         </h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEdit ? 'Müvekkil Bilgilerini Düzenle' : 'Yeni Müvekkil Oluştur'}</CardTitle>
+          <CardTitle>{isEdit ? t.clients.editClientInfo : t.clients.createNewClient}</CardTitle>
           <CardDescription>
-            {isEdit ? 'Mevcut müvekkil bilgilerini güncelleyin.' : 'Yeni bir müvekkil kaydı oluşturun.'}
+            {isEdit ? t.clients.updateExistingClientInfo : t.clients.createNewClientRecord}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Ad Soyad *</Label>
+                <Label htmlFor="name">{t.clients.fullName} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="Müvekkil adını girin"
+                  placeholder={t.clients.enterClientName}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Vekalet Bilgileri</Label>
+                <Label htmlFor="email">{t.clients.powerOfAttorneyInfo}</Label>
                 <Input
                   id="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="Vekalet bilgilerini girin"
+                  placeholder={t.clients.enterPowerOfAttorneyInfo}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefon *</Label>
+                <Label htmlFor="phone">{t.clients.phone} *</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="Telefon numarasını girin"
+                  placeholder={t.clients.enterPhoneNumber}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vekalet_ofis_no">Vekalet Ofis No</Label>
+                <Label htmlFor="vekalet_ofis_no">{t.clients.powerOfAttorneyOfficeNo}</Label>
                 <Input
                   id="vekalet_ofis_no"
                   value={formData.vekalet_ofis_no}
                   onChange={(e) => handleChange('vekalet_ofis_no', e.target.value)}
-                  placeholder="Vekalet ofis numarası girin"
+                  placeholder={t.clients.enterPowerOfAttorneyOfficeNo}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tax_id">Müvekkil T.C veya Vergi No</Label>
+              <Label htmlFor="tax_id">{t.clients.clientTcOrTaxNo}</Label>
               <Input
                 id="tax_id"
                 value={formData.tax_id}
                 onChange={(e) => handleChange('tax_id', e.target.value)}
-                placeholder="T.C. Kimlik No veya Vergi No girin"
+                placeholder={t.clients.enterTcOrTaxNo}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Adres *</Label>
+              <Label htmlFor="address">{t.clients.address} *</Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleChange('address', e.target.value)}
-                placeholder="Müvekkil adresini girin"
+                placeholder={t.clients.enterClientAddress}
                 rows={3}
                 required
               />
@@ -205,11 +207,11 @@ export default function ClientForm() {
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline" onClick={() => navigate('/clients')}>
-                İptal
+                {t.common.cancel}
               </Button>
               <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
+                {loading ? t.common.saving : (isEdit ? t.common.update : t.common.create)}
               </Button>
             </div>
           </form>

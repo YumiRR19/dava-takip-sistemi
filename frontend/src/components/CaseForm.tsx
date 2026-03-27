@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, Client, CaseCreate, CaseUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function CaseForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
   const { toast } = useToast()
+  const { t } = useLanguage()
 
   const [loading, setLoading] = useState(false)
   const [clientsLoading, setClientsLoading] = useState(false)
@@ -131,11 +133,11 @@ export default function CaseForm() {
         return
       }
       
-      setClientsError("Müvekkiller yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.")
+      setClientsError(t.cases.clientsLoadError)
       setClientsLoading(false)
       toast({
-        title: "Hata",
-        description: "Müvekkiller yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.cases.clientsLoadError,
         variant: "destructive",
       })
     } finally {
@@ -173,8 +175,8 @@ export default function CaseForm() {
       setCurrentVersion(caseData.version)
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Dava bilgileri yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.cases.caseLoadError,
         variant: "destructive",
       })
       navigate('/cases')
@@ -186,8 +188,8 @@ export default function CaseForm() {
     
     if (clientsLoading) {
       toast({
-        title: "Uyarı",
-        description: "Müvekkiller yüklenirken lütfen bekleyin.",
+        title: t.common.warning,
+        description: t.cases.pleaseWaitClientsLoading,
         variant: "destructive",
       })
       return
@@ -195,8 +197,8 @@ export default function CaseForm() {
 
     if (!formData.client_id || !clients.find(c => c.id === formData.client_id)) {
       toast({
-        title: "Hata",
-        description: "Geçerli bir müvekkil seçiniz.",
+        title: t.common.error,
+        description: t.cases.selectValidClient,
         variant: "destructive",
       })
       return
@@ -237,8 +239,8 @@ export default function CaseForm() {
         console.log('Update data:', updateData)
         await api.cases.update(id, updateData)
         toast({
-          title: "Başarılı",
-          description: "Dava başarıyla güncellendi.",
+          title: t.common.success,
+          description: t.cases.caseUpdated,
         })
       } else {
         const createData: CaseCreate = {
@@ -251,8 +253,8 @@ export default function CaseForm() {
         console.log('Create data:', createData)
         await api.cases.create(createData)
         toast({
-          title: "Başarılı",
-          description: "Dava başarıyla oluşturuldu.",
+          title: t.common.success,
+          description: t.cases.caseCreated,
         })
       }
       navigate('/cases')
@@ -260,17 +262,17 @@ export default function CaseForm() {
       console.error('Submission error:', error)
       if (error.status === 409) {
         toast({
-          title: "Çakışma Hatası",
-          description: "Bu kayıt başka bir kullanıcı tarafından değiştirilmiş. Lütfen sayfayı yenileyin ve tekrar deneyin.",
+          title: t.cases.conflictError,
+          description: t.cases.conflictErrorDescription,
           variant: "destructive",
         })
         if (isEdit && id) {
           loadCase(id)
         }
       } else {
-        const errorMessage = error.message || (isEdit ? "Dava güncellenirken bir hata oluştu." : "Dava oluşturulurken bir hata oluştu.")
+        const errorMessage = error.message || (isEdit ? t.cases.caseUpdateError : t.cases.caseCreateError)
         toast({
-          title: "Hata",
+          title: t.common.error,
           description: errorMessage,
           variant: "destructive",
         })
@@ -289,25 +291,25 @@ export default function CaseForm() {
       <div className="flex items-center space-x-4">
         <Button variant="outline" onClick={() => navigate('/cases')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Geri
+          {t.common.back}
         </Button>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isEdit ? 'Dava Düzenle' : 'Yeni Dava'}
+          {isEdit ? t.cases.editCase : t.cases.newCase}
         </h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEdit ? 'Dava Bilgilerini Düzenle' : 'Yeni Dava Oluştur'}</CardTitle>
+          <CardTitle>{isEdit ? t.cases.editCaseInfo : t.cases.createNewCase}</CardTitle>
           <CardDescription>
-            {isEdit ? 'Mevcut dava bilgilerini güncelleyin.' : 'Yeni bir dava kaydı oluşturun.'}
+            {isEdit ? t.cases.updateExistingCaseInfo : t.cases.createNewCaseRecord}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="client_id">Müvekkil *</Label>
+                <Label htmlFor="client_id">{t.cases.client} *</Label>
                 <Select 
                   key={`client-select-${clientsLoading}-${clients.length}-${!!clientsError}`}
                   value={formData.client_id} 
@@ -316,10 +318,10 @@ export default function CaseForm() {
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={
-                      clientsLoading ? "Müvekkiller yükleniyor..." :
-                      clientsError ? "Hata oluştu" :
-                      clients.length === 0 ? "Müvekkil bulunamadı" :
-                      "Müvekkil seçin"
+                      clientsLoading ? t.cases.clientsLoading :
+                      clientsError ? t.common.error :
+                      clients.length === 0 ? t.cases.noClientFound :
+                      t.cases.selectClient
                     } />
                   </SelectTrigger>
                   <SelectContent>
@@ -332,18 +334,18 @@ export default function CaseForm() {
                           onClick={() => loadClients()}
                           disabled={clientsLoading}
                         >
-                          Tekrar Dene
+                          {t.common.retry}
                         </Button>
                       </div>
                     ) : clients.length === 0 && !clientsLoading ? (
                       <div className="p-4 text-center">
-                        <p className="text-sm text-gray-600 mb-2">Henüz müvekkil eklenmemiş</p>
+                        <p className="text-sm text-gray-600 mb-2">{t.cases.noClientAddedYet}</p>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => navigate('/clients/new')}
                         >
-                          Müvekkil Ekle
+                          {t.cases.addClient}
                         </Button>
                       </div>
                     ) : (
@@ -358,96 +360,96 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="case_name">Dava Adı</Label>
+                <Label htmlFor="case_name">{t.cases.caseName}</Label>
                 <Input
                   id="case_name"
                   name="case_name"
                   value={formData.case_name}
                   onChange={(e) => handleChange('case_name', e.target.value)}
-                  placeholder="Dava adını girin"
+                  placeholder={t.cases.enterCaseName}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="defendant">Karşı Taraf *</Label>
+                <Label htmlFor="defendant">{t.cases.defendant} *</Label>
                 <Input
                   id="defendant"
                   name="defendant"
                   value={formData.defendant}
                   onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Karşı taraf adını girin"
+                  placeholder={t.cases.enterDefendantName}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="court">Mahkeme *</Label>
+                <Label htmlFor="court">{t.cases.court} *</Label>
                 <Input
                   id="court"
                   name="court"
                   value={formData.court}
                   onChange={(e) => handleChange('court', e.target.value)}
-                  placeholder="Mahkeme adını manuel olarak girin"
+                  placeholder={t.cases.enterCourtName}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="case_number">Dava Dosya No *</Label>
+                <Label htmlFor="case_number">{t.cases.fileNo} *</Label>
                 <Input
                   id="case_number"
                   name="case_number"
                   value={formData.case_number}
                   onChange={(e) => handleChange('case_number', e.target.value)}
-                  placeholder="Dava numarasını girin"
+                  placeholder={t.cases.enterCaseNumber}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Durum *</Label>
+                <Label htmlFor="status">{t.cases.status} *</Label>
                 <Select value={formData.status} onValueChange={(value) => handleChange('status', value)} name="status">
                   <SelectTrigger>
-                    <SelectValue placeholder="Durum seçin" />
+                    <SelectValue placeholder={t.cases.selectStatus} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Beraat">Beraat</SelectItem>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
-                    <SelectItem value="Kabul">Kabul</SelectItem>
-                    <SelectItem value="Red">Red</SelectItem>
-                    <SelectItem value="Temyiz">Temyiz</SelectItem>
-                    <SelectItem value="İstinaf">İstinaf</SelectItem>
-                    <SelectItem value="Derdest">Derdest</SelectItem>
-                    <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-                    <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
-                    <SelectItem value="Konkordato">Konkordato</SelectItem>
+                    <SelectItem value="Beraat">{t.caseStatuses.acquittal}</SelectItem>
+                    <SelectItem value="Ceza">{t.caseStatuses.criminal}</SelectItem>
+                    <SelectItem value="Kısmen kabul Kısmen red">{t.caseStatuses.partialAcceptPartialReject}</SelectItem>
+                    <SelectItem value="Kabul">{t.caseStatuses.accepted}</SelectItem>
+                    <SelectItem value="Red">{t.caseStatuses.rejected}</SelectItem>
+                    <SelectItem value="Temyiz">{t.caseStatuses.appeal}</SelectItem>
+                    <SelectItem value="İstinaf">{t.caseStatuses.appellate}</SelectItem>
+                    <SelectItem value="Derdest">{t.caseStatuses.pending}</SelectItem>
+                    <SelectItem value="Kesinleştirme">{t.caseStatuses.finalization}</SelectItem>
+                    <SelectItem value="G.K. Bekleniyor">{t.caseStatuses.awaitingDecision}</SelectItem>
+                    <SelectItem value="Bilirkişi">{t.caseStatuses.expert}</SelectItem>
+                    <SelectItem value="Konkordato">{t.caseStatuses.concordat}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="case_type">Dava Türü *</Label>
+                <Label htmlFor="case_type">{t.cases.caseType} *</Label>
                 <Select value={formData.case_type} onValueChange={(value) => handleChange('case_type', value)} name="case_type">
                   <SelectTrigger>
-                    <SelectValue placeholder="Dava türü seçin" />
+                    <SelectValue placeholder={t.cases.selectCaseType} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="Hukuk">Hukuk</SelectItem>
-                    <SelectItem value="İcra">İcra</SelectItem>
-                    <SelectItem value="İdari Yargı">İdari Yargı</SelectItem>
-                    <SelectItem value="Satış Memurluğu">Satış Memurluğu</SelectItem>
-                    <SelectItem value="Arabuluculuk">Arabuluculuk</SelectItem>
-                    <SelectItem value="Cbs">Cbs</SelectItem>
-                    <SelectItem value="Tazminat Komisyonu Başkanlığı">Tazminat Komisyonu Başkanlığı</SelectItem>
+                    <SelectItem value="Ceza">{t.caseTypes.criminal}</SelectItem>
+                    <SelectItem value="Hukuk">{t.caseTypes.civil}</SelectItem>
+                    <SelectItem value="İcra">{t.caseTypes.execution}</SelectItem>
+                    <SelectItem value="İdari Yargı">{t.caseTypes.administrative}</SelectItem>
+                    <SelectItem value="Satış Memurluğu">{t.caseTypes.salesOffice}</SelectItem>
+                    <SelectItem value="Arabuluculuk">{t.caseTypes.mediation}</SelectItem>
+                    <SelectItem value="Cbs">{t.caseTypes.cbs}</SelectItem>
+                    <SelectItem value="Tazminat Komisyonu Başkanlığı">{t.caseTypes.compensationCommission}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="start_date">Açılış Tarihi *</Label>
+                <Label htmlFor="start_date">{t.cases.openingDate} *</Label>
                 <Input
                   id="start_date"
                   name="start_date"
@@ -459,7 +461,7 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="next_hearing_date">Duruşma Tarihi</Label>
+                <Label htmlFor="next_hearing_date">{t.cases.hearingDate}</Label>
                 <Input
                   id="next_hearing_date"
                   name="next_hearing_date"
@@ -470,7 +472,7 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reminder_date">Hatırlatma Tarihi</Label>
+                <Label htmlFor="reminder_date">{t.cases.reminderDate}</Label>
                 <Input
                   id="reminder_date"
                   name="reminder_date"
@@ -481,50 +483,50 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="office_archive_no">Ofis Arşiv NO</Label>
+                <Label htmlFor="office_archive_no">{t.cases.officeArchiveNo}</Label>
                 <Input
                   id="office_archive_no"
                   name="office_archive_no"
                   value={formData.office_archive_no}
                   onChange={(e) => handleChange('office_archive_no', e.target.value)}
-                  placeholder="Ofis arşiv numarasını girin"
+                  placeholder={t.cases.enterOfficeArchiveNo}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="görevlendiren">Görevlendiren</Label>
+                <Label htmlFor="görevlendiren">{t.cases.assignedBy}</Label>
                 <Select value={formData.görevlendiren} onValueChange={(value) => handleChange('görevlendiren', value)} name="görevlendiren">
                   <SelectTrigger>
-                    <SelectValue placeholder="Görevlendiren seçin" />
+                    <SelectValue placeholder={t.cases.selectAssignedBy} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+                    <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+                    <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+                    <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+                    <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+                    <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="responsible_person">İlgili/Sorumlu</Label>
+                <Label htmlFor="responsible_person">{t.cases.responsiblePerson}</Label>
                 <Select value={formData.responsible_person} onValueChange={(value) => handleChange('responsible_person', value)} name="responsible_person">
                   <SelectTrigger>
-                    <SelectValue placeholder="İlgili/Sorumlu seçin" />
+                    <SelectValue placeholder={t.cases.selectResponsiblePerson} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    <SelectItem value="Av.M.Şerif Bey">{t.responsiblePersons.avMSerifBey}</SelectItem>
+                    <SelectItem value="Ömer Bey">{t.responsiblePersons.omerBey}</SelectItem>
+                    <SelectItem value="Av.İbrahim Bey">{t.responsiblePersons.avIbrahimBey}</SelectItem>
+                    <SelectItem value="Av.Kenan Bey">{t.responsiblePersons.avKenanBey}</SelectItem>
+                    <SelectItem value="İsmail Bey">{t.responsiblePersons.ismailBey}</SelectItem>
+                    <SelectItem value="Ebru Hanım">{t.responsiblePersons.ebruHanim}</SelectItem>
+                    <SelectItem value="Pınar Hanım">{t.responsiblePersons.pinarHanim}</SelectItem>
+                    <SelectItem value="Yaren Hanım">{t.responsiblePersons.yarenHanim}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -532,36 +534,36 @@ export default function CaseForm() {
 
 
             <div className="space-y-2">
-              <Label htmlFor="description">Hatırlatma Metni</Label>
+              <Label htmlFor="description">{t.cases.reminderText}</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Dava hakkında detaylı açıklama girin"
+                placeholder={t.cases.enterDetailedDescription}
                 rows={4}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Özel Not</Label>
+              <Label htmlFor="notes">{t.cases.privateNote}</Label>
               <Textarea
                 id="notes"
                 name="notes"
                 value={formData.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
-                placeholder="Dava ile ilgili özel notlarınızı buraya yazabilirsiniz"
+                placeholder={t.cases.enterPrivateNotes}
                 rows={3}
               />
             </div>
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline" onClick={() => navigate('/cases')}>
-                İptal
+                {t.common.cancel}
               </Button>
               <Button type="submit" disabled={loading || clientsLoading || !formData.client_id}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Kaydediliyor...' : clientsLoading ? `Müvekkiller yükleniyor${retryCount > 0 ? ` (${retryCount}/3)` : ''}...` : (isEdit ? 'Güncelle' : 'Oluştur')}
+                {loading ? t.common.saving : clientsLoading ? `${t.cases.clientsLoading}${retryCount > 0 ? ` (${retryCount}/3)` : ''}` : (isEdit ? t.common.update : t.common.create)}
               </Button>
             </div>
           </form>

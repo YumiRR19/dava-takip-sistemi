@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { api, Client } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([])
@@ -14,6 +15,7 @@ export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     loadClients()
@@ -26,14 +28,20 @@ export default function Clients() {
     }
   }, [hasChangesForEntity, clearDataChanges])
 
+  const getDateLocale = () => {
+    if (language === 'tr') return 'tr-TR'
+    if (language === 'de') return 'de-DE'
+    return 'en-US'
+  }
+
   const loadClients = async () => {
     try {
       const clientsData = await api.clients.getAll()
       setClients(clientsData)
     } catch (error) {
       toast({
-        title: "Hata",
-        description: "Müvekkiller yüklenirken bir hata oluştu.",
+        title: t.common.error,
+        description: t.clients.clientsLoadError,
         variant: "destructive",
       })
     } finally {
@@ -42,7 +50,7 @@ export default function Clients() {
   }
 
   const handleDelete = async (clientId: string) => {
-    if (!confirm('Bu müvekkili silmek istediğinizden emin misiniz?')) {
+    if (!confirm(t.clients.confirmDelete)) {
       return
     }
 
@@ -50,16 +58,16 @@ export default function Clients() {
       await api.clients.delete(clientId)
       setClients(clients.filter(c => c.id !== clientId))
       toast({
-        title: "Başarılı",
-        description: "Müvekkil başarıyla silindi.",
+        title: t.common.success,
+        description: t.clients.clientDeleted,
       })
     } catch (error: any) {
       const errorMessage = error.message.includes('existing cases') 
-        ? 'Bu müvekkile ait dava dosyaları bulunduğu için silinemez.'
-        : 'Müvekkil silinirken bir hata oluştu.'
+        ? t.clients.clientDeleteErrorWithCases
+        : t.clients.clientDeleteError
       
       toast({
-        title: "Hata",
+        title: t.common.error,
         description: errorMessage,
         variant: "destructive",
       })
@@ -84,11 +92,11 @@ export default function Clients() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Müvekkiller</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t.clients.title}</h1>
         <Button asChild>
           <Link to="/clients/new">
             <Plus className="h-4 w-4 mr-2" />
-            Yeni Müvekkil
+            {t.clients.newClient}
           </Link>
         </Button>
       </div>
@@ -96,7 +104,7 @@ export default function Clients() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input
-          placeholder="Ad, email, telefon veya vekalet ofis no ile ara..."
+          placeholder={t.clients.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -107,11 +115,11 @@ export default function Clients() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm ? 'Arama kriterlerinize uygun müvekkil bulunamadı.' : 'Henüz müvekkil bulunmuyor.'}
+              {searchTerm ? t.clients.noClientsMatchingCriteria : t.clients.noClientsFound}
             </p>
             {!searchTerm && (
               <Button asChild className="mt-4">
-                <Link to="/clients/new">İlk Müvekkili Ekle</Link>
+                <Link to="/clients/new">{t.clients.addFirstClient}</Link>
               </Button>
             )}
           </CardContent>
@@ -123,7 +131,7 @@ export default function Clients() {
               <CardHeader>
                 <CardTitle className="text-lg">{client.name}</CardTitle>
                 <CardDescription>
-                  Kayıt: {new Date(client.created_at).toLocaleDateString('tr-TR')}
+                  {t.clients.registration}: {new Date(client.created_at).toLocaleDateString(getDateLocale())}
                 </CardDescription>
               </CardHeader>
               <CardContent>
