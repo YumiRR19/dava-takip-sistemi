@@ -843,6 +843,8 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
                     if execution_data.get("reminder_date"):
                         execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
+                    if execution_data.get("haciz_reminder_date"):
+                        execution_data["haciz_reminder_date"] = date.fromisoformat(execution_data["haciz_reminder_date"])
                     
                     db_execution = ExecutionDB(**execution_data)
                     db.add(db_execution)
