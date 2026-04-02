@@ -1468,15 +1468,14 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
     if letter_update.version is not None and db_letter.version != letter_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
-    if letter_update.client_name:
-        pass  # Will be set via update_data below
-    elif letter_update.client_id:
+    update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and letter_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
         if db_client:
-            letter_update.client_name = db_client.name
-    
-    update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
+            update_data['client_name'] = db_client.name
     for field, value in update_data.items():
         setattr(db_letter, field, value)
     
@@ -1612,15 +1611,14 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
     if execution_update.version is not None and db_execution.version != execution_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    # Handle client_name update: prefer direct client_name, fall back to client_id lookup
-    if execution_update.client_name:
-        pass  # Will be set via update_data below
-    elif execution_update.client_id:
+    update_data = execution_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and execution_update.client_id:
         db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
         if db_client:
-            execution_update.client_name = db_client.name
-    
-    update_data = execution_update.dict(exclude_unset=True, exclude={"version"})
+            update_data['client_name'] = db_client.name
     for field, value in update_data.items():
         setattr(db_execution, field, value)
     
