@@ -4,21 +4,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, Set
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import json
 import uuid
 import jwt
 import os
 import asyncio
 import threading
+import time
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, Index, ForeignKey, or_
+from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
+from sqlalchemy import text, Index, ForeignKey, or_, func as sql_func
 import logging
-from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
+from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, engine
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ─── Structured Logging ───
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("lexcloud")
 
 app = FastAPI(title="LexCloud API", version="1.0.0")
 
@@ -136,6 +145,24 @@ async def startup_event():
         print(f"client_id migration error: {e}")
     
     print("✅ Backend startup completed - table creation and migration completed")
+    
+    # Start periodic background task to clean up stale WebSocket connections
+    # and log pool health every 60 seconds
+    async def periodic_cleanup():
+        while True:
+            try:
+                await asyncio.sleep(60)
+                manager.cleanup_stale_connections()
+                pool_status = engine.pool.status()
+                ws_count = manager.get_connection_count()
+                logger.info(f"Periodic health | pool: {pool_status} | ws_connections: {ws_count}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Periodic cleanup error: {e}")
+    
+    asyncio.create_task(periodic_cleanup())
+    logger.info("Background cleanup task started (60s interval)")
 
 class Client(BaseModel):
     id: str
@@ -376,6 +403,8 @@ class ConnectionManager:
             if user_token not in self.active_connections:
                 self.active_connections[user_token] = set()
             self.active_connections[user_token].add(websocket)
+        total = self.get_connection_count()
+        logger.info(f"WebSocket connected. Total active: {total}")
 
     def disconnect(self, websocket: WebSocket, user_token: str):
         with self.connection_lock:
@@ -383,6 +412,28 @@ class ConnectionManager:
                 self.active_connections[user_token].discard(websocket)
                 if not self.active_connections[user_token]:
                     del self.active_connections[user_token]
+        total = self.get_connection_count()
+        logger.info(f"WebSocket disconnected. Total active: {total}")
+
+    def get_connection_count(self) -> int:
+        with self.connection_lock:
+            return sum(len(conns) for conns in self.active_connections.values())
+
+    def cleanup_stale_connections(self):
+        """Remove connections that are no longer open."""
+        stale = []
+        with self.connection_lock:
+            for user_token, connections in self.active_connections.items():
+                for conn in connections.copy():
+                    try:
+                        if conn.client_state.name != "CONNECTED":
+                            stale.append((conn, user_token))
+                    except Exception:
+                        stale.append((conn, user_token))
+        for conn, token in stale:
+            self.disconnect(conn, token)
+        if stale:
+            logger.info(f"Cleaned up {len(stale)} stale WebSocket connections")
 
     async def broadcast_data_change(self, change_type: str, entity_type: str, entity_id: str, data: dict):
         serializable_data = self._make_serializable(data)
@@ -403,7 +454,7 @@ class ConnectionManager:
                     try:
                         await connection.send_text(json.dumps(message))
                     except Exception as e:
-                        print(f"Error sending WebSocket message: {e}")
+                        logger.warning(f"Failed to send WebSocket message: {e}")
                         disconnected_connections.append((connection, user_token))
         
         for connection, user_token in disconnected_connections:
@@ -533,32 +584,44 @@ def verify_token(token: str = Depends(HTTPBearer())):
 
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
+    accepted = False
+    ping_coroutine = None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         await websocket.accept()
+        accepted = True
         manager.connect(websocket, token)
         
-        import asyncio
         async def ping_task():
             while True:
                 try:
                     await asyncio.sleep(25)
-                    if websocket.client_state == websocket.client_state.CONNECTED:
+                    if websocket.client_state.name == "CONNECTED":
                         await websocket.ping()
+                    else:
+                        break
                 except Exception:
                     break
         
         ping_coroutine = asyncio.create_task(ping_task())
         
-        try:
-            while True:
-                data = await websocket.receive_text()
-                print(f"Received WebSocket message: {data}")
-        except WebSocketDisconnect:
-            ping_coroutine.cancel()
-            manager.disconnect(websocket, token)
+        while True:
+            data = await websocket.receive_text()
+            logger.debug(f"Received WebSocket message: {data}")
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected normally")
     except jwt.InvalidTokenError:
-        await websocket.close(code=1008)
+        if not accepted:
+            await websocket.close(code=1008)
+        logger.warning("WebSocket rejected: invalid token")
+    except Exception as e:
+        logger.error(f"WebSocket unexpected error: {e}")
+    finally:
+        # Always clean up — this prevents connection leaks
+        if ping_coroutine is not None:
+            ping_coroutine.cancel()
+        if accepted:
+            manager.disconnect(websocket, token)
 
 @app.get("/healthz")
 async def healthz():
@@ -580,15 +643,10 @@ async def api_health():
 @app.get("/health/db")
 async def db_health(db: Session = Depends(get_db)):
     try:
-        from sqlalchemy import text
         from urllib.parse import urlparse
         
+        # Simple SELECT 1 — no temp tables needed
         db.execute(text("SELECT 1"))
-        db.execute(text("CREATE TEMP TABLE health_test (id INTEGER)"))
-        db.execute(text("INSERT INTO health_test (id) VALUES (1)"))
-        db.execute(text("SELECT id FROM health_test WHERE id = 1"))
-        db.execute(text("DROP TABLE health_test"))
-        db.commit()
         
         database_url = os.getenv("DATABASE_URL", "")
         parsed = urlparse(database_url)
@@ -599,9 +657,11 @@ async def db_health(db: Session = Depends(get_db)):
             "host": parsed.hostname or "unknown",
             "db": parsed.path.lstrip('/') or "unknown",
             "status": "ok",
+            "pool": engine.pool.status(),
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
+        logger.error(f"DB health check failed: {e}")
         db.rollback()
         return {
             "connected": False,
@@ -610,8 +670,23 @@ async def db_health(db: Session = Depends(get_db)):
             "db": "unknown", 
             "status": "error",
             "error": str(e),
+            "pool": engine.pool.status(),
             "timestamp": datetime.now().isoformat()
         }
+
+@app.get("/health/pool")
+async def pool_health():
+    """Connection pool diagnostics endpoint."""
+    return {
+        "status": "ok",
+        "pool": engine.pool.status(),
+        "pool_size": engine.pool.size(),
+        "checked_in": engine.pool.checkedin(),
+        "checked_out": engine.pool.checkedout(),
+        "overflow": engine.pool.overflow(),
+        "ws_connections": manager.get_connection_count(),
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/health/ws")
 async def ws_health():
@@ -1127,153 +1202,179 @@ async def health_check():
 
 @app.get("/api/dashboard")
 async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token), reminder_date: Optional[str] = Query(None, description="Filter reminders by specific date (YYYY-MM-DD). If not provided, shows reminders for today and next 7 days.")):
-    total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
-    total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
-    total_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).count()
-    total_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).count()
+    request_start = time.time()
+    pool_status = engine.pool.status()
+    logger.info(f"Dashboard request started | pool: {pool_status}")
     
-    # Parse the optional reminder_date filter
-    filter_date = None
-    if reminder_date:
-        try:
-            filter_date = date.fromisoformat(reminder_date)
-        except ValueError:
-            pass  # Invalid date format, fall back to default behavior
-    
-    upcoming_reminders = []
-    
-    db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None), CaseDB.is_deleted == False).all()
-    for case in db_cases:
-        if case.reminder_date:
+    try:
+        # ── 1. Counts (optimized: SQL COUNT, no ORM object loading) ──
+        t0 = time.time()
+        total_cases = db.query(sql_func.count(CaseDB.id)).filter(CaseDB.is_deleted == False).scalar() or 0
+        total_clients = db.query(sql_func.count(ClientDB.id)).filter(ClientDB.is_deleted == False).scalar() or 0
+        total_executions = db.query(sql_func.count(ExecutionDB.id)).filter(ExecutionDB.is_deleted == False).scalar() or 0
+        total_compensation_letters = db.query(sql_func.count(CompensationLetterDB.id)).filter(CompensationLetterDB.is_deleted == False).scalar() or 0
+        logger.info(f"Dashboard counts took {time.time()-t0:.3f}s | cases={total_cases} execs={total_executions} letters={total_compensation_letters} clients={total_clients}")
+        
+        # ── 2. Parse date filter ──
+        filter_date = None
+        if reminder_date:
+            try:
+                filter_date = date.fromisoformat(reminder_date)
+            except ValueError:
+                logger.warning(f"Invalid reminder_date format: {reminder_date}")
+        
+        today = date.today()
+        date_range_start = filter_date if filter_date else today
+        date_range_end = filter_date if filter_date else (today + timedelta(days=7))
+        
+        upcoming_reminders = []
+        
+        # ── 3. Case reminders (filter in SQL, not Python) ──
+        t1 = time.time()
+        case_query = db.query(CaseDB).filter(
+            CaseDB.is_deleted == False,
+            CaseDB.reminder_date.isnot(None),
+            CaseDB.reminder_date >= date_range_start,
+            CaseDB.reminder_date <= date_range_end,
+        )
+        db_cases = case_query.all()
+        for case in db_cases:
             r_date = case.reminder_date
-            days_until = (r_date - date.today()).days
-            
-            include = False
-            if filter_date:
-                include = (r_date == filter_date)
-            else:
-                include = (0 <= days_until <= 7)
-            
-            if include:
-                upcoming_reminders.append({
-                    "type": "case",
-                    "case_id": case.id,
-                    "case_number": case.case_number,
-                    "case_name": case.case_name,
-                    "court": case.court,
-                    "client_name": case.client_name,
-                    "defendant": case.defendant,
-                    "reminder_date": r_date.isoformat(),
-                    "description": case.description,
-                    "responsible_person": case.responsible_person,
-                    "görevlendiren": case.görevlendiren,
-                    "is_starred": case.is_starred if case.is_starred is not None else False,
-                    "days_until": days_until
-                })
-    
-    db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
-    for execution in db_executions:
-        if execution.reminder_date:
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "case",
+                "case_id": case.id,
+                "case_number": case.case_number,
+                "case_name": case.case_name,
+                "court": case.court,
+                "client_name": case.client_name,
+                "defendant": case.defendant,
+                "reminder_date": r_date.isoformat(),
+                "description": case.description,
+                "responsible_person": case.responsible_person,
+                "görevlendiren": case.görevlendiren,
+                "is_starred": case.is_starred if case.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Case reminders: {len(db_cases)} rows in {time.time()-t1:.3f}s")
+        
+        # ── 4. Execution reminders (filter in SQL) ──
+        t2 = time.time()
+        exec_query = db.query(ExecutionDB).filter(
+            ExecutionDB.is_deleted == False,
+            ExecutionDB.reminder_date.isnot(None),
+            ExecutionDB.reminder_date >= date_range_start,
+            ExecutionDB.reminder_date <= date_range_end,
+        )
+        db_executions = exec_query.all()
+        for execution in db_executions:
             r_date = execution.reminder_date
-            days_until = (r_date - date.today()).days
-            
-            include = False
-            if filter_date:
-                include = (r_date == filter_date)
-            else:
-                include = (0 <= days_until <= 7)
-            
-            if include:
-                upcoming_reminders.append({
-                    "type": "execution",
-                    "execution_id": execution.id,
-                    "execution_number": execution.execution_number,
-                    "execution_office": execution.execution_office,
-                    "client_name": execution.client_name,
-                    "defendant": execution.defendant,
-                    "reminder_date": r_date.isoformat(),
-                    "reminder_text": execution.reminder_text,
-                    "responsible_person": execution.responsible_person,
-                    "görevlendiren": execution.görevlendiren,
-                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
-                    "days_until": days_until
-                })
-    
-    # Haciz reminders from executions with haciz_reminder_date
-    db_haciz_executions = db.query(ExecutionDB).filter(ExecutionDB.haciz_reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
-    for execution in db_haciz_executions:
-        if execution.haciz_reminder_date:
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "execution",
+                "execution_id": execution.id,
+                "execution_number": execution.execution_number,
+                "execution_office": execution.execution_office,
+                "client_name": execution.client_name,
+                "defendant": execution.defendant,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": execution.reminder_text,
+                "responsible_person": execution.responsible_person,
+                "görevlendiren": execution.görevlendiren,
+                "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Execution reminders: {len(db_executions)} rows in {time.time()-t2:.3f}s")
+        
+        # ── 5. Haciz reminders (filter in SQL) ──
+        t3 = time.time()
+        haciz_query = db.query(ExecutionDB).filter(
+            ExecutionDB.is_deleted == False,
+            ExecutionDB.haciz_reminder_date.isnot(None),
+            ExecutionDB.haciz_reminder_date >= date_range_start,
+            ExecutionDB.haciz_reminder_date <= date_range_end,
+        )
+        db_haciz_executions = haciz_query.all()
+        for execution in db_haciz_executions:
             r_date = execution.haciz_reminder_date
-            days_until = (r_date - date.today()).days
-            
-            include = False
-            if filter_date:
-                include = (r_date == filter_date)
-            else:
-                include = (0 <= days_until <= 7)
-            
-            if include:
-                upcoming_reminders.append({
-                    "type": "haciz_reminder",
-                    "execution_id": execution.id,
-                    "execution_number": execution.execution_number,
-                    "execution_office": execution.execution_office,
-                    "client_name": execution.client_name,
-                    "defendant": execution.defendant,
-                    "reminder_date": r_date.isoformat(),
-                    "reminder_text": execution.haciz_reminder_text,
-                    "haciz_durumu": execution.haciz_durumu,
-                    "responsible_person": execution.responsible_person,
-                    "görevlendiren": execution.görevlendiren,
-                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
-                    "days_until": days_until
-                })
-    
-    db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
-    for letter in db_compensation_letters:
-        if letter.reminder_date:
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "haciz_reminder",
+                "execution_id": execution.id,
+                "execution_number": execution.execution_number,
+                "execution_office": execution.execution_office,
+                "client_name": execution.client_name,
+                "defendant": execution.defendant,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": execution.haciz_reminder_text,
+                "haciz_durumu": execution.haciz_durumu,
+                "responsible_person": execution.responsible_person,
+                "görevlendiren": execution.görevlendiren,
+                "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Haciz reminders: {len(db_haciz_executions)} rows in {time.time()-t3:.3f}s")
+        
+        # ── 6. Compensation letter reminders (filter in SQL) ──
+        t4 = time.time()
+        letter_query = db.query(CompensationLetterDB).filter(
+            CompensationLetterDB.is_deleted == False,
+            CompensationLetterDB.reminder_date.isnot(None),
+            CompensationLetterDB.reminder_date >= date_range_start,
+            CompensationLetterDB.reminder_date <= date_range_end,
+        )
+        db_compensation_letters = letter_query.all()
+        for letter in db_compensation_letters:
             r_date = letter.reminder_date
-            days_until = (r_date - date.today()).days
-            
-            include = False
-            if filter_date:
-                include = (r_date == filter_date)
-            else:
-                include = (0 <= days_until <= 7)
-            
-            if include:
-                upcoming_reminders.append({
-                    "type": "compensation_letter",
-                    "compensation_letter_id": letter.id,
-                    "letter_number": letter.letter_number,
-                    "court": letter.court,
-                    "case_number": letter.case_number,
-                    "customer": letter.customer,
-                    "client_name": letter.client_name,
-                    "reminder_date": r_date.isoformat(),
-                    "reminder_text": letter.reminder_text,
-                    "responsible_person": letter.responsible_person,
-                    "görevlendiren": letter.görevlendiren,
-                    "is_starred": letter.is_starred if letter.is_starred is not None else False,
-                    "days_until": days_until
-                })
-    
-    upcoming_reminders.sort(key=lambda x: x["days_until"])
-    
-    status_counts = {}
-    db_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).all()
-    for case in db_cases:
-        status = case.status
-        status_counts[status] = status_counts.get(status, 0) + 1
-    
-    return {
-        "total_cases": total_cases,
-        "total_clients": total_clients,
-        "total_executions": total_executions,
-        "total_compensation_letters": total_compensation_letters,
-        "status_counts": status_counts,
-        "upcoming_reminders": upcoming_reminders
-    }
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "compensation_letter",
+                "compensation_letter_id": letter.id,
+                "letter_number": letter.letter_number,
+                "court": letter.court,
+                "case_number": letter.case_number,
+                "customer": letter.customer,
+                "client_name": letter.client_name,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": letter.reminder_text,
+                "responsible_person": letter.responsible_person,
+                "görevlendiren": letter.görevlendiren,
+                "is_starred": letter.is_starred if letter.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Letter reminders: {len(db_compensation_letters)} rows in {time.time()-t4:.3f}s")
+        
+        upcoming_reminders.sort(key=lambda x: x["days_until"])
+        
+        # ── 7. Status counts (optimized: SQL GROUP BY instead of loading all rows) ──
+        t5 = time.time()
+        status_rows = db.query(CaseDB.status, sql_func.count(CaseDB.id)).filter(
+            CaseDB.is_deleted == False
+        ).group_by(CaseDB.status).all()
+        status_counts = {status: count for status, count in status_rows}
+        logger.info(f"Status counts took {time.time()-t5:.3f}s")
+        
+        total_time = time.time() - request_start
+        logger.info(f"Dashboard request completed in {total_time:.3f}s | reminders={len(upcoming_reminders)}")
+        
+        return {
+            "total_cases": total_cases,
+            "total_clients": total_clients,
+            "total_executions": total_executions,
+            "total_compensation_letters": total_compensation_letters,
+            "status_counts": status_counts,
+            "upcoming_reminders": upcoming_reminders
+        }
+    except (OperationalError, DBAPIError) as db_err:
+        total_time = time.time() - request_start
+        logger.error(f"Dashboard DB error after {total_time:.3f}s: {db_err}")
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
+    except Exception as e:
+        total_time = time.time() - request_start
+        logger.error(f"Dashboard unexpected error after {total_time:.3f}s: {e}", exc_info=True)
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Dashboard data could not be loaded. Please try again.")
 
 @app.post("/api/compensation-letters", response_model=CompensationLetter)
 async def create_compensation_letter(letter: CompensationLetterCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):

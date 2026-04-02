@@ -20,13 +20,14 @@ if DATABASE_URL.startswith("postgres://"):
 engine = create_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=5,
-    max_overflow=10,
+    pool_size=10,
+    max_overflow=20,
     pool_timeout=30,
     pool_pre_ping=True,
-    pool_recycle=3600,
+    pool_recycle=300,
     connect_args={
-        "application_name": "lexcloud-backend"
+        "application_name": "lexcloud-backend",
+        "options": "-c statement_timeout=30000"
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -131,6 +132,9 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

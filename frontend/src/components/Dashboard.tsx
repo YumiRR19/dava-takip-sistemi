@@ -37,21 +37,29 @@ export default function Dashboard() {
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
 
   const loadDashboardData = useCallback(async () => {
-    try {
-      const params = selectedDate ? { reminder_date: selectedDate } : undefined
-      const dashboardData = await api.dashboard.getData(params)
-      setData(dashboardData)
-      console.log('Dashboard data loaded:', dashboardData)
-    } catch (error) {
-      console.error('Dashboard loading error:', error)
-      toast({
-        title: "Hata",
-        description: "Dashboard verileri yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
+    const maxRetries = 3
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const params = selectedDate ? { reminder_date: selectedDate } : undefined
+        const dashboardData = await api.dashboard.getData(params)
+        setData(dashboardData)
+        console.log('Dashboard data loaded:', dashboardData)
+        return // success — exit retry loop
+      } catch (error) {
+        console.error(`Dashboard loading error (attempt ${attempt}/${maxRetries}):`, error)
+        if (attempt < maxRetries) {
+          // Wait before retrying: 1s, 2s
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000))
+        } else {
+          toast({
+            title: "Hata",
+            description: "Dashboard verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.",
+            variant: "destructive",
+          })
+        }
+      }
     }
+    setLoading(false)
   }, [selectedDate, toast])
 
   const checkHealthStatus = async () => {
