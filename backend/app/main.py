@@ -1193,20 +1193,27 @@ async def search_cases(
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Fly.io"""
+    """Health check endpoint for Fly.io.
+    
+    Returns 200 even when DB is temporarily unreachable so Fly.io does not
+    kill the machine during transient Neon connection-limit spikes.  The
+    ``database`` field tells the caller whether the DB is actually reachable.
+    """
+    db_status = "unknown"
     try:
         db = next(get_db())
         db.execute(text("SELECT 1"))
         db.close()
-        
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "timestamp": datetime.now().isoformat()
-        }
+        db_status = "connected"
     except Exception as e:
-        logging.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        db_status = "unavailable"
+        logger.warning(f"Health check DB probe failed (non-fatal): {e}")
+
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/api/dashboard")
 async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token), reminder_date: Optional[str] = Query(None, description="Filter reminders by specific date (YYYY-MM-DD). If not provided, shows reminders for today and next 7 days.")):

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, DateTime, Date, Integer, Text, Boolean
+from sqlalchemy import create_engine, event, Column, String, DateTime, Date, Integer, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
@@ -20,16 +20,23 @@ if DATABASE_URL.startswith("postgres://"):
 engine = create_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,
+    max_overflow=5,
     pool_timeout=30,
     pool_pre_ping=True,
     pool_recycle=300,
     connect_args={
         "application_name": "lexcloud-backend",
-        "options": "-c statement_timeout=30000"
     }
 )
+
+# Set statement_timeout after connection is established (Neon pooler
+# rejects the "options" startup parameter, so we use an event listener).
+@event.listens_for(engine, "connect")
+def set_statement_timeout(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("SET statement_timeout = '30s'")
+    cursor.close()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
