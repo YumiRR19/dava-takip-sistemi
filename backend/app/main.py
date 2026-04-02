@@ -447,15 +447,23 @@ class ConnectionManager:
             "timestamp": datetime.now().isoformat()
         }
         
-        disconnected_connections = []
+        # Collect snapshot of connections under the lock, then send outside the lock.
+        # This prevents deadlock: await inside a threading.Lock blocks the event loop
+        # thread, preventing the lock holder from ever releasing it.
         with self.connection_lock:
-            for user_token, connections in self.active_connections.items():
-                for connection in connections.copy():
-                    try:
-                        await connection.send_text(json.dumps(message))
-                    except Exception as e:
-                        logger.warning(f"Failed to send WebSocket message: {e}")
-                        disconnected_connections.append((connection, user_token))
+            all_connections = [
+                (conn, token)
+                for token, conns in self.active_connections.items()
+                for conn in conns.copy()
+            ]
+        
+        disconnected_connections = []
+        for connection, user_token in all_connections:
+            try:
+                await connection.send_text(json.dumps(message))
+            except Exception as e:
+                logger.warning(f"Failed to send WebSocket message: {e}")
+                disconnected_connections.append((connection, user_token))
         
         for connection, user_token in disconnected_connections:
             self.disconnect(connection, user_token)
