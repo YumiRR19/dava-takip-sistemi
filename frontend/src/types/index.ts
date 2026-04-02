@@ -49,6 +49,7 @@ export interface Case {
   office_archive_no: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
@@ -58,7 +59,8 @@ export interface CaseCreate {
   title: string
   case_name?: string
   description?: string
-  client_id: string
+  client_id?: string
+  client_name?: string
   case_type: string
   status: string
   court: string
@@ -71,12 +73,15 @@ export interface CaseCreate {
   office_archive_no: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface CaseUpdate {
   title?: string
   case_name?: string
   description?: string
+  client_id?: string
+  client_name?: string
   case_type?: string
   status?: string
   court?: string
@@ -84,11 +89,12 @@ export interface CaseUpdate {
   defendant?: string
   notes?: string
   start_date?: string
-  next_hearing_date?: string
-  reminder_date?: string
+  next_hearing_date?: string | null
+  reminder_date?: string | null
   office_archive_no?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }
 
@@ -116,7 +122,7 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution' | 'compensation_letter'
+    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'
     case_id?: string
     case_title?: string
     case_name?: string
@@ -134,8 +140,10 @@ export interface DashboardData {
     defendant?: string
     description?: string
     reminder_text?: string
+    haciz_durumu?: string
     responsible_person?: string
     görevlendiren?: string
+    is_starred?: boolean
   }>
 }
 
@@ -156,13 +164,15 @@ export interface CompensationLetter {
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
 }
 
 export interface CompensationLetterCreate {
-  client_id: string
+  client_id?: string
+  client_name?: string
   letter_number: string
   bank: string
   customer_number: string
@@ -175,10 +185,12 @@ export interface CompensationLetterCreate {
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface CompensationLetterUpdate {
   client_id?: string
+  client_name?: string
   letter_number?: string
   bank?: string
   customer_number?: string
@@ -187,10 +199,11 @@ export interface CompensationLetterUpdate {
   case_number?: string
   status?: string
   description_text?: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }
 
@@ -209,15 +222,20 @@ export interface Execution {
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   created_at: string
   updated_at: string
   version: number
 }
 
 export interface ExecutionCreate {
-  client_id: string
+  client_id?: string
+  client_name?: string
   defendant: string
   execution_office: string
   execution_number: string
@@ -225,26 +243,36 @@ export interface ExecutionCreate {
   execution_type: string
   start_date: string
   office_archive_no: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string | null
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
 }
 
 export interface ExecutionUpdate {
+  client_id?: string
+  client_name?: string
   defendant?: string
   execution_office?: string
   execution_number?: string
   status?: string
   start_date?: string
   office_archive_no?: string
-  reminder_date?: string
+  reminder_date?: string | null
   reminder_text?: string
   notes?: string
   haciz_durumu?: string
+  haciz_reminder_date?: string | null
+  haciz_reminder_text?: string
+  related_case_id?: string
   responsible_person?: string
   görevlendiren?: string
+  is_starred?: boolean
   version?: number
 }
