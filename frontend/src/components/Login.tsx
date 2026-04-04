@@ -105,7 +105,7 @@ export default function Login() {
       </div>
 
       {/* Top Navigation Bar */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 lg:px-12 lg:py-6">
+      <nav className="relative z-50 flex items-center justify-between px-6 py-4 lg:px-12 lg:py-6">
         {/* Logo + Language Dropdown */}
         <div className="flex flex-col items-start gap-2">
           <div className="flex items-center gap-3">
