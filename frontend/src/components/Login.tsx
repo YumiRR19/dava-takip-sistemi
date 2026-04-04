@@ -50,40 +50,31 @@ export default function Login() {
     }
   }
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setRegisterSubmitting(true)
 
-    try {
-      const subject = encodeURIComponent('LexCloud Üyelik Talebi')
-      const body = encodeURIComponent(
-        `Yeni üyelik talebi:\n\n` +
-        `Ad Soyad: ${registerForm.fullName}\n` +
-        `E-posta: ${registerForm.email}\n` +
-        `Telefon: ${registerForm.phone}\n` +
-        `Ofis / Büro Adı: ${registerForm.officeName}\n` +
-        `${registerForm.message ? `Ek Not: ${registerForm.message}\n` : ''}` +
-        `\n---\nBu mesaj LexCloud üyelik formu üzerinden gönderilmiştir.`
-      )
-      
-      window.location.href = `mailto:yusuf@lexcloud.tr?subject=${subject}&body=${body}`
-      
-      setRegisterSuccess(true)
-      timeoutRef.current = setTimeout(() => {
-        setRegisterSuccess(false)
-        setShowRegisterModal(false)
-        setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
-        timeoutRef.current = null
-      }, 4000)
-    } catch {
-      toast({
-        title: "Hata",
-        description: "Bir hata oluştu. Lütfen tekrar deneyin.",
-        variant: "destructive",
-      })
-    } finally {
-      setRegisterSubmitting(false)
-    }
+    const subject = encodeURIComponent('LexCloud Üyelik Talebi')
+    const body = encodeURIComponent(
+      `Yeni üyelik talebi:\n\n` +
+      `Ad Soyad: ${registerForm.fullName}\n` +
+      `E-posta: ${registerForm.email}\n` +
+      `Telefon: ${registerForm.phone}\n` +
+      `Ofis / Büro Adı: ${registerForm.officeName}\n` +
+      `${registerForm.message ? `Ek Not: ${registerForm.message}\n` : ''}` +
+      `\n---\nBu mesaj LexCloud üyelik formu üzerinden gönderilmiştir.`
+    )
+    
+    window.location.href = `mailto:yusuf@lexcloud.tr?subject=${subject}&body=${body}`
+    
+    setRegisterSubmitting(false)
+    setRegisterSuccess(true)
+    timeoutRef.current = setTimeout(() => {
+      setRegisterSuccess(false)
+      setShowRegisterModal(false)
+      setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+      timeoutRef.current = null
+    }, 4000)
   }
 
   const features = [
@@ -317,7 +308,7 @@ export default function Login() {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Talebiniz Alındı</h2>
                   <p className="text-gray-500 text-sm leading-relaxed">
-                    Üyelik talebiniz başarıyla iletildi. E-posta uygulamanız açılacaktır.<br />
+                    E-posta uygulamanız açılacaktır. Lütfen açılan e-postayı gönderin.<br />
                     En kısa sürede sizinle iletişime geçilecektir.
                   </p>
                 </div>
