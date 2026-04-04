@@ -309,6 +309,7 @@ export default function Login() {
                 setShowRegisterModal(false)
                 setRegisterSuccess(false)
                 setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+                registerSubmittedRef.current = false
               }}
               className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
             >
@@ -436,6 +437,7 @@ export default function Login() {
                           clearModalTimeout()
                           setShowRegisterModal(false)
                           setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+                          registerSubmittedRef.current = false
                         }}
                         className="w-full"
                       >
