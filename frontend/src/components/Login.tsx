@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Eye, EyeOff, Shield, FileText, Bell, Users, Scale, BarChart3, Lock, Mail, X, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, Shield, FileText, Bell, Users, Scale, BarChart3, Lock, Mail, X, CheckCircle2, User, Phone, Building2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,15 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [registerForm, setRegisterForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    officeName: '',
+    message: '',
+  })
+  const [registerSubmitting, setRegisterSubmitting] = useState(false)
+  const [registerSuccess, setRegisterSuccess] = useState(false)
   const { login, loading } = useAuth()
   const { toast } = useToast()
 
@@ -24,6 +33,41 @@ export default function Login() {
         variant: "destructive",
       })
       setPassword('')
+    }
+  }
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setRegisterSubmitting(true)
+
+    try {
+      const subject = encodeURIComponent('LexCloud Üyelik Talebi')
+      const body = encodeURIComponent(
+        `Yeni üyelik talebi:\n\n` +
+        `Ad Soyad: ${registerForm.fullName}\n` +
+        `E-posta: ${registerForm.email}\n` +
+        `Telefon: ${registerForm.phone}\n` +
+        `Ofis / Büro Adı: ${registerForm.officeName}\n` +
+        `${registerForm.message ? `Ek Not: ${registerForm.message}\n` : ''}` +
+        `\n---\nBu mesaj LexCloud üyelik formu üzerinden gönderilmiştir.`
+      )
+      
+      window.location.href = `mailto:yusuf@lexcloud.tr?subject=${subject}&body=${body}`
+      
+      setRegisterSuccess(true)
+      setTimeout(() => {
+        setRegisterSuccess(false)
+        setShowRegisterModal(false)
+        setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+      }, 4000)
+    } catch {
+      toast({
+        title: "Hata",
+        description: "Bir hata oluştu. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      })
+    } finally {
+      setRegisterSubmitting(false)
     }
   }
 
@@ -115,7 +159,7 @@ export default function Login() {
             onClick={() => setShowRegisterModal(true)}
             className="text-blue-300 hover:text-blue-200 text-sm font-medium whitespace-nowrap transition-colors"
           >
-            Kayıt Ol
+            Üye Ol
           </button>
         </div>
       </nav>
@@ -181,7 +225,7 @@ export default function Login() {
                   onClick={() => setShowRegisterModal(true)}
                   className="text-blue-300 hover:text-blue-200 text-sm font-medium transition-colors"
                 >
-                  Kayıt Ol
+                  Üye Ol
                 </button>
               </div>
             </div>
@@ -232,80 +276,169 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Register / Contact Modal */}
+      {/* Membership Form Modal */}
       {showRegisterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
             {/* Close button */}
             <button
-              onClick={() => setShowRegisterModal(false)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => {
+                setShowRegisterModal(false)
+                setRegisterSuccess(false)
+                setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+              }}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
             <div className="p-8">
-              {/* Header */}
-              <div className="text-center mb-6">
-                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-7 w-7 text-blue-600" />
+              {registerSuccess ? (
+                /* Success state */
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Talebiniz Alındı</h2>
+                  <p className="text-gray-500 text-sm leading-relaxed">
+                    Üyelik talebiniz başarıyla iletildi. E-posta uygulamanız açılacaktır.<br />
+                    En kısa sürede sizinle iletişime geçilecektir.
+                  </p>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Kayıt Ol</h2>
-                <p className="text-gray-500 mt-2 text-sm leading-relaxed">
-                  LexCloud sistemine kayıt olmak için lütfen bizimle iletişime geçin. 
-                  Aşağıdaki e-posta adresine mesaj göndererek kayıt talebinizi iletebilirsiniz.
-                </p>
-              </div>
-
-              {/* Email Info */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-6">
-                <Label className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-2 block">
-                  İletişim E-posta Adresi
-                </Label>
-                <a 
-                  href="mailto:ysfmrzgndz2004@gmail.com?subject=LexCloud%20Kay%C4%B1t%20Talebi&body=Merhaba%2C%0A%0ALexCloud%20sisteminize%20kay%C4%B1t%20olmak%20istiyorum.%0A%0AAd%C4%B1m%3A%0ATelefon%3A%0AOfis%20Ad%C4%B1%3A%0A%0ATe%C5%9Fekk%C3%BCrler."
-                  className="text-lg font-semibold text-blue-700 hover:text-blue-800 transition-colors break-all"
-                >
-                  ysfmrzgndz2004@gmail.com
-                </a>
-              </div>
-
-              {/* Steps */}
-              <div className="space-y-3 mb-6">
-                <p className="text-sm font-medium text-gray-700">Kayıt Süreci:</p>
-                <div className="space-y-2">
-                  {[
-                    'Yukarıdaki e-posta adresine kayıt talebinizi gönderin',
-                    'Bilgileriniz incelendikten sonra sizinle iletişime geçilecektir',
-                    'Hesabınız oluşturulduktan sonra giriş yapabilirsiniz',
-                  ].map((step, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm text-gray-600">{step}</span>
+              ) : (
+                /* Form state */
+                <>
+                  {/* Header */}
+                  <div className="text-center mb-6">
+                    <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="h-7 w-7 text-blue-600" />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <h2 className="text-2xl font-bold text-gray-900">Üye Ol</h2>
+                    <p className="text-gray-500 mt-2 text-sm leading-relaxed">
+                      LexCloud sistemine üyelik talebinde bulunmak için aşağıdaki formu doldurun.
+                    </p>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <a
-                  href="mailto:ysfmrzgndz2004@gmail.com?subject=LexCloud%20Kay%C4%B1t%20Talebi&body=Merhaba%2C%0A%0ALexCloud%20sisteminize%20kay%C4%B1t%20olmak%20istiyorum.%0A%0AAd%C4%B1m%3A%0ATelefon%3A%0AOfis%20Ad%C4%B1%3A%0A%0ATe%C5%9Fekk%C3%BCrler."
-                  className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
-                >
-                  <Mail className="h-4 w-4" />
-                  E-posta Gönder
-                </a>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="w-full"
-                >
-                  Kapat
-                </Button>
-              </div>
+                  {/* Form */}
+                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-name" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400" />
+                        Ad Soyad <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="reg-name"
+                        type="text"
+                        value={registerForm.fullName}
+                        onChange={(e) => setRegisterForm(prev => ({ ...prev, fullName: e.target.value }))}
+                        placeholder="Adınızı ve soyadınızı girin"
+                        required
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-email" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        E-posta Adresi <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        value={registerForm.email}
+                        onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="ornek@mail.com"
+                        required
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-phone" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        Telefon Numarası <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="reg-phone"
+                        type="tel"
+                        value={registerForm.phone}
+                        onChange={(e) => setRegisterForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="05XX XXX XX XX"
+                        required
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-office" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-gray-400" />
+                        Ofis / Büro Adı <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="reg-office"
+                        type="text"
+                        value={registerForm.officeName}
+                        onChange={(e) => setRegisterForm(prev => ({ ...prev, officeName: e.target.value }))}
+                        placeholder="Hukuk büro veya ofis adınızı girin"
+                        required
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-message" className="text-sm font-medium text-gray-700">
+                        Ek Not (İsteğe bağlı)
+                      </Label>
+                      <textarea
+                        id="reg-message"
+                        value={registerForm.message}
+                        onChange={(e) => setRegisterForm(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Eklemek istediğiniz bilgi varsa yazabilirsiniz..."
+                        rows={3}
+                        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:ring-blue-400 focus:outline-none resize-none"
+                      />
+                    </div>
+
+                    <div className="pt-2 space-y-3">
+                      <Button
+                        type="submit"
+                        disabled={registerSubmitting}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
+                      >
+                        {registerSubmitting ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Gönderiliyor...
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2">
+                            <Send className="h-4 w-4" />
+                            Üyelik Talebini Gönder
+                          </span>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowRegisterModal(false)
+                          setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+                        }}
+                        className="w-full"
+                      >
+                        Kapat
+                      </Button>
+                    </div>
+                  </form>
+
+                  {/* Contact info */}
+                  <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                    <p className="text-xs text-gray-400">
+                      Sorularınız için: <a href="mailto:yusuf@lexcloud.tr" className="text-blue-500 hover:text-blue-600 font-medium">yusuf@lexcloud.tr</a>
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
