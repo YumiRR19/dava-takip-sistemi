@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Eye, EyeOff, Shield, FileText, Bell, Users, Scale, BarChart3, Lock, Mail, X, CheckCircle2, User, Phone, Building2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,8 +19,22 @@ export default function Login() {
   })
   const [registerSubmitting, setRegisterSubmitting] = useState(false)
   const [registerSuccess, setRegisterSuccess] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { login, loading } = useAuth()
   const { toast } = useToast()
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  const clearModalTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,10 +69,11 @@ export default function Login() {
       window.location.href = `mailto:yusuf@lexcloud.tr?subject=${subject}&body=${body}`
       
       setRegisterSuccess(true)
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setRegisterSuccess(false)
         setShowRegisterModal(false)
         setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+        timeoutRef.current = null
       }, 4000)
     } catch {
       toast({
@@ -283,6 +298,7 @@ export default function Login() {
             {/* Close button */}
             <button
               onClick={() => {
+                clearModalTimeout()
                 setShowRegisterModal(false)
                 setRegisterSuccess(false)
                 setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
@@ -421,6 +437,7 @@ export default function Login() {
                         type="button"
                         variant="outline"
                         onClick={() => {
+                          clearModalTimeout()
                           setShowRegisterModal(false)
                           setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
                         }}
