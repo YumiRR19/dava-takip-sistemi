@@ -18,8 +18,8 @@ export default function Login() {
     officeName: '',
     message: '',
   })
-  const [registerSubmitting, setRegisterSubmitting] = useState(false)
   const [registerSuccess, setRegisterSuccess] = useState(false)
+  const registerSubmittedRef = useRef(false)
   const [lang, setLang] = useState<Lang>('tr')
   const [showLangDropdown, setShowLangDropdown] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -59,7 +59,8 @@ export default function Login() {
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setRegisterSubmitting(true)
+    if (registerSubmittedRef.current) return
+    registerSubmittedRef.current = true
 
     const subject = encodeURIComponent(t.emailSubject)
     const body = encodeURIComponent(
@@ -74,12 +75,12 @@ export default function Login() {
     
     window.location.href = `mailto:yusuf@lexcloud.tr?subject=${subject}&body=${body}`
     
-    setRegisterSubmitting(false)
     setRegisterSuccess(true)
     timeoutRef.current = setTimeout(() => {
       setRegisterSuccess(false)
       setShowRegisterModal(false)
       setRegisterForm({ fullName: '', email: '', phone: '', officeName: '', message: '' })
+      registerSubmittedRef.current = false
       timeoutRef.current = null
     }, 4000)
   }
@@ -421,20 +422,12 @@ export default function Login() {
                     <div className="pt-2 space-y-3">
                       <Button
                         type="submit"
-                        disabled={registerSubmitting}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
                       >
-                        {registerSubmitting ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            {t.submitting}
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center gap-2">
-                            <Send className="h-4 w-4" />
-                            {t.submitButton}
-                          </span>
-                        )}
+                        <span className="flex items-center justify-center gap-2">
+                          <Send className="h-4 w-4" />
+                          {t.submitButton}
+                        </span>
                       </Button>
                       <Button
                         type="button"
