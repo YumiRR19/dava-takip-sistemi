@@ -23,7 +23,6 @@ export default function Login() {
   const [lang, setLang] = useState<Lang>('tr')
   const [showLangDropdown, setShowLangDropdown] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const langDropdownRef = useRef<HTMLDivElement>(null)
   const { login, loading } = useAuth()
   const { toast } = useToast()
 
@@ -35,16 +34,7 @@ export default function Login() {
     }
   }, [])
 
-  // Close language dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
-        setShowLangDropdown(false)
-      }
-    }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [])
+  // No document-level listener needed — backdrop overlay handles click-outside
 
   const clearModalTimeout = () => {
     if (timeoutRef.current) {
@@ -126,7 +116,7 @@ export default function Login() {
           </div>
           
           {/* Language Dropdown */}
-          <div className="relative" ref={langDropdownRef}>
+          <div className="relative">
             <button
               onClick={() => setShowLangDropdown(!showLangDropdown)}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white/80 hover:bg-white/15 hover:text-white transition-all"
@@ -137,31 +127,33 @@ export default function Login() {
             </button>
             
             {showLangDropdown && (
-              <div
-                className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                {langs.map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setLang(l)
-                      setShowLangDropdown(false)
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                      lang === l
-                        ? 'bg-blue-600/30 text-white'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <span className="text-base">{langFlags[l]}</span>
-                    <span>{langLabels[l]}</span>
-                  </button>
-                ))}
-              </div>
+              <>
+                {/* Invisible backdrop to catch outside clicks */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowLangDropdown(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50">
+                  {langs.map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => {
+                        setLang(l)
+                        setShowLangDropdown(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                        lang === l
+                          ? 'bg-blue-600/30 text-white'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <span className="text-base">{langFlags[l]}</span>
+                      <span>{langLabels[l]}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
