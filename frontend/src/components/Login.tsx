@@ -42,8 +42,8 @@ export default function Login() {
         setShowLangDropdown(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
   const clearModalTimeout = () => {
@@ -137,15 +137,21 @@ export default function Login() {
             </button>
             
             {showLangDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50">
+              <div
+                className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 {langs.map((l) => (
                   <button
                     key={l}
-                    onClick={() => {
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
                       setLang(l)
                       setShowLangDropdown(false)
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
                       lang === l
                         ? 'bg-blue-600/30 text-white'
                         : 'text-white/70 hover:bg-white/10 hover:text-white'
