@@ -96,7 +96,7 @@ export default function Login() {
   const langs: Lang[] = ['tr', 'en', 'zh', 'es']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 relative overflow-hidden" onClick={() => showLangDropdown && setShowLangDropdown(false)}>
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
@@ -116,7 +116,7 @@ export default function Login() {
           </div>
           
           {/* Language Dropdown */}
-          <div className="relative">
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setShowLangDropdown(!showLangDropdown)}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white/80 hover:bg-white/15 hover:text-white transition-all"
@@ -127,33 +127,26 @@ export default function Login() {
             </button>
             
             {showLangDropdown && (
-              <>
-                {/* Invisible backdrop to catch outside clicks */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowLangDropdown(false)}
-                />
-                <div className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50">
-                  {langs.map((l) => (
-                    <button
-                      key={l}
-                      type="button"
-                      onClick={() => {
-                        setLang(l)
-                        setShowLangDropdown(false)
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                        lang === l
-                          ? 'bg-blue-600/30 text-white'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <span className="text-base">{langFlags[l]}</span>
-                      <span>{langLabels[l]}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
+              <div className="absolute top-full left-0 mt-1 bg-slate-800/95 backdrop-blur-md border border-white/20 rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50">
+                {langs.map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => {
+                      setLang(l)
+                      setShowLangDropdown(false)
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${
+                      lang === l
+                        ? 'bg-blue-600/30 text-white'
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-base">{langFlags[l]}</span>
+                    <span>{langLabels[l]}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>
