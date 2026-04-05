@@ -30,7 +30,14 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       let errorMessage = response.statusText
       try {
         const errorData = JSON.parse(errorText)
-        errorMessage = errorData.detail || errorMessage
+        const detail = errorData.detail
+        if (typeof detail === 'string') {
+          errorMessage = detail
+        } else if (Array.isArray(detail) && detail.length > 0) {
+          errorMessage = detail.map((e: any) => e.msg || String(e)).join(', ')
+        } else if (detail) {
+          errorMessage = String(detail)
+        }
       } catch {
         errorMessage = errorText || errorMessage
       }
@@ -107,7 +114,19 @@ export const api = {
   },
   
   dashboard: {
-    getData: () => apiRequest<DashboardData>('/api/dashboard'),
+    getData: (params?: { reminder_date?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.reminder_date) searchParams.append('reminder_date', params.reminder_date)
+      const query = searchParams.toString()
+      return apiRequest<DashboardData>(`/api/dashboard${query ? `?${query}` : ''}`)
+    },
+  },
+  
+  reminders: {
+    toggleStar: (entityType: string, entityId: string) => apiRequest<{ entity_type: string; entity_id: string; is_starred: boolean }>('/api/reminders/toggle-star', {
+      method: 'POST',
+      body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
+    }),
   },
   
   auth: {
