@@ -1202,14 +1202,17 @@ async def health_check():
     ``database`` field tells the caller whether the DB is actually reachable.
     """
     db_status = "unknown"
+    db = None
     try:
         db = next(get_db())
         db.execute(text("SELECT 1"))
-        db.close()
         db_status = "connected"
     except Exception as e:
         db_status = "unavailable"
         logger.warning(f"Health check DB probe failed (non-fatal): {e}")
+    finally:
+        if db is not None:
+            db.close()
 
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
