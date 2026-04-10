@@ -1170,6 +1170,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
 async def get_compensation_letters(
     status: Optional[str] = None,
     client_id: Optional[str] = None,
+    responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(1000, ge=1, le=10000),
@@ -1181,6 +1182,8 @@ async def get_compensation_letters(
         query = query.filter(CompensationLetterDB.status == status)
     if client_id:
         query = query.filter(CompensationLetterDB.client_id == client_id)
+    if responsible_person:
+        query = query.filter(CompensationLetterDB.responsible_person == responsible_person)
     if görevlendiren:
         query = query.filter(CompensationLetterDB.görevlendiren == görevlendiren)
     

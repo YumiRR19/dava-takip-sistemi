@@ -127,10 +127,11 @@ export const api = {
   },
   
   compensationLetters: {
-    getAll: (params?: { status?: string; client_id?: string; görevlendiren?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; responsible_person?: string; görevlendiren?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
+      if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       
       const query = searchParams.toString()
