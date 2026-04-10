@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text, Index, ForeignKey, or_
 import logging
-from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
+from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -1381,3 +1381,68 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     await manager.broadcast_data_change("delete", "execution", execution_id, {})
     
     return {"message": "Execution deleted successfully"}
+
+# --- Settings Options API ---
+
+class SettingsOptionCreate(BaseModel):
+    category: str  # 'bank', 'gorevlendiren', 'ilgili_sorumlu'
+    value: str
+
+class SettingsOptionResponse(BaseModel):
+    id: str
+    category: str
+    value: str
+    created_at: datetime
+
+VALID_SETTINGS_CATEGORIES = ["bank", "gorevlendiren", "ilgili_sorumlu"]
+
+@app.get("/api/settings/options")
+async def get_settings_options(category: Optional[str] = None, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    query = db.query(SettingsOptionDB)
+    if category:
+        if category not in VALID_SETTINGS_CATEGORIES:
+            raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {VALID_SETTINGS_CATEGORIES}")
+        query = query.filter(SettingsOptionDB.category == category)
+    options = query.order_by(SettingsOptionDB.created_at.asc()).all()
+    return [{"id": opt.id, "category": opt.category, "value": opt.value, "created_at": opt.created_at} for opt in options]
+
+@app.post("/api/settings/options", response_model=SettingsOptionResponse)
+async def create_settings_option(option: SettingsOptionCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    if option.category not in VALID_SETTINGS_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {VALID_SETTINGS_CATEGORIES}")
+    
+    if not option.value.strip():
+        raise HTTPException(status_code=400, detail="Value cannot be empty")
+    
+    existing = db.query(SettingsOptionDB).filter(
+        SettingsOptionDB.category == option.category,
+        SettingsOptionDB.value == option.value.strip()
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="This option already exists")
+    
+    new_option = SettingsOptionDB(
+        id=str(uuid.uuid4()),
+        category=option.category,
+        value=option.value.strip(),
+        created_at=datetime.now()
+    )
+    db.add(new_option)
+    try:
+        db.commit()
+        db.refresh(new_option)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="This option already exists")
+    
+    return {"id": new_option.id, "category": new_option.category, "value": new_option.value, "created_at": new_option.created_at}
+
+@app.delete("/api/settings/options/{option_id}")
+async def delete_settings_option(option_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    option = db.query(SettingsOptionDB).filter(SettingsOptionDB.id == option_id).first()
+    if not option:
+        raise HTTPException(status_code=404, detail="Option not found")
+    
+    db.delete(option)
+    db.commit()
+    return {"message": "Option deleted successfully"}

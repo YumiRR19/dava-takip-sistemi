@@ -113,8 +113,8 @@ export default function CaseSearch() {
     const headers = [
       'Mahkeme/İcra',
       'Dosya No',
-      'Müvekkil',
-      'Karşı Taraf',
+      'Davacı/Müşteki',
+      'Davalı/Sanık',
       'Hatırlatma Tarihi',
       'Hatırlatma Metni',
       'Durum',
@@ -440,10 +440,10 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="client_id">Müvekkil</Label>
+              <Label htmlFor="client_id">Davacı/Müşteki</Label>
               <Select value={searchParams.client_id || ''} onValueChange={(value) => handleParamChange('client_id', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Müvekkil seçin" />
+                  <SelectValue placeholder="Davacı/Müşteki seçin" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tümü</SelectItem>
@@ -457,10 +457,10 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="defendant">Karşı Taraf</Label>
+              <Label htmlFor="defendant">Davalı/Sanık</Label>
               <Input
                 id="defendant"
-                placeholder="Karşı taraf adı ara..."
+                placeholder="Davalı/Sanık adı ara..."
                 value={searchParams.defendant || ''}
                 onChange={(e) => handleParamChange('defendant', e.target.value)}
               />
@@ -509,8 +509,8 @@ export default function CaseSearch() {
                   <TableRow>
                     <TableHead className="w-[200px]">Mahkeme</TableHead>
                     <TableHead className="w-[120px]">Dosya No</TableHead>
-                    <TableHead className="w-[150px]">Müvekkil</TableHead>
-                    <TableHead className="w-[150px]">Karşı Taraf</TableHead>
+                    <TableHead className="w-[150px]">Davacı/Müşteki</TableHead>
+                    <TableHead className="w-[150px]">Davalı/Sanık</TableHead>
                     <TableHead className="w-[120px]">Hatırlatma Tarihi</TableHead>
                     <TableHead className="w-[200px]">Hatırlatma Metni</TableHead>
                     <TableHead className="w-[100px]">Durum</TableHead>

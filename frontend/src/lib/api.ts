@@ -174,6 +174,32 @@ export const api = {
       method: 'DELETE',
     }),
   },
+
+  settingsOptions: {
+    getAll: (category?: string) => {
+      const params = category ? `?category=${category}` : ''
+      return apiRequest<SettingsOption[]>(`/api/settings/options${params}`)
+    },
+    create: (data: SettingsOptionCreate) => apiRequest<SettingsOption>('/api/settings/options', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    delete: (id: string) => apiRequest<{ message: string }>(`/api/settings/options/${id}`, {
+      method: 'DELETE',
+    }),
+  },
+}
+
+export interface SettingsOption {
+  id: string
+  category: string
+  value: string
+  created_at: string
+}
+
+export interface SettingsOptionCreate {
+  category: string
+  value: string
 }
 
 import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate } from '../types'
