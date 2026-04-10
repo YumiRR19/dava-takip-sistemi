@@ -1,13 +1,13 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { api, CompensationLetterCreate, CompensationLetterUpdate } from '@/lib/api'
+import { api, CompensationLetterCreate, CompensationLetterUpdate, SettingsOption } from '@/lib/api'
 
 export default function CompensationLetterForm() {
   const { id } = useParams()
@@ -16,8 +16,12 @@ export default function CompensationLetterForm() {
   const isEdit = Boolean(id)
 
   const [loading, setLoading] = useState(false)
+  const [customBanks, setCustomBanks] = useState<SettingsOption[]>([])
+  const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const [formData, setFormData] = useState({
     client_id: '',
+    client_name: '',
     letter_number: '',
     bank: '',
     customer_number: '',
@@ -29,130 +33,50 @@ export default function CompensationLetterForm() {
     reminder_date: '',
     reminder_text: '',
     responsible_person: '',
-    görevlendiren: ''
+    görevlendiren: '',
+    is_starred: false
   })
-  const [clients, setClients] = useState<any[]>([])
-  const [clientsLoading, setClientsLoading] = useState(false)
-  const [clientsError, setClientsError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
   const [currentVersion, setCurrentVersion] = useState<number>(1)
-  const requestIdRef = useRef(0)
-  const abortControllerRef = useRef<AbortController | null>(null)
 
-  const loadClients = async (attempt = 1) => {
-    const maxRetries = 3
-    const timeout = 5000
-    let active = true
-    const requestId = ++requestIdRef.current
+  const DEFAULT_BANKS = [
+    'TÜRKİYE VAKIFLAR BANKASI T.A.O.',
+    'TÜRKİYE GARANTİ BANKASI A.Ş.',
+    'ŞEKERBANK T.A.Ş.'
+  ]
+  const DEFAULT_PERSONS = [
+    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
+    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
+  ]
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    abortControllerRef.current = new AbortController()
-
-    const t0 = Date.now()
-    console.log(`[CompensationLetterForm] t0: fetch start at ${t0}, requestId=${requestId}`)
-    
-    try {
-      setClientsLoading(true)
-      setClientsError(null)
-      
-      const timeoutPromise = new Promise<string>((resolve) => 
-        setTimeout(() => resolve('timeout'), timeout)
-      )
-      
-      const fetchPromise = api.clients.getAll({ signal: abortControllerRef.current.signal }).catch(err => {
-        if (err.name === 'AbortError') throw err
-        throw new Error(`API Error: ${err.message || 'Unknown error'}`)
-      })
-      
-      const result = await Promise.race([fetchPromise, timeoutPromise])
-      
-      if (!active || requestId !== requestIdRef.current) {
-        console.log(`[CompensationLetterForm] Stale request ${requestId}, ignoring result`)
-        return
-      }
-
-      const t1 = Date.now()
-      console.log(`[CompensationLetterForm] t1: response at ${t1}, requestId=${requestId}`)
-      
-      if (result === 'timeout') {
-        console.log(`[CompensationLetterForm] Timeout reached at ${t1}, but continuing to wait for data`)
-        const lateResult = await fetchPromise.catch(() => null)
-        if (lateResult && active && requestId === requestIdRef.current) {
-          const t2 = Date.now()
-          console.log(`[CompensationLetterForm] t2: setClients (late) at ${t2}, len=${lateResult.length}`)
-          setClients(lateResult)
-          setClientsError(null)
-          setRetryCount(0)
-        }
-      } else {
-        const t2 = Date.now()
-        console.log(`[CompensationLetterForm] t2: setClients at ${t2}, len=${result.length}`)
-        setClients(result as any[])
-        setRetryCount(0)
-        
-        const t4 = Date.now()
-        console.log(`[CompensationLetterForm] t4: setError(false) at ${t4}`)
-        setClientsError(null)
-      }
-      
-    } catch (error) {
-      if (!active || requestId !== requestIdRef.current) {
-        console.log(`[CompensationLetterForm] Stale error for request ${requestId}, ignoring`)
-        return
-      }
-      
-      console.error(`[CompensationLetterForm] Error loading clients (attempt ${attempt}):`, error)
-      
-      if (attempt < maxRetries) {
-        const backoffDelay = Math.pow(2, attempt - 1) * 1000
-        setTimeout(() => {
-          if (active && requestId === requestIdRef.current) {
-            setRetryCount(attempt)
-            loadClients(attempt + 1)
-          }
-        }, backoffDelay)
-        return
-      }
-      
-      setClientsError("Müvekkiller yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.")
-      setClientsLoading(false)
-      toast({
-        title: "Hata",
-        description: "Müvekkiller yüklenirken bir hata oluştu.",
-        variant: "destructive",
-      })
-    } finally {
-      const t3 = Date.now()
-      console.log(`[CompensationLetterForm] t3: setLoading(false) at ${t3}, requestId=${requestId}, current: ${requestIdRef.current}`)
-      
-      if (requestId === requestIdRef.current) {
-        setClientsLoading(false)
-      }
-    }
-
-    return () => {
-      active = false
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }
+  const bankList = [...new Set([...DEFAULT_BANKS, ...customBanks.map(o => o.value)])]
+  const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
+  const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
 
   useEffect(() => {
-    loadClients()
+    loadCustomOptions()
     if (isEdit && id) {
       loadLetter(id)
     }
   }, [id, isEdit])
+
+  const loadCustomOptions = async () => {
+    try {
+      const allOptions = await api.settingsOptions.getAll()
+      setCustomBanks(allOptions.filter(o => o.category === 'bank'))
+      setCustomGorevlendiren(allOptions.filter(o => o.category === 'gorevlendiren'))
+      setCustomIlgiliSorumlu(allOptions.filter(o => o.category === 'ilgili_sorumlu'))
+    } catch (error) {
+      console.error('Error loading custom options:', error)
+    }
+  }
 
 
   const loadLetter = async (letterId: string) => {
     try {
       const letter = await api.compensationLetters.getById(letterId)
       setFormData({
-        client_id: letter.client_id,
+        client_id: letter.client_id || '',
+        client_name: letter.client_name || '',
         letter_number: letter.letter_number,
         bank: letter.bank,
         customer_number: letter.customer_number,
@@ -164,7 +88,8 @@ export default function CompensationLetterForm() {
         reminder_date: letter.reminder_date ? new Date(letter.reminder_date).toISOString().split('T')[0] : '',
         reminder_text: letter.reminder_text || '',
         responsible_person: letter.responsible_person || '',
-        görevlendiren: letter.görevlendiren || ''
+        görevlendiren: letter.görevlendiren || '',
+        is_starred: letter.is_starred || false
       })
       setCurrentVersion(letter.version)
     } catch (error) {
@@ -184,7 +109,7 @@ export default function CompensationLetterForm() {
     try {
       if (isEdit && id) {
         const updateData: CompensationLetterUpdate = {
-          client_id: formData.client_id,
+          client_name: formData.client_name.trim(),
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -197,7 +122,11 @@ export default function CompensationLetterForm() {
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
           görevlendiren: formData.görevlendiren || undefined,
+          is_starred: formData.is_starred,
           version: currentVersion
+        }
+        if (!updateData.reminder_date) {
+          (updateData as any).reminder_date = null
         }
         await api.compensationLetters.update(id, updateData)
         toast({
@@ -206,7 +135,7 @@ export default function CompensationLetterForm() {
         })
       } else {
         const createData: CompensationLetterCreate = {
-          client_id: formData.client_id,
+          client_name: formData.client_name.trim(),
           letter_number: formData.letter_number,
           bank: formData.bank,
           customer_number: formData.customer_number,
@@ -218,7 +147,8 @@ export default function CompensationLetterForm() {
           reminder_date: (formData.reminder_date && formData.reminder_date.length === 10) ? formData.reminder_date : undefined,
           reminder_text: formData.reminder_text || undefined,
           responsible_person: formData.responsible_person || undefined,
-          görevlendiren: formData.görevlendiren || undefined
+          görevlendiren: formData.görevlendiren || undefined,
+          is_starred: formData.is_starred
         }
         await api.compensationLetters.create(createData)
         toast({
@@ -269,54 +199,14 @@ export default function CompensationLetterForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="client_id">Müvekkil *</Label>
-                <Select
-                  key={`client-select-${clientsLoading}-${clients.length}-${!!clientsError}`}
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                <Label htmlFor="client_name">Alacaklı *</Label>
+                <Input
+                  id="client_name"
+                  value={formData.client_name}
+                  onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                  placeholder="Alacaklı adını girin"
                   required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      clientsLoading ? "Müvekkiller yükleniyor..." :
-                      clientsError ? "Hata oluştu" :
-                      clients.length === 0 ? "Müvekkil bulunamadı" :
-                      "Müvekkil seçin"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientsError ? (
-                      <div className="p-4 text-center">
-                        <p className="text-sm text-red-600 mb-2">{clientsError}</p>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => loadClients()}
-                          disabled={clientsLoading}
-                        >
-                          Tekrar Dene
-                        </Button>
-                      </div>
-                    ) : clients.length === 0 && !clientsLoading ? (
-                      <div className="p-4 text-center">
-                        <p className="text-sm text-gray-600 mb-2">Henüz müvekkil eklenmemiş</p>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => navigate('/clients/new')}
-                        >
-                          Müvekkil Ekle
-                        </Button>
-                      </div>
-                    ) : (
-                      clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               <div className="space-y-2">
@@ -340,9 +230,9 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="Banka seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TÜRKİYE VAKIFLAR BANKASI T.A.O.">TÜRKİYE VAKIFLAR BANKASI T.A.O.</SelectItem>
-                    <SelectItem value="TÜRKİYE GARANTİ BANKASI A.Ş.">TÜRKİYE GARANTİ BANKASI A.Ş.</SelectItem>
-                    <SelectItem value="ŞEKERBANK T.A.Ş.">ŞEKERBANK T.A.Ş.</SelectItem>
+                    {bankList.map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -407,14 +297,9 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {gorevlendirenList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -426,17 +311,30 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {ilgiliSorumluList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                  <Label>Hatırlatmalarda Yıldızla</Label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, is_starred: !prev.is_starred }))}
+                    className="flex items-center space-x-2 p-2 rounded-md border hover:bg-gray-50 transition-colors w-full"
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        formData.is_starred
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                    />
+                    <span className="text-sm">{formData.is_starred ? 'Yıldızlı' : 'Yıldızla'}</span>
+                  </button>
+                </div>
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="status">Durumu *</Label>
@@ -483,8 +381,8 @@ export default function CompensationLetterForm() {
               <Button type="button" variant="outline" onClick={() => navigate('/compensation-letters')}>
                 İptal
               </Button>
-              <Button type="submit" disabled={loading || clientsLoading || !formData.client_id}>
-                {loading ? 'Kaydediliyor...' : clientsLoading ? `Müvekkiller yükleniyor${retryCount > 0 ? ` (${retryCount}/3)` : ''}...` : (isEdit ? 'Güncelle' : 'Oluştur')}
+              <Button type="submit" disabled={loading || !formData.client_name.trim()}>
+                {loading ? 'Kaydediliyor...' : (isEdit ? 'Güncelle' : 'Oluştur')}
               </Button>
             </div>
           </form>

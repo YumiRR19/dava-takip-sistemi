@@ -4,21 +4,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, Set
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import json
 import uuid
 import jwt
 import os
 import asyncio
 import threading
+import time
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text, Index, ForeignKey, or_
+from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
+from sqlalchemy import text, Index, ForeignKey, or_, func as sql_func
 import logging
-from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB
+from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB, engine
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ─── Structured Logging ───
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("lexcloud")
 
 app = FastAPI(title="LexCloud API", version="1.0.0")
 
@@ -78,7 +87,82 @@ async def startup_event():
     except Exception as migration_error:
         print(f"⚠️ Migration error: {migration_error}")
     
+    # Migration: add is_starred column to cases, executions, compensation_letters
+    try:
+        from app.database import engine
+        from sqlalchemy.orm import sessionmaker as sm2
+        from sqlalchemy import text as text2
+        SL2 = sm2(autocommit=False, autoflush=False, bind=engine)
+        with SL2() as db:
+            for table_name in ['cases', 'executions', 'compensation_letters']:
+                try:
+                    db.execute(text2(f"SELECT is_starred FROM {table_name} LIMIT 1"))
+                    print(f"✅ is_starred column already exists in {table_name}")
+                except Exception:
+                    db.rollback()
+                    print(f"🔧 Adding is_starred column to {table_name}...")
+                    db.execute(text2(f"ALTER TABLE {table_name} ADD COLUMN is_starred BOOLEAN DEFAULT false NOT NULL"))
+                    db.commit()
+                    print(f"✅ Successfully added is_starred column to {table_name}")
+    except Exception as starred_migration_error:
+        print(f"⚠️ is_starred migration error: {starred_migration_error}")
+    
+    # Migration: add haciz_reminder_date, haciz_reminder_text, related_case_id columns to executions
+    try:
+        from app.database import engine as eng3
+        from sqlalchemy.orm import sessionmaker as sm3
+        from sqlalchemy import text as text3
+        SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
+        with SL3() as db:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR')]:
+                try:
+                    db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
+                    print(f"Column {col_name} already exists in executions")
+                except Exception:
+                    db.rollback()
+                    print(f"Adding {col_name} column to executions...")
+                    db.execute(text3(f"ALTER TABLE executions ADD COLUMN {col_name} {col_type}"))
+                    db.commit()
+                    print(f"Successfully added {col_name} column to executions")
+    except Exception as haciz_migration_error:
+        print(f"haciz migration error: {haciz_migration_error}")
+    
+    # Migration: make client_id nullable in cases table
+    try:
+        from app.database import engine as eng4
+        from sqlalchemy.orm import sessionmaker as sm4
+        from sqlalchemy import text as text4
+        SL4 = sm4(autocommit=False, autoflush=False, bind=eng4)
+        with SL4() as db:
+            try:
+                db.execute(text4("ALTER TABLE cases ALTER COLUMN client_id DROP NOT NULL"))
+                db.commit()
+                print("Successfully made client_id nullable")
+            except Exception:
+                db.rollback()
+                print("client_id is already nullable or migration not needed")
+    except Exception as e:
+        print(f"client_id migration error: {e}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
+    
+    # Start periodic background task to clean up stale WebSocket connections
+    # and log pool health every 60 seconds
+    async def periodic_cleanup():
+        while True:
+            try:
+                await asyncio.sleep(60)
+                manager.cleanup_stale_connections()
+                pool_status = engine.pool.status()
+                ws_count = manager.get_connection_count()
+                logger.info(f"Periodic health | pool: {pool_status} | ws_connections: {ws_count}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Periodic cleanup error: {e}")
+    
+    asyncio.create_task(periodic_cleanup())
+    logger.info("Background cleanup task started (60s interval)")
 
 class Client(BaseModel):
     id: str
@@ -114,7 +198,7 @@ class Case(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = ""
     client_name: str
     case_type: str
     status: str
@@ -128,6 +212,7 @@ class Case(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
@@ -136,7 +221,8 @@ class CaseCreate(BaseModel):
     title: str
     case_name: Optional[str] = None
     description: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: str
     status: str
     court: str
@@ -149,12 +235,14 @@ class CaseCreate(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
     case_name: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     case_type: Optional[str] = None
     status: Optional[str] = None
     court: Optional[str] = None
@@ -167,6 +255,7 @@ class CaseUpdate(BaseModel):
     office_archive_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class CompensationLetter(BaseModel):
@@ -185,14 +274,15 @@ class CompensationLetter(BaseModel):
     reminder_date: Optional[date] = None
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
-    responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
 
 class CompensationLetterCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: str
     bank: str
     customer_number: str
@@ -205,9 +295,11 @@ class CompensationLetterCreate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class CompensationLetterUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     letter_number: Optional[str] = None
     bank: Optional[str] = None
     customer_number: Optional[str] = None
@@ -220,6 +312,7 @@ class CompensationLetterUpdate(BaseModel):
     reminder_text: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
 
 class Execution(BaseModel):
@@ -237,14 +330,19 @@ class Execution(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
     created_at: datetime
     updated_at: datetime
     version: int
 
 class ExecutionCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: str
     execution_office: str
     execution_number: str
@@ -256,11 +354,16 @@ class ExecutionCreate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: bool = False
 
 class ExecutionUpdate(BaseModel):
     client_id: Optional[str] = None
+    client_name: Optional[str] = None
     defendant: Optional[str] = None
     execution_office: Optional[str] = None
     execution_number: Optional[str] = None
@@ -272,9 +375,23 @@ class ExecutionUpdate(BaseModel):
     reminder_text: Optional[str] = None
     notes: Optional[str] = None
     haciz_durumu: Optional[str] = None
+    haciz_reminder_date: Optional[date] = None
+    haciz_reminder_text: Optional[str] = None
+    related_case_id: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    is_starred: Optional[bool] = None
     version: Optional[int] = None
+
+class SettingsOption(BaseModel):
+    id: str
+    category: str
+    value: str
+    created_at: datetime
+
+class SettingsOptionCreate(BaseModel):
+    category: str
+    value: str
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -296,6 +413,8 @@ class ConnectionManager:
             if user_token not in self.active_connections:
                 self.active_connections[user_token] = set()
             self.active_connections[user_token].add(websocket)
+        total = self.get_connection_count()
+        logger.info(f"WebSocket connected. Total active: {total}")
 
     def disconnect(self, websocket: WebSocket, user_token: str):
         with self.connection_lock:
@@ -303,6 +422,28 @@ class ConnectionManager:
                 self.active_connections[user_token].discard(websocket)
                 if not self.active_connections[user_token]:
                     del self.active_connections[user_token]
+        total = self.get_connection_count()
+        logger.info(f"WebSocket disconnected. Total active: {total}")
+
+    def get_connection_count(self) -> int:
+        with self.connection_lock:
+            return sum(len(conns) for conns in self.active_connections.values())
+
+    def cleanup_stale_connections(self):
+        """Remove connections that are no longer open."""
+        stale = []
+        with self.connection_lock:
+            for user_token, connections in self.active_connections.items():
+                for conn in connections.copy():
+                    try:
+                        if conn.client_state.name != "CONNECTED":
+                            stale.append((conn, user_token))
+                    except Exception:
+                        stale.append((conn, user_token))
+        for conn, token in stale:
+            self.disconnect(conn, token)
+        if stale:
+            logger.info(f"Cleaned up {len(stale)} stale WebSocket connections")
 
     async def broadcast_data_change(self, change_type: str, entity_type: str, entity_id: str, data: dict):
         serializable_data = self._make_serializable(data)
@@ -316,15 +457,23 @@ class ConnectionManager:
             "timestamp": datetime.now().isoformat()
         }
         
-        disconnected_connections = []
+        # Collect snapshot of connections under the lock, then send outside the lock.
+        # This prevents deadlock: await inside a threading.Lock blocks the event loop
+        # thread, preventing the lock holder from ever releasing it.
         with self.connection_lock:
-            for user_token, connections in self.active_connections.items():
-                for connection in connections.copy():
-                    try:
-                        await connection.send_text(json.dumps(message))
-                    except Exception as e:
-                        print(f"Error sending WebSocket message: {e}")
-                        disconnected_connections.append((connection, user_token))
+            all_connections = [
+                (conn, token)
+                for token, conns in self.active_connections.items()
+                for conn in conns.copy()
+            ]
+        
+        disconnected_connections = []
+        for connection, user_token in all_connections:
+            try:
+                await connection.send_text(json.dumps(message))
+            except Exception as e:
+                logger.warning(f"Failed to send WebSocket message: {e}")
+                disconnected_connections.append((connection, user_token))
         
         for connection, user_token in disconnected_connections:
             self.disconnect(connection, user_token)
@@ -360,7 +509,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         title=db_case.title,
         case_name=db_case.case_name,
         description=db_case.description,
-        client_id=db_case.client_id,
+        client_id=db_case.client_id if db_case.client_id is not None else "",
         client_name=db_case.client_name,
         case_type=db_case.case_type,
         status=db_case.status,
@@ -374,6 +523,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         office_archive_no=db_case.office_archive_no,
         responsible_person=db_case.responsible_person,
         görevlendiren=db_case.görevlendiren,
+        is_starred=db_case.is_starred if db_case.is_starred is not None else False,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
         version=db_case.version
@@ -397,6 +547,7 @@ def db_to_pydantic_compensation_letter(db_letter: CompensationLetterDB) -> Compe
         reminder_text=db_letter.reminder_text,
         responsible_person=db_letter.responsible_person,
         görevlendiren=db_letter.görevlendiren,
+        is_starred=db_letter.is_starred if db_letter.is_starred is not None else False,
         created_at=db_letter.created_at,
         updated_at=db_letter.updated_at,
         version=db_letter.version
@@ -418,8 +569,12 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         reminder_text=db_execution.reminder_text,
         notes=db_execution.notes,
         haciz_durumu=db_execution.haciz_durumu,
+        haciz_reminder_date=db_execution.haciz_reminder_date,
+        haciz_reminder_text=db_execution.haciz_reminder_text,
+        related_case_id=db_execution.related_case_id,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
+        is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
         created_at=db_execution.created_at,
         updated_at=db_execution.updated_at,
         version=db_execution.version
@@ -447,32 +602,44 @@ def verify_token(token: str = Depends(HTTPBearer())):
 
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
+    accepted = False
+    ping_coroutine = None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         await websocket.accept()
+        accepted = True
         manager.connect(websocket, token)
         
-        import asyncio
         async def ping_task():
             while True:
                 try:
                     await asyncio.sleep(25)
-                    if websocket.client_state == websocket.client_state.CONNECTED:
+                    if websocket.client_state.name == "CONNECTED":
                         await websocket.ping()
+                    else:
+                        break
                 except Exception:
                     break
         
         ping_coroutine = asyncio.create_task(ping_task())
         
-        try:
-            while True:
-                data = await websocket.receive_text()
-                print(f"Received WebSocket message: {data}")
-        except WebSocketDisconnect:
-            ping_coroutine.cancel()
-            manager.disconnect(websocket, token)
+        while True:
+            data = await websocket.receive_text()
+            logger.debug(f"Received WebSocket message: {data}")
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected normally")
     except jwt.InvalidTokenError:
-        await websocket.close(code=1008)
+        if not accepted:
+            await websocket.close(code=1008)
+        logger.warning("WebSocket rejected: invalid token")
+    except Exception as e:
+        logger.error(f"WebSocket unexpected error: {e}")
+    finally:
+        # Always clean up — this prevents connection leaks
+        if ping_coroutine is not None:
+            ping_coroutine.cancel()
+        if accepted:
+            manager.disconnect(websocket, token)
 
 @app.get("/healthz")
 async def healthz():
@@ -494,15 +661,10 @@ async def api_health():
 @app.get("/health/db")
 async def db_health(db: Session = Depends(get_db)):
     try:
-        from sqlalchemy import text
         from urllib.parse import urlparse
         
+        # Simple SELECT 1 — no temp tables needed
         db.execute(text("SELECT 1"))
-        db.execute(text("CREATE TEMP TABLE health_test (id INTEGER)"))
-        db.execute(text("INSERT INTO health_test (id) VALUES (1)"))
-        db.execute(text("SELECT id FROM health_test WHERE id = 1"))
-        db.execute(text("DROP TABLE health_test"))
-        db.commit()
         
         database_url = os.getenv("DATABASE_URL", "")
         parsed = urlparse(database_url)
@@ -513,9 +675,11 @@ async def db_health(db: Session = Depends(get_db)):
             "host": parsed.hostname or "unknown",
             "db": parsed.path.lstrip('/') or "unknown",
             "status": "ok",
+            "pool": engine.pool.status(),
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
+        logger.error(f"DB health check failed: {e}")
         db.rollback()
         return {
             "connected": False,
@@ -524,8 +688,23 @@ async def db_health(db: Session = Depends(get_db)):
             "db": "unknown", 
             "status": "error",
             "error": str(e),
+            "pool": engine.pool.status(),
             "timestamp": datetime.now().isoformat()
         }
+
+@app.get("/health/pool")
+async def pool_health():
+    """Connection pool diagnostics endpoint."""
+    return {
+        "status": "ok",
+        "pool": engine.pool.status(),
+        "pool_size": engine.pool.size(),
+        "checked_in": engine.pool.checkedin(),
+        "checked_out": engine.pool.checkedout(),
+        "overflow": engine.pool.overflow(),
+        "ws_connections": manager.get_connection_count(),
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/health/ws")
 async def ws_health():
@@ -674,6 +853,8 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
                     if execution_data.get("reminder_date"):
                         execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
+                    if execution_data.get("haciz_reminder_date"):
+                        execution_data["haciz_reminder_date"] = date.fromisoformat(execution_data["haciz_reminder_date"])
                     
                     db_execution = ExecutionDB(**execution_data)
                     db.add(db_execution)
@@ -836,17 +1017,24 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
     case_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_id = case.client_id or ""
+    resolved_client_name = case.client_name or ""
+    if not resolved_client_name and case.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Client name is required")
     
     db_case = CaseDB(
         id=case_id,
         title=case.title,
         case_name=case.case_name,
         description=case.description,
-        client_id=case.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         case_type=case.case_type,
         status=case.status,
         court=case.court,
@@ -859,6 +1047,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         office_archive_no=case.office_archive_no,
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
+        is_starred=case.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -901,7 +1090,10 @@ async def get_cases(
         db_query = db_query.filter(
             or_(
                 CaseDB.title.ilike(f"%{query}%"),
-                CaseDB.defendant.ilike(f"%{query}%")
+                CaseDB.defendant.ilike(f"%{query}%"),
+                CaseDB.client_name.ilike(f"%{query}%"),
+                CaseDB.case_number.ilike(f"%{query}%"),
+                CaseDB.case_name.ilike(f"%{query}%")
             )
         )
     
@@ -925,18 +1117,17 @@ async def update_case(case_id: str, case_update: CaseUpdate, db: Session = Depen
     if case_update.version is not None and db_case.version != case_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
-    
     update_data = case_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and case_update.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            update_data['client_name'] = db_client.name
+    
     for field, value in update_data.items():
         setattr(db_case, field, value)
-    
-    if case_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == case_update.client_id, ClientDB.is_deleted == False).first()
-        db_case.client_name = db_client.name
     
     db_case.updated_at = datetime.now()
     db_case.version += 1
@@ -1014,126 +1205,228 @@ async def search_cases(
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Fly.io"""
+    """Health check endpoint for Fly.io.
+    
+    Returns 200 even when DB is temporarily unreachable so Fly.io does not
+    kill the machine during transient Neon connection-limit spikes.  The
+    ``database`` field tells the caller whether the DB is actually reachable.
+    """
+    db_status = "unknown"
+    db = None
     try:
         db = next(get_db())
         db.execute(text("SELECT 1"))
-        db.close()
-        
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "timestamp": datetime.now().isoformat()
-        }
+        db_status = "connected"
     except Exception as e:
-        logging.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        db_status = "unavailable"
+        logger.warning(f"Health check DB probe failed (non-fatal): {e}")
+    finally:
+        if db is not None:
+            db.close()
+
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/api/dashboard")
-async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    total_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).count()
-    total_clients = db.query(ClientDB).filter(ClientDB.is_deleted == False).count()
-    total_executions = db.query(ExecutionDB).filter(ExecutionDB.is_deleted == False).count()
-    total_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.is_deleted == False).count()
+async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(verify_token), reminder_date: Optional[str] = Query(None, description="Filter reminders by specific date (YYYY-MM-DD). If not provided, shows reminders for today and next 7 days.")):
+    request_start = time.time()
+    pool_status = engine.pool.status()
+    logger.info(f"Dashboard request started | pool: {pool_status}")
     
-    upcoming_reminders = []
-    
-    db_cases = db.query(CaseDB).filter(CaseDB.reminder_date.isnot(None), CaseDB.is_deleted == False).all()
-    for case in db_cases:
-        if case.reminder_date:
-            reminder_date = case.reminder_date
-            days_until = (reminder_date - date.today()).days
-            
-            if 0 <= days_until <= 7:
-                upcoming_reminders.append({
-                    "type": "case",
-                    "case_id": case.id,
-                    "case_number": case.case_number,
-                    "case_name": case.case_name,
-                    "court": case.court,
-                    "client_name": case.client_name,
-                    "defendant": case.defendant,
-                    "reminder_date": reminder_date.isoformat(),
-                    "description": case.description,
-                    "responsible_person": case.responsible_person,
-                    "görevlendiren": case.görevlendiren,
-                    "days_until": days_until
-                })
-    
-    db_executions = db.query(ExecutionDB).filter(ExecutionDB.reminder_date.isnot(None), ExecutionDB.is_deleted == False).all()
-    for execution in db_executions:
-        if execution.reminder_date:
-            reminder_date = execution.reminder_date
-            days_until = (reminder_date - date.today()).days
-            
-            if 0 <= days_until <= 7:
-                upcoming_reminders.append({
-                    "type": "execution",
-                    "execution_id": execution.id,
-                    "execution_number": execution.execution_number,
-                    "execution_office": execution.execution_office,
-                    "client_name": execution.client_name,
-                    "defendant": execution.defendant,
-                    "reminder_date": reminder_date.isoformat(),
-                    "reminder_text": execution.reminder_text,
-                    "responsible_person": execution.responsible_person,
-                    "görevlendiren": execution.görevlendiren,
-                    "days_until": days_until
-                })
-    
-    db_compensation_letters = db.query(CompensationLetterDB).filter(CompensationLetterDB.reminder_date.isnot(None), CompensationLetterDB.is_deleted == False).all()
-    for letter in db_compensation_letters:
-        if letter.reminder_date:
-            reminder_date = letter.reminder_date
-            days_until = (reminder_date - date.today()).days
-            
-            if 0 <= days_until <= 7:
-                upcoming_reminders.append({
-                    "type": "compensation_letter",
-                    "compensation_letter_id": letter.id,
-                    "letter_number": letter.letter_number,
-                    "court": letter.court,
-                    "case_number": letter.case_number,
-                    "customer": letter.customer,
-                    "client_name": letter.client_name,
-                    "reminder_date": reminder_date.isoformat(),
-                    "reminder_text": letter.reminder_text,
-                    "responsible_person": letter.responsible_person,
-                    "görevlendiren": letter.görevlendiren,
-                    "days_until": days_until
-                })
-    
-    upcoming_reminders.sort(key=lambda x: x["days_until"])
-    
-    status_counts = {}
-    db_cases = db.query(CaseDB).filter(CaseDB.is_deleted == False).all()
-    for case in db_cases:
-        status = case.status
-        status_counts[status] = status_counts.get(status, 0) + 1
-    
-    return {
-        "total_cases": total_cases,
-        "total_clients": total_clients,
-        "total_executions": total_executions,
-        "total_compensation_letters": total_compensation_letters,
-        "status_counts": status_counts,
-        "upcoming_reminders": upcoming_reminders
-    }
+    try:
+        # ── 1. Counts (optimized: SQL COUNT, no ORM object loading) ──
+        t0 = time.time()
+        total_cases = db.query(sql_func.count(CaseDB.id)).filter(CaseDB.is_deleted == False).scalar() or 0
+        total_clients = db.query(sql_func.count(ClientDB.id)).filter(ClientDB.is_deleted == False).scalar() or 0
+        total_executions = db.query(sql_func.count(ExecutionDB.id)).filter(ExecutionDB.is_deleted == False).scalar() or 0
+        total_compensation_letters = db.query(sql_func.count(CompensationLetterDB.id)).filter(CompensationLetterDB.is_deleted == False).scalar() or 0
+        logger.info(f"Dashboard counts took {time.time()-t0:.3f}s | cases={total_cases} execs={total_executions} letters={total_compensation_letters} clients={total_clients}")
+        
+        # ── 2. Parse date filter ──
+        filter_date = None
+        if reminder_date:
+            try:
+                filter_date = date.fromisoformat(reminder_date)
+            except ValueError:
+                logger.warning(f"Invalid reminder_date format: {reminder_date}")
+        
+        today = date.today()
+        date_range_start = filter_date if filter_date else today
+        date_range_end = filter_date if filter_date else (today + timedelta(days=7))
+        
+        upcoming_reminders = []
+        
+        # ── 3. Case reminders (filter in SQL, not Python) ──
+        t1 = time.time()
+        case_query = db.query(CaseDB).filter(
+            CaseDB.is_deleted == False,
+            CaseDB.reminder_date.isnot(None),
+            CaseDB.reminder_date >= date_range_start,
+            CaseDB.reminder_date <= date_range_end,
+        )
+        db_cases = case_query.all()
+        for case in db_cases:
+            r_date = case.reminder_date
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "case",
+                "case_id": case.id,
+                "case_number": case.case_number,
+                "case_name": case.case_name,
+                "court": case.court,
+                "client_name": case.client_name,
+                "defendant": case.defendant,
+                "reminder_date": r_date.isoformat(),
+                "description": case.description,
+                "responsible_person": case.responsible_person,
+                "görevlendiren": case.görevlendiren,
+                "is_starred": case.is_starred if case.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Case reminders: {len(db_cases)} rows in {time.time()-t1:.3f}s")
+        
+        # ── 4. Execution reminders (filter in SQL) ──
+        t2 = time.time()
+        exec_query = db.query(ExecutionDB).filter(
+            ExecutionDB.is_deleted == False,
+            ExecutionDB.reminder_date.isnot(None),
+            ExecutionDB.reminder_date >= date_range_start,
+            ExecutionDB.reminder_date <= date_range_end,
+        )
+        db_executions = exec_query.all()
+        for execution in db_executions:
+            r_date = execution.reminder_date
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "execution",
+                "execution_id": execution.id,
+                "execution_number": execution.execution_number,
+                "execution_office": execution.execution_office,
+                "client_name": execution.client_name,
+                "defendant": execution.defendant,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": execution.reminder_text,
+                "responsible_person": execution.responsible_person,
+                "görevlendiren": execution.görevlendiren,
+                "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Execution reminders: {len(db_executions)} rows in {time.time()-t2:.3f}s")
+        
+        # ── 5. Haciz reminders (filter in SQL) ──
+        t3 = time.time()
+        haciz_query = db.query(ExecutionDB).filter(
+            ExecutionDB.is_deleted == False,
+            ExecutionDB.haciz_reminder_date.isnot(None),
+            ExecutionDB.haciz_reminder_date >= date_range_start,
+            ExecutionDB.haciz_reminder_date <= date_range_end,
+        )
+        db_haciz_executions = haciz_query.all()
+        for execution in db_haciz_executions:
+            r_date = execution.haciz_reminder_date
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "haciz_reminder",
+                "execution_id": execution.id,
+                "execution_number": execution.execution_number,
+                "execution_office": execution.execution_office,
+                "client_name": execution.client_name,
+                "defendant": execution.defendant,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": execution.haciz_reminder_text,
+                "haciz_durumu": execution.haciz_durumu,
+                "responsible_person": execution.responsible_person,
+                "görevlendiren": execution.görevlendiren,
+                "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Haciz reminders: {len(db_haciz_executions)} rows in {time.time()-t3:.3f}s")
+        
+        # ── 6. Compensation letter reminders (filter in SQL) ──
+        t4 = time.time()
+        letter_query = db.query(CompensationLetterDB).filter(
+            CompensationLetterDB.is_deleted == False,
+            CompensationLetterDB.reminder_date.isnot(None),
+            CompensationLetterDB.reminder_date >= date_range_start,
+            CompensationLetterDB.reminder_date <= date_range_end,
+        )
+        db_compensation_letters = letter_query.all()
+        for letter in db_compensation_letters:
+            r_date = letter.reminder_date
+            days_until = (r_date - today).days
+            upcoming_reminders.append({
+                "type": "compensation_letter",
+                "compensation_letter_id": letter.id,
+                "letter_number": letter.letter_number,
+                "court": letter.court,
+                "case_number": letter.case_number,
+                "customer": letter.customer,
+                "client_name": letter.client_name,
+                "reminder_date": r_date.isoformat(),
+                "reminder_text": letter.reminder_text,
+                "responsible_person": letter.responsible_person,
+                "görevlendiren": letter.görevlendiren,
+                "is_starred": letter.is_starred if letter.is_starred is not None else False,
+                "days_until": days_until
+            })
+        logger.info(f"Letter reminders: {len(db_compensation_letters)} rows in {time.time()-t4:.3f}s")
+        
+        upcoming_reminders.sort(key=lambda x: x["days_until"])
+        
+        # ── 7. Status counts (optimized: SQL GROUP BY instead of loading all rows) ──
+        t5 = time.time()
+        status_rows = db.query(CaseDB.status, sql_func.count(CaseDB.id)).filter(
+            CaseDB.is_deleted == False
+        ).group_by(CaseDB.status).all()
+        status_counts = {status: count for status, count in status_rows}
+        logger.info(f"Status counts took {time.time()-t5:.3f}s")
+        
+        total_time = time.time() - request_start
+        logger.info(f"Dashboard request completed in {total_time:.3f}s | reminders={len(upcoming_reminders)}")
+        
+        return {
+            "total_cases": total_cases,
+            "total_clients": total_clients,
+            "total_executions": total_executions,
+            "total_compensation_letters": total_compensation_letters,
+            "status_counts": status_counts,
+            "upcoming_reminders": upcoming_reminders
+        }
+    except (OperationalError, DBAPIError) as db_err:
+        total_time = time.time() - request_start
+        logger.error(f"Dashboard DB error after {total_time:.3f}s: {db_err}")
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
+    except Exception as e:
+        total_time = time.time() - request_start
+        logger.error(f"Dashboard unexpected error after {total_time:.3f}s: {e}", exc_info=True)
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Dashboard data could not be loaded. Please try again.")
 
 @app.post("/api/compensation-letters", response_model=CompensationLetter)
 async def create_compensation_letter(letter: CompensationLetterCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
     letter_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = letter.client_name or ""
+    resolved_client_id = letter.client_id or ""
+    if not resolved_client_name and letter.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_letter = CompensationLetterDB(
         id=letter_id,
         title=f"Teminat Mektubu - {letter.letter_number}",
-        client_id=letter.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         letter_number=letter.letter_number,
         bank=letter.bank,
         customer_number=letter.customer_number,
@@ -1146,6 +1439,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
         reminder_text=letter.reminder_text,
         responsible_person=letter.responsible_person,
         görevlendiren=letter.görevlendiren,
+        is_starred=letter.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1170,6 +1464,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
 async def get_compensation_letters(
     status: Optional[str] = None,
     client_id: Optional[str] = None,
+    responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(1000, ge=1, le=10000),
@@ -1181,6 +1476,8 @@ async def get_compensation_letters(
         query = query.filter(CompensationLetterDB.status == status)
     if client_id:
         query = query.filter(CompensationLetterDB.client_id == client_id)
+    if responsible_person:
+        query = query.filter(CompensationLetterDB.responsible_person == responsible_person)
     if görevlendiren:
         query = query.filter(CompensationLetterDB.görevlendiren == görevlendiren)
     
@@ -1204,18 +1501,16 @@ async def update_compensation_letter(letter_id: str, letter_update: Compensation
     if letter_update.version is not None and db_letter.version != letter_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
-    
     update_data = letter_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and letter_update.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            update_data['client_name'] = db_client.name
     for field, value in update_data.items():
         setattr(db_letter, field, value)
-    
-    if letter_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == letter_update.client_id, ClientDB.is_deleted == False).first()
-        db_letter.client_name = db_client.name
     
     db_letter.updated_at = datetime.now()
     db_letter.version += 1
@@ -1253,14 +1548,21 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
     execution_id = str(uuid.uuid4())
     now = datetime.now()
     
-    db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
-    if not db_client:
-        raise HTTPException(status_code=400, detail="Invalid client ID")
+    # Resolve client_name: prefer direct client_name, fall back to client_id lookup
+    resolved_client_name = execution.client_name or ""
+    resolved_client_id = execution.client_id or ""
+    if not resolved_client_name and execution.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == execution.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            resolved_client_name = db_client.name
+    
+    if not resolved_client_name:
+        raise HTTPException(status_code=400, detail="Alacaklı alanı zorunludur.")
     
     db_execution = ExecutionDB(
         id=execution_id,
-        client_id=execution.client_id,
-        client_name=db_client.name,
+        client_id=resolved_client_id,
+        client_name=resolved_client_name,
         defendant=execution.defendant,
         execution_office=execution.execution_office,
         execution_number=execution.execution_number,
@@ -1272,8 +1574,12 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         reminder_text=execution.reminder_text,
         notes=execution.notes,
         haciz_durumu=execution.haciz_durumu,
+        haciz_reminder_date=execution.haciz_reminder_date,
+        haciz_reminder_text=execution.haciz_reminder_text,
+        related_case_id=execution.related_case_id,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
+        is_starred=execution.is_starred,
         created_at=now,
         updated_at=now,
         version=1
@@ -1338,18 +1644,16 @@ async def update_execution(execution_id: str, execution_update: ExecutionUpdate,
     if execution_update.version is not None and db_execution.version != execution_update.version:
         raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
     
-    if execution_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        if not db_client:
-            raise HTTPException(status_code=400, detail="Invalid client ID")
-    
     update_data = execution_update.dict(exclude_unset=True, exclude={"version"})
+    
+    # Handle client_name: if client_name is explicitly provided, use it directly (free text).
+    # Only fall back to client_id lookup if client_name was NOT provided.
+    if 'client_name' not in update_data and execution_update.client_id:
+        db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
+        if db_client:
+            update_data['client_name'] = db_client.name
     for field, value in update_data.items():
         setattr(db_execution, field, value)
-    
-    if execution_update.client_id:
-        db_client = db.query(ClientDB).filter(ClientDB.id == execution_update.client_id, ClientDB.is_deleted == False).first()
-        db_execution.client_name = db_client.name
     
     db_execution.updated_at = datetime.now()
     db_execution.version += 1
@@ -1381,3 +1685,94 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     await manager.broadcast_data_change("delete", "execution", execution_id, {})
     
     return {"message": "Execution deleted successfully"}
+
+class ToggleStarRequest(BaseModel):
+    entity_type: str  # "case", "execution", "compensation_letter"
+    entity_id: str
+
+@app.post("/api/reminders/toggle-star")
+async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    if request.entity_type == "case":
+        db_item = db.query(CaseDB).filter(CaseDB.id == request.entity_id, CaseDB.is_deleted == False).first()
+    elif request.entity_type == "execution":
+        db_item = db.query(ExecutionDB).filter(ExecutionDB.id == request.entity_id, ExecutionDB.is_deleted == False).first()
+    elif request.entity_type == "compensation_letter":
+        db_item = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == request.entity_id, CompensationLetterDB.is_deleted == False).first()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    db_item.is_starred = not db_item.is_starred
+    db_item.updated_at = datetime.now()
+    db_item.version += 1
+    
+    try:
+        db.commit()
+        db.refresh(db_item)
+        
+        await manager.broadcast_data_change("update", request.entity_type, request.entity_id, {
+            "entity_type": request.entity_type,
+            "entity_id": request.entity_id,
+            "is_starred": db_item.is_starred
+        })
+        
+        return {"entity_type": request.entity_type, "entity_id": request.entity_id, "is_starred": db_item.is_starred}
+    except Exception as e:
+        db.rollback()
+        print(f"Error toggling star: {e}")
+        raise HTTPException(status_code=500, detail="Failed to toggle star")
+
+# ─── Settings Options CRUD ───
+
+@app.get("/api/settings/options", response_model=List[SettingsOption])
+async def get_settings_options(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    query = db.query(SettingsOptionDB)
+    if category:
+        query = query.filter(SettingsOptionDB.category == category)
+    options = query.order_by(SettingsOptionDB.created_at.desc()).all()
+    return [SettingsOption(id=o.id, category=o.category, value=o.value, created_at=o.created_at) for o in options]
+
+@app.post("/api/settings/options", response_model=SettingsOption, status_code=201)
+async def create_settings_option(
+    option: SettingsOptionCreate,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    if option.category not in ('bank', 'gorevlendiren', 'ilgili_sorumlu'):
+        raise HTTPException(status_code=400, detail="Invalid category")
+    
+    db_option = SettingsOptionDB(
+        id=str(uuid.uuid4()),
+        category=option.category,
+        value=option.value
+    )
+    try:
+        db.add(db_option)
+        db.commit()
+        db.refresh(db_option)
+        return SettingsOption(id=db_option.id, category=db_option.category, value=db_option.value, created_at=db_option.created_at)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="This option already exists")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create option")
+
+@app.delete("/api/settings/options/{option_id}")
+async def delete_settings_option(
+    option_id: str,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    db_option = db.query(SettingsOptionDB).filter(SettingsOptionDB.id == option_id).first()
+    if not db_option:
+        raise HTTPException(status_code=404, detail="Option not found")
+    db.delete(db_option)
+    db.commit()
+    return {"message": "Option deleted successfully"}
