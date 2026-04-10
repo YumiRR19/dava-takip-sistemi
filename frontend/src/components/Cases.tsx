@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { api, Case } from '@/lib/api'
+import { api, Case, SettingsOption } from '@/lib/api'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
@@ -18,9 +18,31 @@ export default function Cases() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('')
   const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('')
+  const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
   const debouncedSearchTerm = useDebouncedSearch(searchTerm, 300)
+
+  const DEFAULT_PERSONS = [
+    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
+    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
+  ]
+  const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
+  const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
+
+  useEffect(() => {
+    const loadCustomOptions = async () => {
+      try {
+        const allOptions = await api.settingsOptions.getAll()
+        setCustomGorevlendiren(allOptions.filter(o => o.category === 'gorevlendiren'))
+        setCustomIlgiliSorumlu(allOptions.filter(o => o.category === 'ilgili_sorumlu'))
+      } catch (error) {
+        console.error('Error loading custom options:', error)
+      }
+    }
+    loadCustomOptions()
+  }, [])
 
   useEffect(() => {
     loadCases()
@@ -148,14 +170,9 @@ export default function Cases() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
-            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+            {ilgiliSorumluList.map((person) => (
+              <SelectItem key={person} value={person}>{person}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={görevlendirenFilter} onValueChange={setGörevlendirenFilter}>
@@ -165,14 +182,9 @@ export default function Cases() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Görevlendirenler</SelectItem>
-            <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-            <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-            <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-            <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-            <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-            <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-            <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-            <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+            {gorevlendirenList.map((person) => (
+              <SelectItem key={person} value={person}>{person}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -199,8 +211,8 @@ export default function Cases() {
                   <TableRow>
                     <TableHead>Mahkeme</TableHead>
                     <TableHead>Dosya No</TableHead>
-                    <TableHead>Müvekkil</TableHead>
-                    <TableHead>Karşı Taraf</TableHead>
+                    <TableHead>Davacı/Müşteki</TableHead>
+                    <TableHead>Davalı/Sanık</TableHead>
                     <TableHead>Dava Adı</TableHead>
                     <TableHead>Hatırlatma Tarihi</TableHead>
                     <TableHead>Hatırlatma Metni</TableHead>
