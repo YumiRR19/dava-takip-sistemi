@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { api, CompensationLetterCreate, CompensationLetterUpdate } from '@/lib/api'
+import { api, CompensationLetterCreate, CompensationLetterUpdate, SettingsOption } from '@/lib/api'
 
 export default function CompensationLetterForm() {
   const { id } = useParams()
@@ -16,6 +16,9 @@ export default function CompensationLetterForm() {
   const isEdit = Boolean(id)
 
   const [loading, setLoading] = useState(false)
+  const [customBanks, setCustomBanks] = useState<SettingsOption[]>([])
+  const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const [formData, setFormData] = useState({
     client_id: '',
     client_name: '',
@@ -35,11 +38,37 @@ export default function CompensationLetterForm() {
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
+  const DEFAULT_BANKS = [
+    'TÜRKİYE VAKIFLAR BANKASI T.A.O.',
+    'TÜRKİYE GARANTİ BANKASI A.Ş.',
+    'ŞEKERBANK T.A.Ş.'
+  ]
+  const DEFAULT_PERSONS = [
+    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
+    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
+  ]
+
+  const bankList = [...new Set([...DEFAULT_BANKS, ...customBanks.map(o => o.value)])]
+  const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
+  const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
+
   useEffect(() => {
+    loadCustomOptions()
     if (isEdit && id) {
       loadLetter(id)
     }
   }, [id, isEdit])
+
+  const loadCustomOptions = async () => {
+    try {
+      const allOptions = await api.settingsOptions.getAll()
+      setCustomBanks(allOptions.filter(o => o.category === 'bank'))
+      setCustomGorevlendiren(allOptions.filter(o => o.category === 'gorevlendiren'))
+      setCustomIlgiliSorumlu(allOptions.filter(o => o.category === 'ilgili_sorumlu'))
+    } catch (error) {
+      console.error('Error loading custom options:', error)
+    }
+  }
 
 
   const loadLetter = async (letterId: string) => {
@@ -201,9 +230,9 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="Banka seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TÜRKİYE VAKIFLAR BANKASI T.A.O.">TÜRKİYE VAKIFLAR BANKASI T.A.O.</SelectItem>
-                    <SelectItem value="TÜRKİYE GARANTİ BANKASI A.Ş.">TÜRKİYE GARANTİ BANKASI A.Ş.</SelectItem>
-                    <SelectItem value="ŞEKERBANK T.A.Ş.">ŞEKERBANK T.A.Ş.</SelectItem>
+                    {bankList.map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -268,14 +297,9 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {gorevlendirenList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -287,14 +311,9 @@ export default function CompensationLetterForm() {
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {ilgiliSorumluList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { api, Execution } from '@/lib/api'
+import { api, Execution, SettingsOption } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Executions() {
@@ -20,11 +20,30 @@ export default function Executions() {
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('all')
   const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('all')
   const [executionTypeFilter, setExecutionTypeFilter] = useState<string>('all')
+  const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const { toast } = useToast()
   const navigate = useNavigate()
 
+  const DEFAULT_PERSONS = [
+    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
+    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
+  ]
+  const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
+  const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
+
   useEffect(() => {
     loadExecutions()
+    const loadCustomOptions = async () => {
+      try {
+        const allOptions = await api.settingsOptions.getAll()
+        setCustomGorevlendiren(allOptions.filter(o => o.category === 'gorevlendiren'))
+        setCustomIlgiliSorumlu(allOptions.filter(o => o.category === 'ilgili_sorumlu'))
+      } catch (error) {
+        console.error('Error loading custom options:', error)
+      }
+    }
+    loadCustomOptions()
   }, [])
 
   useEffect(() => {
@@ -221,14 +240,9 @@ export default function Executions() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Sorumlu Kişiler</SelectItem>
-                <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                {ilgiliSorumluList.map((person) => (
+                  <SelectItem key={person} value={person}>{person}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={görevlendirenFilter} onValueChange={setGörevlendirenFilter}>
@@ -237,14 +251,9 @@ export default function Executions() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Görevlendirenler</SelectItem>
-                <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                {gorevlendirenList.map((person) => (
+                  <SelectItem key={person} value={person}>{person}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

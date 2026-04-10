@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
 from sqlalchemy import text, Index, ForeignKey, or_, func as sql_func
 import logging
-from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, engine
+from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB, engine
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -382,6 +382,16 @@ class ExecutionUpdate(BaseModel):
     görevlendiren: Optional[str] = None
     is_starred: Optional[bool] = None
     version: Optional[int] = None
+
+class SettingsOption(BaseModel):
+    id: str
+    category: str
+    value: str
+    created_at: datetime
+
+class SettingsOptionCreate(BaseModel):
+    category: str
+    value: str
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -1454,6 +1464,7 @@ async def create_compensation_letter(letter: CompensationLetterCreate, db: Sessi
 async def get_compensation_letters(
     status: Optional[str] = None,
     client_id: Optional[str] = None,
+    responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(1000, ge=1, le=10000),
@@ -1465,6 +1476,8 @@ async def get_compensation_letters(
         query = query.filter(CompensationLetterDB.status == status)
     if client_id:
         query = query.filter(CompensationLetterDB.client_id == client_id)
+    if responsible_person:
+        query = query.filter(CompensationLetterDB.responsible_person == responsible_person)
     if görevlendiren:
         query = query.filter(CompensationLetterDB.görevlendiren == görevlendiren)
     
@@ -1710,3 +1723,56 @@ async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db),
         db.rollback()
         print(f"Error toggling star: {e}")
         raise HTTPException(status_code=500, detail="Failed to toggle star")
+
+# ─── Settings Options CRUD ───
+
+@app.get("/api/settings/options", response_model=List[SettingsOption])
+async def get_settings_options(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    query = db.query(SettingsOptionDB)
+    if category:
+        query = query.filter(SettingsOptionDB.category == category)
+    options = query.order_by(SettingsOptionDB.created_at.desc()).all()
+    return [SettingsOption(id=o.id, category=o.category, value=o.value, created_at=o.created_at) for o in options]
+
+@app.post("/api/settings/options", response_model=SettingsOption, status_code=201)
+async def create_settings_option(
+    option: SettingsOptionCreate,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    if option.category not in ('bank', 'gorevlendiren', 'ilgili_sorumlu'):
+        raise HTTPException(status_code=400, detail="Invalid category")
+    
+    db_option = SettingsOptionDB(
+        id=str(uuid.uuid4()),
+        category=option.category,
+        value=option.value
+    )
+    try:
+        db.add(db_option)
+        db.commit()
+        db.refresh(db_option)
+        return SettingsOption(id=db_option.id, category=db_option.category, value=db_option.value, created_at=db_option.created_at)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="This option already exists")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to create option")
+
+@app.delete("/api/settings/options/{option_id}")
+async def delete_settings_option(
+    option_id: str,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    db_option = db.query(SettingsOptionDB).filter(SettingsOptionDB.id == option_id).first()
+    if not db_option:
+        raise HTTPException(status_code=404, detail="Option not found")
+    db.delete(db_option)
+    db.commit()
+    return {"message": "Option deleted successfully"}

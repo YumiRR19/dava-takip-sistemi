@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event, Column, String, DateTime, Date, Integer, Text, Boolean
+from sqlalchemy import create_engine, event, Column, String, DateTime, Date, Integer, Text, Boolean, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
@@ -134,6 +134,18 @@ class ExecutionDB(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     version = Column(Integer, default=1)
     is_deleted = Column(Boolean, default=False)
+
+class SettingsOptionDB(Base):
+    __tablename__ = "settings_options"
+    
+    id = Column(String, primary_key=True)
+    category = Column(String, nullable=False)  # 'bank', 'gorevlendiren', 'ilgili_sorumlu'
+    value = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    
+    __table_args__ = (
+        UniqueConstraint('category', 'value', name='uq_settings_category_value'),
+    )
 
 def get_db():
     db = SessionLocal()

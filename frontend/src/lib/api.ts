@@ -146,10 +146,11 @@ export const api = {
   },
   
   compensationLetters: {
-    getAll: (params?: { status?: string; client_id?: string; görevlendiren?: string }) => {
+    getAll: (params?: { status?: string; client_id?: string; responsible_person?: string; görevlendiren?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
+      if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       
       const query = searchParams.toString()
@@ -193,6 +194,32 @@ export const api = {
       method: 'DELETE',
     }),
   },
+
+  settingsOptions: {
+    getAll: (category?: string) => {
+      const params = category ? `?category=${category}` : ''
+      return apiRequest<SettingsOption[]>(`/api/settings/options${params}`)
+    },
+    create: (data: SettingsOptionCreate) => apiRequest<SettingsOption>('/api/settings/options', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    delete: (id: string) => apiRequest<{ message: string }>(`/api/settings/options/${id}`, {
+      method: 'DELETE',
+    }),
+  },
+}
+
+export interface SettingsOption {
+  id: string
+  category: string
+  value: string
+  created_at: string
+}
+
+export interface SettingsOptionCreate {
+  category: string
+  value: string
 }
 
 import type { Client, ClientCreate, ClientUpdate, Case, CaseCreate, CaseUpdate, DashboardData, CaseSearchParams, CompensationLetter, CompensationLetterCreate, CompensationLetterUpdate, Execution, ExecutionCreate, ExecutionUpdate } from '../types'

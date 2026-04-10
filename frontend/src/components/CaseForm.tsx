@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { api, CaseCreate, CaseUpdate } from '@/lib/api'
+import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
 export default function CaseForm() {
@@ -17,6 +17,8 @@ export default function CaseForm() {
   const { toast } = useToast()
 
   const [loading, setLoading] = useState(false)
+  const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const [formData, setFormData] = useState({
     description: '',
     client_id: '',
@@ -39,10 +41,29 @@ export default function CaseForm() {
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
   useEffect(() => {
+    loadCustomOptions()
     if (isEdit && id) {
       loadCase(id)
     }
   }, [isEdit, id])
+
+  const loadCustomOptions = async () => {
+    try {
+      const allOptions = await api.settingsOptions.getAll()
+      setCustomGorevlendiren(allOptions.filter(o => o.category === 'gorevlendiren'))
+      setCustomIlgiliSorumlu(allOptions.filter(o => o.category === 'ilgili_sorumlu'))
+    } catch (error) {
+      console.error('Error loading custom options:', error)
+    }
+  }
+
+  const DEFAULT_PERSONS = [
+    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
+    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
+  ]
+
+  const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
+  const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
 
   const loadCase = async (caseId: string) => {
     try {
@@ -202,13 +223,13 @@ export default function CaseForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="client_name">Davacı *</Label>
+                <Label htmlFor="client_name">Davacı/Müşteki *</Label>
                 <Input
                   id="client_name"
                   name="client_name"
                   value={formData.client_name}
                   onChange={(e) => handleChange('client_name', e.target.value)}
-                  placeholder="Davacı adını girin"
+                  placeholder="Davacı/Müşteki adını girin"
                   required
                 />
               </div>
@@ -225,13 +246,13 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="defendant">Davalı *</Label>
+                <Label htmlFor="defendant">Davalı/Sanık *</Label>
                 <Input
                   id="defendant"
                   name="defendant"
                   value={formData.defendant}
                   onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Davalı adını girin"
+                  placeholder="Davalı/Sanık adını girin"
                   required
                 />
               </div>
@@ -354,14 +375,9 @@ export default function CaseForm() {
                     <SelectValue placeholder="Görevlendiren seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {gorevlendirenList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -373,14 +389,9 @@ export default function CaseForm() {
                     <SelectValue placeholder="İlgili/Sorumlu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Av.M.Şerif Bey">Av.M.Şerif Bey</SelectItem>
-                    <SelectItem value="Ömer Bey">Ömer Bey</SelectItem>
-                    <SelectItem value="Av.İbrahim Bey">Av.İbrahim Bey</SelectItem>
-                    <SelectItem value="Av.Kenan Bey">Av.Kenan Bey</SelectItem>
-                    <SelectItem value="İsmail Bey">İsmail Bey</SelectItem>
-                    <SelectItem value="Ebru Hanım">Ebru Hanım</SelectItem>
-                    <SelectItem value="Pınar Hanım">Pınar Hanım</SelectItem>
-                    <SelectItem value="Yaren Hanım">Yaren Hanım</SelectItem>
+                    {ilgiliSorumluList.map((person) => (
+                      <SelectItem key={person} value={person}>{person}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
