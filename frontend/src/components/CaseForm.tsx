@@ -36,7 +36,8 @@ export default function CaseForm() {
     office_archive_no: '',
     responsible_person: '',
     görevlendiren: '',
-    is_starred: false
+    is_starred: false,
+    icra_dosya_numarasi: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
 
@@ -85,7 +86,8 @@ export default function CaseForm() {
         office_archive_no: caseData.office_archive_no || '',
         responsible_person: caseData.responsible_person || '',
         görevlendiren: caseData.görevlendiren || '',
-        is_starred: caseData.is_starred || false
+        is_starred: caseData.is_starred || false,
+        icra_dosya_numarasi: caseData.icra_dosya_numarasi || ''
       })
       setCurrentVersion(caseData.version)
     } catch (error) {
@@ -130,7 +132,8 @@ export default function CaseForm() {
       office_archive_no: formData.office_archive_no,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
-      is_starred: formData.is_starred
+      is_starred: formData.is_starred,
+      icra_dosya_numarasi: formData.icra_dosya_numarasi || undefined
     }
 
     console.log('Form data before submission:', submissionData)
@@ -425,6 +428,17 @@ export default function CaseForm() {
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Dava hakkında detaylı açıklama girin"
                 rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="icra_dosya_numarasi">Dava ile ilgili icra dosya numarası</Label>
+              <Input
+                id="icra_dosya_numarasi"
+                name="icra_dosya_numarasi"
+                value={formData.icra_dosya_numarasi}
+                onChange={(e) => handleChange('icra_dosya_numarasi', e.target.value)}
+                placeholder="İlgili icra dosya numarasını girin"
               />
             </div>
 

@@ -76,6 +76,7 @@ class CaseDB(Base):
     office_archive_no = Column(String, nullable=False)
     responsible_person = Column(String, nullable=True)
     görevlendiren = Column("gÃ¶revlendiren", String, nullable=True)
+    icra_dosya_numarasi = Column(String, nullable=True)
     is_starred = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

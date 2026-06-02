@@ -144,6 +144,25 @@ async def startup_event():
     except Exception as e:
         print(f"client_id migration error: {e}")
     
+    # Migration: add icra_dosya_numarasi column to cases
+    try:
+        from app.database import engine as eng5
+        from sqlalchemy.orm import sessionmaker as sm5
+        from sqlalchemy import text as text5
+        SL5 = sm5(autocommit=False, autoflush=False, bind=eng5)
+        with SL5() as db:
+            try:
+                db.execute(text5("SELECT icra_dosya_numarasi FROM cases LIMIT 1"))
+                print("Column icra_dosya_numarasi already exists in cases")
+            except Exception:
+                db.rollback()
+                print("Adding icra_dosya_numarasi column to cases...")
+                db.execute(text5("ALTER TABLE cases ADD COLUMN icra_dosya_numarasi VARCHAR"))
+                db.commit()
+                print("Successfully added icra_dosya_numarasi column to cases")
+    except Exception as icra_migration_error:
+        print(f"icra_dosya_numarasi migration error: {icra_migration_error}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
     
     # Start periodic background task to clean up stale WebSocket connections
@@ -212,6 +231,7 @@ class Case(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    icra_dosya_numarasi: Optional[str] = None
     is_starred: bool = False
     created_at: datetime
     updated_at: datetime
@@ -235,6 +255,7 @@ class CaseCreate(BaseModel):
     office_archive_no: str
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    icra_dosya_numarasi: Optional[str] = None
     is_starred: bool = False
 
 class CaseUpdate(BaseModel):
@@ -255,6 +276,7 @@ class CaseUpdate(BaseModel):
     office_archive_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
+    icra_dosya_numarasi: Optional[str] = None
     is_starred: Optional[bool] = None
     version: Optional[int] = None
 
@@ -523,6 +545,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         office_archive_no=db_case.office_archive_no,
         responsible_person=db_case.responsible_person,
         görevlendiren=db_case.görevlendiren,
+        icra_dosya_numarasi=db_case.icra_dosya_numarasi,
         is_starred=db_case.is_starred if db_case.is_starred is not None else False,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
@@ -807,9 +830,9 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                         client_data["updated_at"] = datetime.fromisoformat(client_data["updated_at"])
                     else:
                         client_data["updated_at"] = client_data["created_at"]
+                    client_data["is_deleted"] = False
                     
-                    db_client = ClientDB(**client_data)
-                    db.add(db_client)
+                    db.merge(ClientDB(**client_data))
                 except Exception as e:
                     print(f"Error processing client {client_id}: {e}")
                     continue
@@ -824,9 +847,9 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                         case_data["next_hearing_date"] = date.fromisoformat(case_data["next_hearing_date"])
                     if case_data.get("reminder_date"):
                         case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
+                    case_data["is_deleted"] = False
                     
-                    db_case = CaseDB(**case_data)
-                    db.add(db_case)
+                    db.merge(CaseDB(**case_data))
                 except Exception as e:
                     print(f"Error processing case {case_id}: {e}")
                     continue
@@ -838,9 +861,9 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     letter_data["updated_at"] = datetime.fromisoformat(letter_data["updated_at"])
                     if letter_data.get("reminder_date"):
                         letter_data["reminder_date"] = date.fromisoformat(letter_data["reminder_date"])
+                    letter_data["is_deleted"] = False
                     
-                    db_letter = CompensationLetterDB(**letter_data)
-                    db.add(db_letter)
+                    db.merge(CompensationLetterDB(**letter_data))
                 except Exception as e:
                     print(f"Error processing compensation letter {letter_id}: {e}")
                     continue
@@ -855,9 +878,9 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                         execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
                     if execution_data.get("haciz_reminder_date"):
                         execution_data["haciz_reminder_date"] = date.fromisoformat(execution_data["haciz_reminder_date"])
+                    execution_data["is_deleted"] = False
                     
-                    db_execution = ExecutionDB(**execution_data)
-                    db.add(db_execution)
+                    db.merge(ExecutionDB(**execution_data))
                 except Exception as e:
                     print(f"Error processing execution {execution_id}: {e}")
                     continue
@@ -1047,6 +1070,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         office_archive_no=case.office_archive_no,
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
+        icra_dosya_numarasi=case.icra_dosya_numarasi,
         is_starred=case.is_starred,
         created_at=now,
         updated_at=now,

@@ -50,6 +50,7 @@ export interface Case {
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
+  icra_dosya_numarasi?: string
   created_at: string
   updated_at: string
   version: number
@@ -74,6 +75,7 @@ export interface CaseCreate {
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
+  icra_dosya_numarasi?: string
 }
 
 export interface CaseUpdate {
@@ -95,6 +97,7 @@ export interface CaseUpdate {
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
+  icra_dosya_numarasi?: string
   version?: number
 }
 
