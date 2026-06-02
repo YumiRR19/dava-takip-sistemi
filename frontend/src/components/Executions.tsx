@@ -120,26 +120,26 @@ export default function Executions() {
     }
   }
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'Derdest':
-        return 'default'
+        return 'bg-black text-white border-black'
       case 'İnfaz':
-        return 'destructive'
+        return 'bg-red-800 text-white border-red-800'
       case 'Haricen Tahsil':
-        return 'destructive'
+        return 'bg-red-300 text-red-900 border-red-300'
       case 'İtirazlı':
-        return 'outline'
+        return 'bg-white text-gray-900 border-gray-300'
       case 'İcranın Geri Bırakılması':
-        return 'secondary'
-      case 'Davalı':
-        return 'default'
+        return 'bg-green-300 text-green-900 border-green-300'
       case 'Ödeme Sözü':
-        return 'secondary'
+        return 'bg-green-700 text-white border-green-700'
       case 'Bilirkişi':
-        return 'outline'
+        return 'bg-yellow-200 text-yellow-900 border-yellow-200'
+      case 'Davalı':
+        return 'bg-teal-400 text-white border-teal-400'
       default:
-        return 'default'
+        return 'bg-black text-white border-black'
     }
   }
 
@@ -289,7 +289,7 @@ export default function Executions() {
                       <TableCell>{execution.client_name}</TableCell>
                       <TableCell>{execution.defendant}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(execution.status)}>
+                        <Badge className={getStatusBadgeClass(execution.status)}>
                           {execution.status}
                         </Badge>
                       </TableCell>
