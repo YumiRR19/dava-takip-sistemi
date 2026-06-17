@@ -59,7 +59,7 @@ export const request = apiRequest
 
 export const api = {
   clients: {
-    getAll: (options?: { signal?: AbortSignal }) => apiRequest<Client[]>('/api/clients', options),
+    getAll: (options?: { signal?: AbortSignal }) => apiRequest<Client[]>('/api/clients?limit=10000', options),
     getById: (id: string) => apiRequest<Client>(`/api/clients/${id}`),
     create: (data: ClientCreate) => apiRequest<Client>('/api/clients', {
       method: 'POST',
@@ -83,7 +83,7 @@ export const api = {
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
       if (params?.page) searchParams.append('page', params.page.toString())
-      if (params?.limit) searchParams.append('limit', params.limit.toString())
+      searchParams.append('limit', (params?.limit ?? 10000).toString())
       
       const query = searchParams.toString()
       return apiRequest<Case[]>(`/api/cases${query ? `?${query}` : ''}`)
@@ -152,6 +152,7 @@ export const api = {
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
+      searchParams.append('limit', '10000')
       
       const query = searchParams.toString()
       return apiRequest<CompensationLetter[]>(`/api/compensation-letters${query ? `?${query}` : ''}`)
@@ -177,6 +178,7 @@ export const api = {
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
+      searchParams.append('limit', '10000')
       
       const query = searchParams.toString()
       return apiRequest<Execution[]>(`/api/executions${query ? `?${query}` : ''}`)

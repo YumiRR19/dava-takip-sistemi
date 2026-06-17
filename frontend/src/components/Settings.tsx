@@ -174,6 +174,11 @@ export default function Settings() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (!confirm('Geri yükleme işlemi mevcut tüm verilerin üzerine yazacaktır. Devam etmek istediğinizden emin misiniz?')) {
+      e.target.value = ''
+      return
+    }
+
     try {
       const text = await file.text()
       const backupData = JSON.parse(text)

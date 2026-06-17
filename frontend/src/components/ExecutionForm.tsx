@@ -480,22 +480,57 @@ export default function ExecutionForm() {
               />
             </div>
 
-            {/* Full-width: İşlem Hatırlatma Metni */}
+            {/* Full-width: İşlem Hatırlatma Metni (multi-select + free text) */}
             <div className="space-y-2">
               <Label htmlFor="reminder_text">İşlem Hatırlatma Metni</Label>
+              <div className="border rounded-md p-3 space-y-2 bg-white dark:bg-gray-950">
+                {[
+                  'Ödeme emri /İcra emri hazırlandı mı?',
+                  'Tebligat gönderildi mi?',
+                  'Tebligat kontrol',
+                  'Kesinleştirme talebi gönder',
+                  'Kesinleştirme sonrası sorgu yap',
+                  'Tebligat iade yeni tebligat gönder',
+                  'Taktiyat talebi gönder',
+                  'Banka haczi gönder',
+                ].map((option) => {
+                  const lines = (formData.reminder_text || '').split('\n').map(l => l.trim()).filter(Boolean)
+                  const isChecked = lines.includes(option)
+                  return (
+                    <label key={option} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 rounded p-1">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const currentLines = (formData.reminder_text || '').split('\n').map(l => l.trim()).filter(Boolean)
+                          let newLines: string[]
+                          if (isChecked) {
+                            newLines = currentLines.filter(l => l !== option)
+                          } else {
+                            newLines = [...currentLines, option]
+                          }
+                          handleChange('reminder_text', newLines.join('\n'))
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm">{option}</span>
+                    </label>
+                  )
+                })}
+              </div>
               <Textarea
                 id="reminder_text"
                 name="reminder_text"
                 value={formData.reminder_text}
                 onChange={(e) => handleChange('reminder_text', e.target.value)}
-                placeholder="İşlem hatırlatma metni girin"
+                placeholder="Seçeneklerden seçin veya kendi metninizi yazın"
                 rows={3}
               />
             </div>
 
             {/* Full-width: Haciz Hatırlatma Tarihi */}
             <div className="space-y-2">
-              <Label htmlFor="haciz_reminder_date">Haciz Hatırlatma Tarihi</Label>
+              <Label htmlFor="haciz_reminder_date">M. K. ve Haciz Koruma Hatırlatma Tarihi</Label>
               <Input
                 id="haciz_reminder_date"
                 name="haciz_reminder_date"
@@ -507,7 +542,7 @@ export default function ExecutionForm() {
 
             {/* Full-width: Haciz Hatırlatma Metni */}
             <div className="space-y-2">
-              <Label htmlFor="haciz_reminder_text">Haciz Hatırlatma Metni</Label>
+              <Label htmlFor="haciz_reminder_text">M. K. ve Haciz Koruma Hatırlatma Metni</Label>
               <Textarea
                 id="haciz_reminder_text"
                 name="haciz_reminder_text"
