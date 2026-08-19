@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
+import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 
 export default function CaseForm() {
@@ -57,11 +58,6 @@ export default function CaseForm() {
       console.error('Error loading custom options:', error)
     }
   }
-
-  const DEFAULT_PERSONS = [
-    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
-    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
-  ]
 
   const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
   const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]

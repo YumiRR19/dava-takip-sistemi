@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { api, ExecutionCreate, ExecutionUpdate, SettingsOption } from '@/lib/api'
+import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 import { useFormAutosave } from '@/hooks/use-form-autosave'
 import { cn } from '@/lib/utils'
@@ -47,10 +48,6 @@ export default function ExecutionForm() {
   const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
   const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
 
-  const DEFAULT_PERSONS = [
-    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
-    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
-  ]
   const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
   const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
   

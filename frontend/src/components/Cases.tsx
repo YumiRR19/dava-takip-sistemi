@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { api, Case, SettingsOption } from '@/lib/api'
+import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
@@ -24,10 +25,6 @@ export default function Cases() {
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
   const debouncedSearchTerm = useDebouncedSearch(searchTerm, 300)
 
-  const DEFAULT_PERSONS = [
-    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
-    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
-  ]
   const gorevlendirenList = [...new Set([...DEFAULT_PERSONS, ...customGorevlendiren.map(o => o.value)])]
   const ilgiliSorumluList = [...new Set([...DEFAULT_PERSONS, ...customIlgiliSorumlu.map(o => o.value)])]
 
