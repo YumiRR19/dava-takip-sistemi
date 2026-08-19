@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { api, CompensationLetterCreate, CompensationLetterUpdate, SettingsOption } from '@/lib/api'
+import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 
 export default function CompensationLetterForm() {
   const { id } = useParams()
@@ -42,10 +43,6 @@ export default function CompensationLetterForm() {
     'TÜRKİYE VAKIFLAR BANKASI T.A.O.',
     'TÜRKİYE GARANTİ BANKASI A.Ş.',
     'ŞEKERBANK T.A.Ş.'
-  ]
-  const DEFAULT_PERSONS = [
-    'Av.M.Şerif Bey', 'Ömer Bey', 'Av.İbrahim Bey', 'Av.Kenan Bey',
-    'İsmail Bey', 'Ebru Hanım', 'Pınar Hanım', 'Yaren Hanım'
   ]
 
   const bankList = [...new Set([...DEFAULT_BANKS, ...customBanks.map(o => o.value)])]

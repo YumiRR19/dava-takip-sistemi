@@ -6,20 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { api, DashboardData, request } from '@/lib/api'
+import { api, DashboardData, SettingsOption, request } from '@/lib/api'
+import { mergePersons } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
-
-const RESPONSIBLE_PERSONS_ORDER = [
-  'Av.M.Şerif Bey',
-  'Ömer Bey',
-  'Av.İbrahim Bey',
-  'Av.Kenan Bey',
-  'İsmail Bey',
-  'Ebru Hanım',
-  'Pınar Hanım',
-  'Yaren Hanım',
-]
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -32,6 +22,7 @@ export default function Dashboard() {
   const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'>('all')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<string>('')
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -86,6 +77,18 @@ export default function Dashboard() {
     loadDashboardData()
     checkHealthStatus()
   }, [loadDashboardData])
+
+  useEffect(() => {
+    const loadCustomOptions = async () => {
+      try {
+        const allOptions = await api.settingsOptions.getAll('ilgili_sorumlu')
+        setCustomIlgiliSorumlu(allOptions)
+      } catch (error) {
+        console.error('Error loading custom options:', error)
+      }
+    }
+    loadCustomOptions()
+  }, [])
 
   useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
@@ -146,8 +149,10 @@ export default function Dashboard() {
     }
   }, [getEntityInfo, toast, loadDashboardData])
 
-  // Fixed ordered list of responsible persons
-  const responsiblePersons = RESPONSIBLE_PERSONS_ORDER
+  const responsiblePersons = useMemo(
+    () => mergePersons(customIlgiliSorumlu),
+    [customIlgiliSorumlu]
+  )
 
   const filteredReminders = displayReminders
     .filter(reminder => {
