@@ -19,6 +19,7 @@ export default function Cases() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('')
   const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('')
+  const [kanunYoluFilter, setKanunYoluFilter] = useState<string>('')
   const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
   const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const { toast } = useToast()
@@ -43,7 +44,7 @@ export default function Cases() {
 
   useEffect(() => {
     loadCases()
-  }, [statusFilter, responsiblePersonFilter, görevlendirenFilter, debouncedSearchTerm])
+  }, [statusFilter, responsiblePersonFilter, görevlendirenFilter, kanunYoluFilter, debouncedSearchTerm])
 
   useEffect(() => {
     if (hasChangesForEntity('case')) {
@@ -63,6 +64,9 @@ export default function Cases() {
       }
       if (görevlendirenFilter && görevlendirenFilter !== 'all') {
         params.görevlendiren = görevlendirenFilter
+      }
+      if (kanunYoluFilter && kanunYoluFilter !== 'all') {
+        params.kanun_yolu = kanunYoluFilter
       }
       if (debouncedSearchTerm) {
         params.query = debouncedSearchTerm
@@ -151,13 +155,26 @@ export default function Cases() {
             <SelectItem value="Kısmen Kabul Kısmen Red">Kısmen Kabul Kısmen Red</SelectItem>
             <SelectItem value="Kabul">Kabul</SelectItem>
             <SelectItem value="Red">Red</SelectItem>
-            <SelectItem value="Temyiz">Temyiz</SelectItem>
-            <SelectItem value="İstinaf">İstinaf</SelectItem>
             <SelectItem value="Derdest">Derdest</SelectItem>
             <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
             <SelectItem value="Gerekli Karar Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
             <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
             <SelectItem value="Konkordato">Konkordato</SelectItem>
+            <SelectItem value="Derdest/Bilirkişi">Derdest/Bilirkişi</SelectItem>
+            <SelectItem value="Derdest/Gerekli Karar Bekleniyor">Derdest/Gerekli Karar Bekleniyor</SelectItem>
+            <SelectItem value="İşlemden kaldırma">İşlemden kaldırma</SelectItem>
+            <SelectItem value="Karar verilmesine yer olmadığına karar verilmiştir">Karar verilmesine yer olmadığına karar verilmiştir</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={kanunYoluFilter} onValueChange={setKanunYoluFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Kanun Yolu filtrele" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Kanun Yolları</SelectItem>
+            <SelectItem value="İstinaf">İstinaf</SelectItem>
+            <SelectItem value="Temyiz">Temyiz</SelectItem>
           </SelectContent>
         </Select>
         <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
@@ -190,9 +207,9 @@ export default function Cases() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {searchTerm || (statusFilter && statusFilter !== 'all') || (responsiblePersonFilter && responsiblePersonFilter !== 'all') || (görevlendirenFilter && görevlendirenFilter !== 'all') ? 'Arama kriterlerinize uygun dava bulunamadı.' : 'Henüz dava bulunmuyor.'}
+              {searchTerm || (statusFilter && statusFilter !== 'all') || (responsiblePersonFilter && responsiblePersonFilter !== 'all') || (görevlendirenFilter && görevlendirenFilter !== 'all') || (kanunYoluFilter && kanunYoluFilter !== 'all') ? 'Arama kriterlerinize uygun dava bulunamadı.' : 'Henüz dava bulunmuyor.'}
             </p>
-            {!searchTerm && (!statusFilter || statusFilter === 'all') && (!responsiblePersonFilter || responsiblePersonFilter === 'all') && (!görevlendirenFilter || görevlendirenFilter === 'all') && (
+            {!searchTerm && (!statusFilter || statusFilter === 'all') && (!responsiblePersonFilter || responsiblePersonFilter === 'all') && (!görevlendirenFilter || görevlendirenFilter === 'all') && (!kanunYoluFilter || kanunYoluFilter === 'all') && (
               <Button asChild className="mt-4">
                 <Link to="/cases/new">İlk Davayı Oluştur</Link>
               </Button>

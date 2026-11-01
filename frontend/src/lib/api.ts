@@ -75,13 +75,14 @@ export const api = {
   },
   
   cases: {
-    getAll: (params?: { status?: string; client_id?: string; query?: string; responsible_person?: string; görevlendiren?: string; page?: number; limit?: number }) => {
+    getAll: (params?: { status?: string; client_id?: string; query?: string; responsible_person?: string; görevlendiren?: string; kanun_yolu?: string; page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.status) searchParams.append('status', params.status)
       if (params?.client_id) searchParams.append('client_id', params.client_id)
       if (params?.query) searchParams.append('query', params.query)
       if (params?.responsible_person) searchParams.append('responsible_person', params.responsible_person)
       if (params?.görevlendiren) searchParams.append('görevlendiren', params.görevlendiren)
+      if (params?.kanun_yolu) searchParams.append('kanun_yolu', params.kanun_yolu)
       if (params?.page) searchParams.append('page', params.page.toString())
       searchParams.append('limit', (params?.limit ?? 10000).toString())
       
