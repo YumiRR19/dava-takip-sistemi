@@ -51,6 +51,7 @@ export interface Case {
   görevlendiren?: string
   is_starred?: boolean
   icra_dosya_numarasi?: string
+  kanun_yolu?: string | null
   created_at: string
   updated_at: string
   version: number
@@ -76,6 +77,7 @@ export interface CaseCreate {
   görevlendiren?: string
   is_starred?: boolean
   icra_dosya_numarasi?: string
+  kanun_yolu?: string | null
 }
 
 export interface CaseUpdate {
@@ -98,6 +100,7 @@ export interface CaseUpdate {
   görevlendiren?: string
   is_starred?: boolean
   icra_dosya_numarasi?: string
+  kanun_yolu?: string | null
   version?: number
 }
 

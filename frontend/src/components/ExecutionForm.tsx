@@ -566,12 +566,13 @@ export default function ExecutionForm() {
             {/* Full-width: İlgili Dava */}
             <div className="space-y-2">
               <Label htmlFor="related_case_id">İlgili Dava</Label>
-              <Input
+              <Textarea
                 id="related_case_id"
                 name="related_case_id"
                 value={formData.related_case_id}
                 onChange={(e) => handleChange('related_case_id', e.target.value)}
-                placeholder="İlgili dava ID'sini girin"
+                placeholder="İlgili dava ID'sini girin (her satıra bir numara yazabilirsiniz)"
+                rows={3}
               />
             </div>
 

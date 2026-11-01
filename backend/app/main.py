@@ -163,6 +163,30 @@ async def startup_event():
     except Exception as icra_migration_error:
         print(f"icra_dosya_numarasi migration error: {icra_migration_error}")
     
+    # Migration: add kanun_yolu column to cases and move legacy İstinaf/Temyiz statuses into it.
+    # The backfill runs only once, together with the column creation; status values are kept as-is.
+    try:
+        from app.database import engine as eng6
+        from sqlalchemy.orm import sessionmaker as sm6
+        from sqlalchemy import text as text6
+        SL6 = sm6(autocommit=False, autoflush=False, bind=eng6)
+        with SL6() as db:
+            try:
+                db.execute(text6("SELECT kanun_yolu FROM cases LIMIT 1"))
+                print("Column kanun_yolu already exists in cases")
+            except Exception:
+                db.rollback()
+                print("Adding kanun_yolu column to cases...")
+                db.execute(text6("ALTER TABLE cases ADD COLUMN kanun_yolu VARCHAR"))
+                result = db.execute(
+                    text6("UPDATE cases SET kanun_yolu = status WHERE status IN (:istinaf, :temyiz)"),
+                    {"istinaf": "İstinaf", "temyiz": "Temyiz"}
+                )
+                db.commit()
+                print(f"Successfully added kanun_yolu column to cases (backfilled {result.rowcount} rows)")
+    except Exception as kanun_yolu_migration_error:
+        print(f"kanun_yolu migration error: {kanun_yolu_migration_error}")
+    
     print("✅ Backend startup completed - table creation and migration completed")
     
     # Start periodic background task to clean up stale WebSocket connections
@@ -232,6 +256,7 @@ class Case(BaseModel):
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     icra_dosya_numarasi: Optional[str] = None
+    kanun_yolu: Optional[str] = None
     is_starred: bool = False
     created_at: datetime
     updated_at: datetime
@@ -256,6 +281,7 @@ class CaseCreate(BaseModel):
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     icra_dosya_numarasi: Optional[str] = None
+    kanun_yolu: Optional[str] = None
     is_starred: bool = False
 
 class CaseUpdate(BaseModel):
@@ -277,6 +303,7 @@ class CaseUpdate(BaseModel):
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     icra_dosya_numarasi: Optional[str] = None
+    kanun_yolu: Optional[str] = None
     is_starred: Optional[bool] = None
     version: Optional[int] = None
 
@@ -546,6 +573,7 @@ def db_to_pydantic_case(db_case: CaseDB) -> Case:
         responsible_person=db_case.responsible_person,
         görevlendiren=db_case.görevlendiren,
         icra_dosya_numarasi=db_case.icra_dosya_numarasi,
+        kanun_yolu=db_case.kanun_yolu,
         is_starred=db_case.is_starred if db_case.is_starred is not None else False,
         created_at=db_case.created_at,
         updated_at=db_case.updated_at,
@@ -848,6 +876,8 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     if case_data.get("reminder_date"):
                         case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
                     case_data["is_deleted"] = False
+                    if "kanun_yolu" not in case_data and case_data.get("status") in ("İstinaf", "Temyiz"):
+                        case_data["kanun_yolu"] = case_data["status"]
                     
                     db.merge(CaseDB(**case_data))
                 except Exception as e:
@@ -1071,6 +1101,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
         icra_dosya_numarasi=case.icra_dosya_numarasi,
+        kanun_yolu=case.kanun_yolu or None,
         is_starred=case.is_starred,
         created_at=now,
         updated_at=now,
@@ -1098,6 +1129,7 @@ async def get_cases(
     query: Optional[str] = None,
     responsible_person: Optional[str] = None,
     görevlendiren: Optional[str] = None,
+    kanun_yolu: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(1000, ge=1, le=10000),
     db: Session = Depends(get_db), 
@@ -1110,6 +1142,8 @@ async def get_cases(
         db_query = db_query.filter(CaseDB.responsible_person == responsible_person)
     if görevlendiren:
         db_query = db_query.filter(CaseDB.görevlendiren == görevlendiren)
+    if kanun_yolu:
+        db_query = db_query.filter(CaseDB.kanun_yolu == kanun_yolu)
     if query:
         db_query = db_query.filter(
             or_(

@@ -11,6 +11,23 @@ import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 
+const REMINDER_TEXT_PRESETS = [
+  'Tensip zaptı oluşturuldu mu?',
+  'Duruşma günü verildi mi?',
+  'Davaya cevap verildi mi?',
+  'Duruşma günü verilmesi istenilsin.',
+  'Ara kararın gereğinin yerine getirilmesi istenilsin.',
+  'Bilirkişi raporu geldi mi?',
+  'Müzekkere / ara karar cevabı geldi mi?',
+  'İstinaf var mı, istinafa gitti mi, istinaf dosya no, istinaf sonucu.',
+  'Temyiz var mı, temyize gitti mi, temyiz dosya no, temyiz sonucu.',
+  'Avans iadesi talep edilsin.',
+  'Kesinleşme istenilsin.',
+]
+
+const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz']
+const KANUN_YOLU_NONE = '__none__'
+
 export default function CaseForm() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -38,9 +55,11 @@ export default function CaseForm() {
     responsible_person: '',
     görevlendiren: '',
     is_starred: false,
-    icra_dosya_numarasi: ''
+    icra_dosya_numarasi: '',
+    kanun_yolu: ''
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
+  const [legacyStatus, setLegacyStatus] = useState<string>('')
 
   useEffect(() => {
     loadCustomOptions()
@@ -65,13 +84,15 @@ export default function CaseForm() {
   const loadCase = async (caseId: string) => {
     try {
       const caseData = await api.cases.getById(caseId)
+      const isLegacyStatus = KANUN_YOLU_OPTIONS.includes(caseData.status)
+      setLegacyStatus(isLegacyStatus ? caseData.status : '')
       setFormData({
         description: caseData.description || '',
         client_id: caseData.client_id,
         client_name: caseData.client_name || '',
         case_name: caseData.case_name || '',
         case_type: caseData.case_type,
-        status: caseData.status,
+        status: isLegacyStatus ? '' : caseData.status,
         court: caseData.court,
         case_number: caseData.case_number,
         defendant: caseData.defendant,
@@ -83,7 +104,8 @@ export default function CaseForm() {
         responsible_person: caseData.responsible_person || '',
         görevlendiren: caseData.görevlendiren || '',
         is_starred: caseData.is_starred || false,
-        icra_dosya_numarasi: caseData.icra_dosya_numarasi || ''
+        icra_dosya_numarasi: caseData.icra_dosya_numarasi || '',
+        kanun_yolu: caseData.kanun_yolu || (isLegacyStatus ? caseData.status : '')
       })
       setCurrentVersion(caseData.version)
     } catch (error) {
@@ -117,7 +139,7 @@ export default function CaseForm() {
       client_id: formData.client_id || undefined,
       client_name: formData.client_name,
       case_type: formData.case_type,
-      status: formData.status,
+      status: formData.status || legacyStatus,
       court: formData.court,
       case_number: formData.case_number,
       defendant: formData.defendant,
@@ -129,7 +151,8 @@ export default function CaseForm() {
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred,
-      icra_dosya_numarasi: formData.icra_dosya_numarasi || undefined
+      icra_dosya_numarasi: formData.icra_dosya_numarasi || undefined,
+      kanun_yolu: formData.kanun_yolu || null
     }
 
     console.log('Form data before submission:', submissionData)
@@ -292,13 +315,34 @@ export default function CaseForm() {
                     <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
                     <SelectItem value="Kabul">Kabul</SelectItem>
                     <SelectItem value="Red">Red</SelectItem>
-                    <SelectItem value="Temyiz">Temyiz</SelectItem>
-                    <SelectItem value="İstinaf">İstinaf</SelectItem>
                     <SelectItem value="Derdest">Derdest</SelectItem>
                     <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
                     <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
                     <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
                     <SelectItem value="Konkordato">Konkordato</SelectItem>
+                    <SelectItem value="Derdest/Bilirkişi">Derdest/Bilirkişi</SelectItem>
+                    <SelectItem value="Derdest/Gerekli Karar Bekleniyor">Derdest/Gerekli Karar Bekleniyor</SelectItem>
+                    <SelectItem value="İşlemden kaldırma">İşlemden kaldırma</SelectItem>
+                    <SelectItem value="Karar verilmesine yer olmadığına karar verilmiştir">Karar verilmesine yer olmadığına karar verilmiştir</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kanun_yolu">Kanun Yolu</Label>
+                <Select
+                  value={formData.kanun_yolu}
+                  onValueChange={(value) => handleChange('kanun_yolu', value === KANUN_YOLU_NONE ? '' : value)}
+                  name="kanun_yolu"
+                >
+                  <SelectTrigger id="kanun_yolu">
+                    <SelectValue placeholder="Kanun yolu seçin (isteğe bağlı)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={KANUN_YOLU_NONE}>Seçimi temizle</SelectItem>
+                    {KANUN_YOLU_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -417,6 +461,22 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="description">Hatırlatma Metni</Label>
+              <Select
+                value=""
+                onValueChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  description: prev.description.trim() ? `${prev.description.replace(/\s+$/, '')}\n${value}` : value
+                }))}
+              >
+                <SelectTrigger aria-label="Hazır hatırlatma metni">
+                  <SelectValue placeholder="Hazır hatırlatma metni seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REMINDER_TEXT_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>{preset}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Textarea
                 id="description"
                 name="description"
@@ -429,12 +489,13 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="icra_dosya_numarasi">Dava ile ilgili icra dosya numarası</Label>
-              <Input
+              <Textarea
                 id="icra_dosya_numarasi"
                 name="icra_dosya_numarasi"
                 value={formData.icra_dosya_numarasi}
                 onChange={(e) => handleChange('icra_dosya_numarasi', e.target.value)}
-                placeholder="İlgili icra dosya numarasını girin"
+                placeholder="İlgili icra dosya numarasını girin (her satıra bir numara yazabilirsiniz)"
+                rows={3}
               />
             </div>
 
