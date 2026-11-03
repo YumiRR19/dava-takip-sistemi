@@ -12,8 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<DashboardData | null>(() => api.dashboard.peekData() ?? null)
+  const [loading, setLoading] = useState(() => !api.dashboard.peekData())
   const [healthStatus, setHealthStatus] = useState({
     api: true,
     websocket: false,
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'>('all')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<string>('')
-  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>(() => api.settingsOptions.peekAll('ilgili_sorumlu') ?? [])
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -298,7 +298,14 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Hatırlatmalar</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Hatırlatmalar
+                  {responsibleFilter !== 'all' && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 border border-blue-200" data-testid="reminder-count">
+                      {filteredReminders.length} hatırlatma
+                    </span>
+                  )}
+                </CardTitle>
                 <CardDescription>
                   {selectedDate
                     ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} için hatırlatmalar`

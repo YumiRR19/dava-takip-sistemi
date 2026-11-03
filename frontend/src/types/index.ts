@@ -78,6 +78,7 @@ export interface CaseCreate {
   is_starred?: boolean
   icra_dosya_numarasi?: string
   kanun_yolu?: string | null
+  office_archive_no_auto?: boolean
 }
 
 export interface CaseUpdate {

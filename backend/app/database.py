@@ -137,6 +137,20 @@ class ExecutionDB(Base):
     version = Column(Integer, default=1)
     is_deleted = Column(Boolean, default=False)
 
+class ImportantReminderDB(Base):
+    __tablename__ = "important_reminders"
+
+    id = Column(String, primary_key=True)
+    responsible_person = Column(String, nullable=True)
+    görevlendiren = Column("gorevlendiren", String, nullable=True)
+    reminder_date = Column(Date, nullable=True)
+    reminder_text = Column(Text, nullable=True)
+    is_starred = Column(Boolean, default=False, nullable=False, server_default="false")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
+
 class SettingsOptionDB(Base):
     __tablename__ = "settings_options"
     

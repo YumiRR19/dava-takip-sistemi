@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
+import { CASE_STATUS_OPTIONS, KANUN_YOLU_OPTIONS, normalizeCaseStatus, toTurkishUpper } from '@/lib/case-options'
 import { useToast } from '@/hooks/use-toast'
 
 const REMINDER_TEXT_PRESETS = [
@@ -25,7 +26,6 @@ const REMINDER_TEXT_PRESETS = [
   'Kesinleşme istenilsin.',
 ]
 
-const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz']
 const KANUN_YOLU_NONE = '__none__'
 
 export default function CaseForm() {
@@ -60,6 +60,35 @@ export default function CaseForm() {
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
   const [legacyStatus, setLegacyStatus] = useState<string>('')
+  const [archiveNoTouched, setArchiveNoTouched] = useState(false)
+  const [archiveSuggestion, setArchiveSuggestion] = useState<string | null>(null)
+  const statusOptions = formData.status && !CASE_STATUS_OPTIONS.includes(formData.status)
+    ? [...CASE_STATUS_OPTIONS, formData.status]
+    : CASE_STATUS_OPTIONS
+
+  useEffect(() => {
+    if (isEdit || archiveNoTouched) return
+    const court = formData.court.trim()
+    if (!court) {
+      setArchiveSuggestion(null)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const result = await api.archiveSuggestion(court)
+        if (cancelled) return
+        setArchiveSuggestion(result.suggestion)
+        setFormData(prev => ({ ...prev, office_archive_no: result.suggestion ?? '' }))
+      } catch (error) {
+        console.error('Error loading archive number suggestion:', error)
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [formData.court, isEdit, archiveNoTouched])
 
   useEffect(() => {
     loadCustomOptions()
@@ -92,7 +121,7 @@ export default function CaseForm() {
         client_name: caseData.client_name || '',
         case_name: caseData.case_name || '',
         case_type: caseData.case_type,
-        status: isLegacyStatus ? '' : caseData.status,
+        status: isLegacyStatus ? '' : normalizeCaseStatus(caseData.status),
         court: caseData.court,
         case_number: caseData.case_number,
         defendant: caseData.defendant,
@@ -148,6 +177,7 @@ export default function CaseForm() {
       next_hearing_date: formData.next_hearing_date,
       reminder_date: formData.reminder_date,
       office_archive_no: formData.office_archive_no,
+      ...(!isEdit && { office_archive_no_auto: !archiveNoTouched && archiveSuggestion !== null && formData.office_archive_no === archiveSuggestion }),
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred,
@@ -184,10 +214,12 @@ export default function CaseForm() {
           reminder_date: submissionData.reminder_date || undefined,
         }
         console.log('Create data:', createData)
-        await api.cases.create(createData)
+        const created = await api.cases.create(createData)
         toast({
           title: "Başarılı",
-          description: "Dava başarıyla oluşturuldu.",
+          description: createData.office_archive_no_auto && created.office_archive_no !== createData.office_archive_no
+            ? `Dava başarıyla oluşturuldu. Önerilen arşiv numarası bu arada kullanıldığı için ${created.office_archive_no} verildi.`
+            : "Dava başarıyla oluşturuldu.",
         })
       }
       navigate('/cases')
@@ -310,20 +342,9 @@ export default function CaseForm() {
                     <SelectValue placeholder="Durum seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Beraat">Beraat</SelectItem>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
-                    <SelectItem value="Kabul">Kabul</SelectItem>
-                    <SelectItem value="Red">Red</SelectItem>
-                    <SelectItem value="Derdest">Derdest</SelectItem>
-                    <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-                    <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
-                    <SelectItem value="Konkordato">Konkordato</SelectItem>
-                    <SelectItem value="Derdest/Bilirkişi">Derdest/Bilirkişi</SelectItem>
-                    <SelectItem value="Derdest/Gerekli Karar Bekleniyor">Derdest/Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="İşlemden kaldırma">İşlemden kaldırma</SelectItem>
-                    <SelectItem value="Karar verilmesine yer olmadığına karar verilmiştir">Karar verilmesine yer olmadığına karar verilmiştir</SelectItem>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -341,7 +362,7 @@ export default function CaseForm() {
                   <SelectContent>
                     <SelectItem value={KANUN_YOLU_NONE}>Seçimi temizle</SelectItem>
                     {KANUN_YOLU_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -406,7 +427,10 @@ export default function CaseForm() {
                   id="office_archive_no"
                   name="office_archive_no"
                   value={formData.office_archive_no}
-                  onChange={(e) => handleChange('office_archive_no', e.target.value)}
+                  onChange={(e) => {
+                    setArchiveNoTouched(true)
+                    handleChange('office_archive_no', e.target.value)
+                  }}
                   placeholder="Ofis arşiv numarasını girin"
                 />
               </div>
