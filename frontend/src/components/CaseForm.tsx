@@ -114,7 +114,7 @@ export default function CaseForm() {
     try {
       const caseData = await api.cases.getById(caseId)
       const isLegacyStatus = KANUN_YOLU_OPTIONS.includes(caseData.status)
-      setLegacyStatus(isLegacyStatus ? caseData.status : '')
+      setLegacyStatus(caseData.status)
       setFormData({
         description: caseData.description || '',
         client_id: caseData.client_id,
@@ -337,7 +337,7 @@ export default function CaseForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Durum *</Label>
-                <Select value={formData.status} onValueChange={(value) => handleChange('status', value)} name="status">
+                <Select value={formData.status} onValueChange={(value) => { if (value) handleChange('status', value) }} name="status">
                   <SelectTrigger>
                     <SelectValue placeholder="Durum seçin" />
                   </SelectTrigger>

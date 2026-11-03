@@ -135,14 +135,14 @@ export default function ImportantReminders() {
   const personSelect = (field: 'responsible_person' | 'görevlendiren', list: string[], placeholder: string) => (
     <Select
       value={formData[field]}
-      onValueChange={(value) => setFormData(prev => ({ ...prev, [field]: value === NONE ? '' : value }))}
+      onValueChange={(value) => { if (value) setFormData(prev => ({ ...prev, [field]: value === NONE ? '' : value })) }}
     >
       <SelectTrigger id={field}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={NONE}>Seçimi temizle</SelectItem>
-        {list.map(person => (
+        {(formData[field] && !list.includes(formData[field]) ? [...list, formData[field]] : list).map(person => (
           <SelectItem key={person} value={person}>{person}</SelectItem>
         ))}
       </SelectContent>
