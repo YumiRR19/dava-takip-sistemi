@@ -118,7 +118,11 @@ export default function ImportantReminders() {
       await api.importantReminders.delete(reminder.id)
       setReminders(prev => prev.filter(r => r.id !== reminder.id))
       toast({ title: "Başarılı", description: "Önemli hatırlatma silindi." })
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setReminders(prev => prev.filter(r => r.id !== reminder.id))
+        return
+      }
       toast({ title: "Hata", description: "Önemli hatırlatma silinirken bir hata oluştu.", variant: "destructive" })
     }
   }
