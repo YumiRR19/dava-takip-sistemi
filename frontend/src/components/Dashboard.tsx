@@ -12,17 +12,17 @@ import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<DashboardData | null>(() => api.dashboard.peekData() ?? null)
+  const [loading, setLoading] = useState(() => !api.dashboard.peekData())
   const [healthStatus, setHealthStatus] = useState({
     api: true,
     websocket: false,
     database: true
   })
-  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'>('all')
+  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder'>('all')
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<string>('')
-  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
+  const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>(() => api.settingsOptions.peekAll('ilgili_sorumlu') ?? [])
   const { toast } = useToast()
   const navigate = useNavigate()
   const { isConnected, hasChangesForEntity, clearDataChanges, isPollingFallback } = useRealTimeData()
@@ -92,7 +92,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (hasChangesForEntity('client') || hasChangesForEntity('case') || 
-        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution')) {
+        hasChangesForEntity('compensation_letter') || hasChangesForEntity('execution') ||
+        hasChangesForEntity('important_reminder')) {
       loadDashboardData()
       clearDataChanges()
     }
@@ -119,6 +120,7 @@ export default function Dashboard() {
     if (reminder.type === 'case') return `case-${reminder.case_id}`
     if (reminder.type === 'execution') return `execution-${reminder.execution_id}`
     if (reminder.type === 'haciz_reminder') return `haciz_reminder-${reminder.execution_id}`
+    if (reminder.type === 'important_reminder') return `important_reminder-${reminder.important_reminder_id}`
     return `compensation_letter-${reminder.compensation_letter_id}`
   }, [])
 
@@ -298,7 +300,14 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Hatırlatmalar</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Hatırlatmalar
+                  {responsibleFilter !== 'all' && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 border border-blue-200" data-testid="reminder-count">
+                      {filteredReminders.length} hatırlatma
+                    </span>
+                  )}
+                </CardTitle>
                 <CardDescription>
                   {selectedDate
                     ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} için hatırlatmalar`
@@ -339,7 +348,7 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder') => setReminderFilter(value)}>
+                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder') => setReminderFilter(value)}>
                   <SelectTrigger className="w-[200px]">
                     <Filter className="h-4 w-4 text-gray-500 mr-1" />
                     <SelectValue placeholder="Filtre" />
@@ -350,6 +359,7 @@ export default function Dashboard() {
                     <SelectItem value="execution">İcra Takipleri</SelectItem>
                     <SelectItem value="haciz_reminder">Haciz Hatırlatma</SelectItem>
                     <SelectItem value="compensation_letter">Teminat Mektupları</SelectItem>
+                    <SelectItem value="important_reminder">Önemli Hatırlatmalar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -371,6 +381,8 @@ export default function Dashboard() {
                       navigate(`/executions/${reminder.execution_id}/edit`)
                     } else if (reminder.type === 'compensation_letter') {
                       navigate(`/compensation-letters/${reminder.compensation_letter_id}/edit`)
+                    } else if (reminder.type === 'important_reminder') {
+                      navigate(`/important-reminders?edit=${reminder.important_reminder_id}`)
                     }
                   }}
                 >
@@ -423,6 +435,15 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-500 mt-1">Haciz Hatırlatma: {reminder.reminder_text}</p>
                         )}
                       </>
+                    ) : reminder.type === 'important_reminder' ? (
+                      <>
+                        <p className="text-sm font-medium text-purple-700">
+                          <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 border border-purple-200">Önemli Hatırlatma</span>
+                        </p>
+                        {reminder.reminder_text && (
+                          <p className="text-xs text-gray-700 mt-1 whitespace-pre-line">{reminder.reminder_text}</p>
+                        )}
+                      </>
                     ) : (
                       <>
                         <p className="text-sm font-medium text-blue-600">Mahkeme: {reminder.court}</p>
@@ -459,10 +480,10 @@ export default function Dashboard() {
                     {selectedDate
                       ? (reminderFilter === 'all'
                           ? `${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} için hatırlatma bulunmuyor.`
-                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : reminderFilter === 'important_reminder' ? 'Önemli Hatırlatmalar' : 'Teminat Mektupları'} için ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR')} tarihinde hatırlatma bulunmuyor.`)
                       : (reminderFilter === 'all' 
                           ? 'Bugün için hatırlatma bulunmuyor.' 
-                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
+                          : `${reminderFilter === 'case' ? 'Dava Dosyaları' : reminderFilter === 'execution' ? 'İcra Takipleri' : reminderFilter === 'haciz_reminder' ? 'Haciz Hatırlatma' : reminderFilter === 'important_reminder' ? 'Önemli Hatırlatmalar' : 'Teminat Mektupları'} için bugün hatırlatma bulunmuyor.`)
                     }
                   </p>
                   {data.total_cases === 0 && data.total_clients === 0 && (

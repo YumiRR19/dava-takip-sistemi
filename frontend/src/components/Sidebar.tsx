@@ -7,7 +7,8 @@ import {
   X,
   Scale,
   Settings,
-  Mail
+  Mail,
+  Bell
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Dava Dosyaları', href: '/cases', icon: FileText },
   { name: 'İcra Takipleri', href: '/executions', icon: Scale },
   { name: 'Teminat Mektupları', href: '/compensation-letters', icon: Mail },
+  { name: 'Önemli Hatırlatmalar', href: '/important-reminders', icon: Bell },
   { name: 'Müvekkiller', href: '/clients', icon: Users },
   { name: 'Ayarlar', href: '/settings', icon: Settings },
 ]

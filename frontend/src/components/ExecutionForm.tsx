@@ -343,6 +343,7 @@ export default function ExecutionForm() {
                     <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                     <SelectItem value="Davalı">Davalı</SelectItem>
                     <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
+                    <SelectItem value="Ödemeye Niyetli">Ödemeye Niyetli</SelectItem>
                     <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
                   </SelectContent>
                 </Select>

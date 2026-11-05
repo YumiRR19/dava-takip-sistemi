@@ -12,9 +12,9 @@ import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Executions() {
-  const [executions, setExecutions] = useState<Execution[]>([])
-  const [filteredExecutions, setFilteredExecutions] = useState<Execution[]>([])
-  const [loading, setLoading] = useState(true)
+  const [executions, setExecutions] = useState<Execution[]>(() => api.executions.peekAll() ?? [])
+  const [filteredExecutions, setFilteredExecutions] = useState<Execution[]>(() => api.executions.peekAll() ?? [])
+  const [loading, setLoading] = useState(() => !api.executions.peekAll())
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hacizFilter, setHacizFilter] = useState<string>('all')
@@ -131,6 +131,8 @@ export default function Executions() {
         return 'bg-green-300 text-green-900 border-green-300'
       case 'Ödeme Sözü':
         return 'bg-green-700 text-white border-green-700'
+      case 'Ödemeye Niyetli':
+        return 'bg-emerald-200 text-emerald-900 border-emerald-200'
       case 'Bilirkişi':
         return 'bg-yellow-200 text-yellow-900 border-yellow-200'
       case 'Davalı':
@@ -191,6 +193,7 @@ export default function Executions() {
                 <SelectItem value="İcranın Geri Bırakılması">İcranın Geri Bırakılması</SelectItem>
                 <SelectItem value="Davalı">Davalı</SelectItem>
                 <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
+                <SelectItem value="Ödemeye Niyetli">Ödemeye Niyetli</SelectItem>
                 <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
               </SelectContent>
             </Select>

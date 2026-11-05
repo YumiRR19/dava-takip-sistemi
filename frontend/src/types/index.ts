@@ -78,6 +78,7 @@ export interface CaseCreate {
   is_starred?: boolean
   icra_dosya_numarasi?: string
   kanun_yolu?: string | null
+  office_archive_no_auto?: boolean
 }
 
 export interface CaseUpdate {
@@ -128,7 +129,8 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'
+    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder'
+    important_reminder_id?: string
     case_id?: string
     case_title?: string
     case_name?: string
