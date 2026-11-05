@@ -1083,22 +1083,47 @@ def case_status_variants(status: str) -> List[str]:
     return [status]
 
 
-def normalize_court(court: Optional[str]) -> str:
+# Archive numbers run per court type; city, district and court number are ignored.
+COURT_TYPES = [
+    "asliye ticaret", "asliye hukuk", "asliye ceza",
+    "sulh hukuk", "sulh ceza",
+    "icra hukuk", "icra ceza",
+    "çocuk ağır ceza", "ağır ceza",
+    "fikri ve sınai haklar hukuk", "fikri ve sınai haklar ceza",
+    "iş", "aile", "tüketici", "çocuk", "idare", "vergi", "kadastro",
+]
+_COURT_TYPE_TOKENS = sorted((t.split() for t in COURT_TYPES), key=len, reverse=True)
+
+
+def court_type(court: Optional[str]) -> Optional[str]:
     value = (court or "").replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "")
-    return re.sub(r"\s+", "", value)
+    tokens = re.findall(r"[a-zçğıöşüâîû]+", value)
+    found = set()
+    i = 0
+    while i < len(tokens):
+        for t in _COURT_TYPE_TOKENS:
+            if tokens[i:i + len(t)] == t:
+                found.add(" ".join(t))
+                i += len(t)
+                break
+        else:
+            i += 1
+    return found.pop() if len(found) == 1 else None
 
 
 def court_lock_key(court: str) -> int:
-    return zlib.crc32(normalize_court(court).encode("utf-8")) - 2**31
+    return zlib.crc32((court_type(court) or "").encode("utf-8")) - 2**31
 
 
 ARCHIVE_NO_PATTERN = re.compile(r"^\s*(\D*?)\s*(\d+)\s*$")
 
 
 def _same_court_cases(db: Session, court: str):
-    key = normalize_court(court)
-    rows = db.query(CaseDB.court, CaseDB.office_archive_no, CaseDB.created_at).all()
-    return [r for r in rows if key and normalize_court(r.court) == key]
+    key = court_type(court)
+    if not key:
+        return []
+    rows = db.query(CaseDB.court, CaseDB.office_archive_no, CaseDB.created_at).filter(CaseDB.is_deleted == False).all()
+    return [r for r in rows if court_type(r.court) == key]
 
 
 def archive_no_taken(db: Session, court: str, archive_no: Optional[str]) -> bool:
@@ -1117,8 +1142,15 @@ def suggest_office_archive_no(db: Session, court: str):
             parsed.append((r.created_at or datetime.min, prefix, int(m.group(2))))
     if not parsed:
         return None
-    latest_prefix = max(parsed, key=lambda x: x[0])[1]
-    last_number = max(n for _, prefix, n in parsed if prefix.upper() == latest_prefix.upper())
+    # Use the most common format in the group (ties: most recent); number continues from the highest.
+    usage: dict = {}
+    for created, prefix, _ in parsed:
+        count, latest, shown = usage.get(prefix.upper(), (0, datetime.min, prefix))
+        if created >= latest:
+            latest, shown = created, prefix
+        usage[prefix.upper()] = (count + 1, latest, shown)
+    latest_prefix = max(usage.values(), key=lambda u: (u[0], u[1]))[2]
+    last_number = max(n for _, _, n in parsed)
     next_no = str(last_number + 1)
     return {
         "suggestion": f"{latest_prefix} {next_no}" if latest_prefix else next_no,
@@ -1129,7 +1161,7 @@ def suggest_office_archive_no(db: Session, court: str):
 
 @app.get("/api/case-archive-suggestion")
 async def get_case_archive_suggestion(court: str = Query(""), db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    if not normalize_court(court):
+    if not court_type(court):
         return {"suggestion": None}
     return suggest_office_archive_no(db, court) or {"suggestion": None}
 
@@ -1509,6 +1541,26 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
             })
         logger.info(f"Letter reminders: {len(db_compensation_letters)} rows in {time.time()-t4:.3f}s")
         
+        # ── 6b. Important reminders (same records as the Önemli Hatırlatmalar page) ──
+        important_rows = db.query(ImportantReminderDB).filter(
+            ImportantReminderDB.is_deleted == False,
+            ImportantReminderDB.reminder_date.isnot(None),
+            ImportantReminderDB.reminder_date >= date_range_start,
+            ImportantReminderDB.reminder_date <= date_range_end,
+        ).all()
+        for r in important_rows:
+            upcoming_reminders.append({
+                "type": "important_reminder",
+                "important_reminder_id": r.id,
+                "client_name": "",
+                "reminder_date": r.reminder_date.isoformat(),
+                "reminder_text": r.reminder_text,
+                "responsible_person": r.responsible_person,
+                "görevlendiren": r.görevlendiren,
+                "is_starred": bool(r.is_starred),
+                "days_until": (r.reminder_date - today).days
+            })
+
         upcoming_reminders.sort(key=lambda x: x["days_until"])
         
         # ── 7. Status counts (optimized: SQL GROUP BY instead of loading all rows) ──

@@ -129,7 +129,8 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder'
+    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder'
+    important_reminder_id?: string
     case_id?: string
     case_title?: string
     case_name?: string

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Edit, Trash2, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ export default function ImportantReminders() {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
   const { hasChangesForEntity, clearDataChanges } = useRealTimeData()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const ilgiliSorumluList = useMemo(() => mergePersons(options.filter(o => o.category === 'ilgili_sorumlu')), [options])
   const gorevlendirenList = useMemo(() => mergePersons(options.filter(o => o.category === 'gorevlendiren')), [options])
@@ -79,6 +81,14 @@ export default function ImportantReminders() {
     })
     setDialogOpen(true)
   }
+
+  const editId = searchParams.get('edit')
+  useEffect(() => {
+    if (!editId || loading) return
+    const target = reminders.find(r => r.id === editId)
+    if (target) openEdit(target)
+    setSearchParams({}, { replace: true })
+  }, [editId, loading, reminders, setSearchParams])
 
   const handleSave = async () => {
     setSaving(true)
