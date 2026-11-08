@@ -38,6 +38,7 @@ export default function ExecutionForm() {
     haciz_reminder_date: '',
     haciz_reminder_text: '',
     related_case_id: '',
+    talimat_icra_dosya_no: '',
     responsible_person: '',
     görevlendiren: '',
     is_starred: false
@@ -99,6 +100,7 @@ export default function ExecutionForm() {
         haciz_reminder_date: executionData.haciz_reminder_date ? new Date(executionData.haciz_reminder_date).toISOString().split('T')[0] : '',
         haciz_reminder_text: executionData.haciz_reminder_text || '',
         related_case_id: executionData.related_case_id || '',
+        talimat_icra_dosya_no: executionData.talimat_icra_dosya_no || '',
         responsible_person: executionData.responsible_person || '',
         görevlendiren: executionData.görevlendiren || '',
         is_starred: executionData.is_starred || false
@@ -144,6 +146,7 @@ export default function ExecutionForm() {
       haciz_reminder_date: formData.haciz_reminder_date || null,
       haciz_reminder_text: formData.haciz_reminder_text || undefined,
       related_case_id: formData.related_case_id || undefined,
+      talimat_icra_dosya_no: formData.talimat_icra_dosya_no || null,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred
@@ -345,6 +348,9 @@ export default function ExecutionForm() {
                     <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
                     <SelectItem value="Ödemeye Niyetli">Ödemeye Niyetli</SelectItem>
                     <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+                    <SelectItem value="Rehin Açığı">Rehin Açığı</SelectItem>
+                    <SelectItem value="İade">İade</SelectItem>
+                    <SelectItem value="Varlık Satışı">Varlık Satışı</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -370,8 +376,22 @@ export default function ExecutionForm() {
                     <SelectItem value="İhtiyat-İ Tedbir">İhtiyat-İ Tedbir</SelectItem>
                     <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">Adi Kira ve Hasılat Kirası – Örnek 13</SelectItem>
                     <SelectItem value="Tahliye – Örnek 14">Tahliye – Örnek 14</SelectItem>
+                    <SelectItem value="Rehin Açığı Belgesi">Rehin Açığı Belgesi</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 md:col-start-2">
+                <Label htmlFor="talimat_icra_dosya_no">Talimat İcra Dosya No</Label>
+                <Input
+                  id="talimat_icra_dosya_no"
+                  name="talimat_icra_dosya_no"
+                  value={formData.talimat_icra_dosya_no || ''}
+                  onChange={(e) => handleChange('talimat_icra_dosya_no', e.target.value)}
+                  placeholder="Talimat icra dosya numarasını girin"
+                />
               </div>
             </div>
 

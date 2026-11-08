@@ -233,6 +233,7 @@ export interface Execution {
   haciz_reminder_date?: string
   haciz_reminder_text?: string
   related_case_id?: string
+  talimat_icra_dosya_no?: string | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -258,6 +259,7 @@ export interface ExecutionCreate {
   haciz_reminder_date?: string | null
   haciz_reminder_text?: string
   related_case_id?: string
+  talimat_icra_dosya_no?: string | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -279,6 +281,7 @@ export interface ExecutionUpdate {
   haciz_reminder_date?: string | null
   haciz_reminder_text?: string
   related_case_id?: string
+  talimat_icra_dosya_no?: string | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean

@@ -195,6 +195,9 @@ export default function Executions() {
                 <SelectItem value="Ödeme Sözü">Ödeme Sözü</SelectItem>
                 <SelectItem value="Ödemeye Niyetli">Ödemeye Niyetli</SelectItem>
                 <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
+                <SelectItem value="Rehin Açığı">Rehin Açığı</SelectItem>
+                <SelectItem value="İade">İade</SelectItem>
+                <SelectItem value="Varlık Satışı">Varlık Satışı</SelectItem>
               </SelectContent>
             </Select>
 
@@ -219,6 +222,7 @@ export default function Executions() {
                 <SelectItem value="İhtiyat-İ Tedbir">İhtiyat-İ Tedbir</SelectItem>
                 <SelectItem value="Adi Kira ve Hasılat Kirası – Örnek 13">Adi Kira ve Hasılat Kirası – Örnek 13</SelectItem>
                 <SelectItem value="Tahliye – Örnek 14">Tahliye – Örnek 14</SelectItem>
+                <SelectItem value="Rehin Açığı Belgesi">Rehin Açığı Belgesi</SelectItem>
               </SelectContent>
             </Select>
             <Select value={hacizFilter} onValueChange={setHacizFilter}>

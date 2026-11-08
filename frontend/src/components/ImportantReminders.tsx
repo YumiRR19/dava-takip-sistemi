@@ -259,12 +259,12 @@ export default function ImportantReminders() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="responsible_person">İlgili/Sorumlu Seç</Label>
-              {personSelect('responsible_person', ilgiliSorumluList, 'İlgili/Sorumlu seçin')}
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="görevlendiren">Görevlendiren Seç</Label>
               {personSelect('görevlendiren', gorevlendirenList, 'Görevlendiren seçin')}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="responsible_person">İlgili/Sorumlu Seç</Label>
+              {personSelect('responsible_person', ilgiliSorumluList, 'İlgili/Sorumlu seçin')}
             </div>
             <div className="space-y-2">
               <Label htmlFor="important_reminder_date">Önemli Hatırlatma Tarihi</Label>

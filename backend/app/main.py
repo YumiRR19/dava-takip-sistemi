@@ -116,7 +116,7 @@ async def startup_event():
         from sqlalchemy import text as text3
         SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
         with SL3() as db:
-            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR')]:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR')]:
                 try:
                     db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
                     print(f"Column {col_name} already exists in executions")
@@ -385,6 +385,7 @@ class Execution(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -409,6 +410,7 @@ class ExecutionCreate(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -430,6 +432,7 @@ class ExecutionUpdate(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: Optional[bool] = None
@@ -626,6 +629,7 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         haciz_reminder_date=db_execution.haciz_reminder_date,
         haciz_reminder_text=db_execution.haciz_reminder_text,
         related_case_id=db_execution.related_case_id,
+        talimat_icra_dosya_no=db_execution.talimat_icra_dosya_no,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
         is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
@@ -1764,6 +1768,7 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         haciz_reminder_date=execution.haciz_reminder_date,
         haciz_reminder_text=execution.haciz_reminder_text,
         related_case_id=execution.related_case_id,
+        talimat_icra_dosya_no=execution.talimat_icra_dosya_no,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
         is_starred=execution.is_starred,

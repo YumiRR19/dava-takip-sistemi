@@ -129,6 +129,7 @@ class ExecutionDB(Base):
     haciz_reminder_date = Column(Date, nullable=True)
     haciz_reminder_text = Column(Text, nullable=True)
     related_case_id = Column(String, nullable=True)
+    talimat_icra_dosya_no = Column(String, nullable=True)
     responsible_person = Column(String, nullable=True)
     görevlendiren = Column("gÃ¶revlendiren", String, nullable=True)
     is_starred = Column(Boolean, default=False, nullable=False, server_default="false")
