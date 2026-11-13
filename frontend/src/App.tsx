@@ -14,6 +14,7 @@ import Executions from './components/Executions'
 import ExecutionForm from './components/ExecutionForm'
 import Login from './components/Login'
 import Settings from './components/Settings'
+import ImportantReminders from './components/ImportantReminders'
 import './App.css'
 
 function AppContent() {
@@ -44,6 +45,7 @@ function AppContent() {
             <Route path="/compensation-letters" element={<CompensationLetters />} />
             <Route path="/compensation-letters/new" element={<CompensationLetterForm />} />
             <Route path="/compensation-letters/:id/edit" element={<CompensationLetterForm />} />
+            <Route path="/important-reminders" element={<ImportantReminders />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>

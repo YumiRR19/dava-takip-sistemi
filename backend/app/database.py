@@ -129,8 +129,23 @@ class ExecutionDB(Base):
     haciz_reminder_date = Column(Date, nullable=True)
     haciz_reminder_text = Column(Text, nullable=True)
     related_case_id = Column(String, nullable=True)
+    talimat_icra_dosya_no = Column(String, nullable=True)
     responsible_person = Column(String, nullable=True)
     görevlendiren = Column("gÃ¶revlendiren", String, nullable=True)
+    is_starred = Column(Boolean, default=False, nullable=False, server_default="false")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    version = Column(Integer, default=1)
+    is_deleted = Column(Boolean, default=False)
+
+class ImportantReminderDB(Base):
+    __tablename__ = "important_reminders"
+
+    id = Column(String, primary_key=True)
+    responsible_person = Column(String, nullable=True)
+    görevlendiren = Column("gorevlendiren", String, nullable=True)
+    reminder_date = Column(Date, nullable=True)
+    reminder_text = Column(Text, nullable=True)
     is_starred = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

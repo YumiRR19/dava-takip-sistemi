@@ -12,11 +12,13 @@ import os
 import asyncio
 import threading
 import time
+import re
+import zlib
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
 from sqlalchemy import text, Index, ForeignKey, or_, func as sql_func
 import logging
-from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB, engine
+from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB, ImportantReminderDB, engine
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -114,7 +116,7 @@ async def startup_event():
         from sqlalchemy import text as text3
         SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
         with SL3() as db:
-            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR')]:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR')]:
                 try:
                     db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
                     print(f"Column {col_name} already exists in executions")
@@ -282,6 +284,7 @@ class CaseCreate(BaseModel):
     görevlendiren: Optional[str] = None
     icra_dosya_numarasi: Optional[str] = None
     kanun_yolu: Optional[str] = None
+    office_archive_no_auto: Optional[bool] = False
     is_starred: bool = False
 
 class CaseUpdate(BaseModel):
@@ -382,6 +385,7 @@ class Execution(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -406,6 +410,7 @@ class ExecutionCreate(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -427,6 +432,7 @@ class ExecutionUpdate(BaseModel):
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
+    talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: Optional[bool] = None
@@ -623,6 +629,7 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         haciz_reminder_date=db_execution.haciz_reminder_date,
         haciz_reminder_text=db_execution.haciz_reminder_text,
         related_case_id=db_execution.related_case_id,
+        talimat_icra_dosya_no=db_execution.talimat_icra_dosya_no,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
         is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
@@ -1065,6 +1072,105 @@ async def delete_client(client_id: str, db: Session = Depends(get_db), token: st
     
     return {"message": "Client deleted successfully"}
 
+
+CASE_STATUS_ALIASES = {
+    "Derdest/Gerekçeli Karar Bekleniyor": ["Derdest/Gerekli Karar Bekleniyor"],
+    "Karar Verilmesine Yer Olmadığına": ["Karar verilmesine yer olmadığına karar verilmiştir"],
+    "Kısmen kabul Kısmen red": ["Kısmen Kabul Kısmen Red"],
+    "Açılmamış Sayılma": ["Açıklanmamış Sayılma"],
+}
+
+
+def case_status_variants(status: str) -> List[str]:
+    for canonical, legacy in CASE_STATUS_ALIASES.items():
+        if status == canonical or status in legacy:
+            return [canonical, *legacy]
+    return [status]
+
+
+# Archive numbers run per court type; city, district and court number are ignored.
+COURT_TYPES = [
+    "asliye ticaret", "asliye hukuk", "asliye ceza",
+    "sulh hukuk", "sulh ceza",
+    "icra hukuk", "icra ceza",
+    "çocuk ağır ceza", "ağır ceza",
+    "fikri ve sınai haklar hukuk", "fikri ve sınai haklar ceza",
+    "iş", "aile", "tüketici", "çocuk", "idare", "vergi", "kadastro",
+]
+_COURT_TYPE_TOKENS = sorted((t.split() for t in COURT_TYPES), key=len, reverse=True)
+
+
+def court_type(court: Optional[str]) -> Optional[str]:
+    value = (court or "").replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "")
+    tokens = re.findall(r"[a-zçğıöşüâîû]+", value)
+    found = set()
+    i = 0
+    while i < len(tokens):
+        for t in _COURT_TYPE_TOKENS:
+            if tokens[i:i + len(t)] == t:
+                found.add(" ".join(t))
+                i += len(t)
+                break
+        else:
+            i += 1
+    return found.pop() if len(found) == 1 else None
+
+
+def court_lock_key(court: str) -> int:
+    return zlib.crc32((court_type(court) or "").encode("utf-8")) - 2**31
+
+
+ARCHIVE_NO_PATTERN = re.compile(r"^\s*(\D*?)\s*(\d+)\s*$")
+
+
+def _same_court_cases(db: Session, court: str):
+    key = court_type(court)
+    if not key:
+        return []
+    rows = db.query(CaseDB.court, CaseDB.office_archive_no, CaseDB.created_at).filter(CaseDB.is_deleted == False).all()
+    return [r for r in rows if court_type(r.court) == key]
+
+
+def archive_no_taken(db: Session, court: str, archive_no: Optional[str]) -> bool:
+    if not archive_no or not archive_no.strip():
+        return True
+    wanted = re.sub(r"\s+", " ", archive_no.strip()).upper()
+    return any(re.sub(r"\s+", " ", (r.office_archive_no or "").strip()).upper() == wanted for r in _same_court_cases(db, court))
+
+
+def suggest_office_archive_no(db: Session, court: str):
+    parsed = []
+    for r in _same_court_cases(db, court):
+        m = ARCHIVE_NO_PATTERN.match(r.office_archive_no or "")
+        if m:
+            prefix = re.sub(r"\s+", " ", m.group(1).strip())
+            parsed.append((r.created_at or datetime.min, prefix, int(m.group(2))))
+    if not parsed:
+        return None
+    # Use the most common format in the group (ties: most recent); number continues from the highest.
+    usage: dict = {}
+    for created, prefix, _ in parsed:
+        count, latest, shown = usage.get(prefix.upper(), (0, datetime.min, prefix))
+        if created >= latest:
+            latest, shown = created, prefix
+        usage[prefix.upper()] = (count + 1, latest, shown)
+    latest_prefix = max(usage.values(), key=lambda u: (u[0], u[1]))[2]
+    last_number = max(n for _, _, n in parsed)
+    next_no = str(last_number + 1)
+    return {
+        "suggestion": f"{latest_prefix} {next_no}" if latest_prefix else next_no,
+        "last_number": last_number,
+        "prefix": latest_prefix,
+    }
+
+
+@app.get("/api/case-archive-suggestion")
+async def get_case_archive_suggestion(court: str = Query(""), db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    if not court_type(court):
+        return {"suggestion": None}
+    return suggest_office_archive_no(db, court) or {"suggestion": None}
+
+
 @app.post("/api/cases", response_model=Case)
 async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
     case_id = str(uuid.uuid4())
@@ -1077,6 +1183,14 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         db_client = db.query(ClientDB).filter(ClientDB.id == case.client_id, ClientDB.is_deleted == False).first()
         if db_client:
             resolved_client_name = db_client.name
+    
+    office_archive_no = case.office_archive_no
+    if case.office_archive_no_auto and case.court:
+        # Serialize automatic numbering per court so concurrent creates get distinct numbers.
+        db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": court_lock_key(case.court)})
+        suggestion = suggest_office_archive_no(db, case.court)
+        if suggestion and archive_no_taken(db, case.court, office_archive_no):
+            office_archive_no = suggestion["suggestion"]
     
     if not resolved_client_name:
         raise HTTPException(status_code=400, detail="Client name is required")
@@ -1097,7 +1211,7 @@ async def create_case(case: CaseCreate, db: Session = Depends(get_db), token: st
         start_date=case.start_date,
         next_hearing_date=case.next_hearing_date,
         reminder_date=case.reminder_date,
-        office_archive_no=case.office_archive_no,
+        office_archive_no=office_archive_no,
         responsible_person=case.responsible_person,
         görevlendiren=case.görevlendiren,
         icra_dosya_numarasi=case.icra_dosya_numarasi,
@@ -1137,7 +1251,7 @@ async def get_cases(
 ):
     db_query = db.query(CaseDB).filter(CaseDB.is_deleted == False)
     if status:
-        db_query = db_query.filter(CaseDB.status == status)
+        db_query = db_query.filter(CaseDB.status.in_(case_status_variants(status)))
     if responsible_person:
         db_query = db_query.filter(CaseDB.responsible_person == responsible_person)
     if görevlendiren:
@@ -1432,6 +1546,26 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
             })
         logger.info(f"Letter reminders: {len(db_compensation_letters)} rows in {time.time()-t4:.3f}s")
         
+        # ── 6b. Important reminders (same records as the Önemli Hatırlatmalar page) ──
+        important_rows = db.query(ImportantReminderDB).filter(
+            ImportantReminderDB.is_deleted == False,
+            ImportantReminderDB.reminder_date.isnot(None),
+            ImportantReminderDB.reminder_date >= date_range_start,
+            ImportantReminderDB.reminder_date <= date_range_end,
+        ).all()
+        for r in important_rows:
+            upcoming_reminders.append({
+                "type": "important_reminder",
+                "important_reminder_id": r.id,
+                "client_name": "",
+                "reminder_date": r.reminder_date.isoformat(),
+                "reminder_text": r.reminder_text,
+                "responsible_person": r.responsible_person,
+                "görevlendiren": r.görevlendiren,
+                "is_starred": bool(r.is_starred),
+                "days_until": (r.reminder_date - today).days
+            })
+
         upcoming_reminders.sort(key=lambda x: x["days_until"])
         
         # ── 7. Status counts (optimized: SQL GROUP BY instead of loading all rows) ──
@@ -1635,6 +1769,7 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         haciz_reminder_date=execution.haciz_reminder_date,
         haciz_reminder_text=execution.haciz_reminder_text,
         related_case_id=execution.related_case_id,
+        talimat_icra_dosya_no=execution.talimat_icra_dosya_no,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
         is_starred=execution.is_starred,
@@ -1744,6 +1879,135 @@ async def delete_execution(execution_id: str, db: Session = Depends(get_db), tok
     
     return {"message": "Execution deleted successfully"}
 
+class ImportantReminder(BaseModel):
+    id: str
+    responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    is_starred: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    version: int = 1
+
+class ImportantReminderCreate(BaseModel):
+    responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    is_starred: bool = False
+
+class ImportantReminderUpdate(BaseModel):
+    responsible_person: Optional[str] = None
+    görevlendiren: Optional[str] = None
+    reminder_date: Optional[date] = None
+    reminder_text: Optional[str] = None
+    is_starred: Optional[bool] = None
+    version: Optional[int] = None
+
+
+def db_to_pydantic_important_reminder(r: ImportantReminderDB) -> ImportantReminder:
+    return ImportantReminder(
+        id=r.id,
+        responsible_person=r.responsible_person,
+        görevlendiren=r.görevlendiren,
+        reminder_date=r.reminder_date,
+        reminder_text=r.reminder_text,
+        is_starred=bool(r.is_starred),
+        created_at=r.created_at,
+        updated_at=r.updated_at,
+        version=r.version or 1,
+    )
+
+
+@app.get("/api/important-reminders", response_model=List[ImportantReminder])
+async def get_important_reminders(
+    responsible_person: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(verify_token)
+):
+    db_query = db.query(ImportantReminderDB).filter(ImportantReminderDB.is_deleted == False)
+    if responsible_person:
+        db_query = db_query.filter(ImportantReminderDB.responsible_person == responsible_person)
+    rows = db_query.order_by(ImportantReminderDB.reminder_date.asc().nullslast(), ImportantReminderDB.created_at.desc()).all()
+    return [db_to_pydantic_important_reminder(r) for r in rows]
+
+
+@app.get("/api/important-reminders/{reminder_id}", response_model=ImportantReminder)
+async def get_important_reminder(reminder_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    r = db.query(ImportantReminderDB).filter(ImportantReminderDB.id == reminder_id, ImportantReminderDB.is_deleted == False).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Important reminder not found")
+    return db_to_pydantic_important_reminder(r)
+
+
+@app.post("/api/important-reminders", response_model=ImportantReminder)
+async def create_important_reminder(reminder: ImportantReminderCreate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    reminder_id = str(uuid.uuid4())
+    now = datetime.now()
+    r = ImportantReminderDB(
+        id=reminder_id,
+        responsible_person=reminder.responsible_person or None,
+        görevlendiren=reminder.görevlendiren or None,
+        reminder_date=reminder.reminder_date,
+        reminder_text=reminder.reminder_text,
+        is_starred=reminder.is_starred,
+        created_at=now,
+        updated_at=now,
+        version=1,
+        is_deleted=False,
+    )
+    try:
+        db.add(r)
+        db.commit()
+        db.refresh(r)
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating important reminder: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create important reminder")
+    result = db_to_pydantic_important_reminder(r)
+    await manager.broadcast_data_change("create", "important_reminder", reminder_id, result.dict())
+    return result
+
+
+@app.put("/api/important-reminders/{reminder_id}", response_model=ImportantReminder)
+async def update_important_reminder(reminder_id: str, reminder_update: ImportantReminderUpdate, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    r = db.query(ImportantReminderDB).filter(ImportantReminderDB.id == reminder_id, ImportantReminderDB.is_deleted == False).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Important reminder not found")
+    if reminder_update.version is not None and r.version != reminder_update.version:
+        raise HTTPException(status_code=409, detail="Version conflict. Please refresh and try again.")
+    for field, value in reminder_update.dict(exclude_unset=True, exclude={"version"}).items():
+        if field in ("responsible_person", "görevlendiren") and value == "":
+            value = None
+        setattr(r, field, value)
+    r.updated_at = datetime.now()
+    r.version = (r.version or 1) + 1
+    try:
+        db.commit()
+        db.refresh(r)
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating important reminder {reminder_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update important reminder")
+    result = db_to_pydantic_important_reminder(r)
+    await manager.broadcast_data_change("update", "important_reminder", reminder_id, result.dict())
+    return result
+
+
+@app.delete("/api/important-reminders/{reminder_id}")
+async def delete_important_reminder(reminder_id: str, db: Session = Depends(get_db), token: str = Depends(verify_token)):
+    r = db.query(ImportantReminderDB).filter(ImportantReminderDB.id == reminder_id, ImportantReminderDB.is_deleted == False).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Important reminder not found")
+    r.is_deleted = True
+    r.updated_at = datetime.now()
+    r.version = (r.version or 1) + 1
+    db.commit()
+    await manager.broadcast_data_change("delete", "important_reminder", reminder_id, {})
+    return {"message": "Important reminder deleted successfully"}
+
+
 class ToggleStarRequest(BaseModel):
     entity_type: str  # "case", "execution", "compensation_letter"
     entity_id: str
@@ -1756,6 +2020,8 @@ async def toggle_star(request: ToggleStarRequest, db: Session = Depends(get_db),
         db_item = db.query(ExecutionDB).filter(ExecutionDB.id == request.entity_id, ExecutionDB.is_deleted == False).first()
     elif request.entity_type == "compensation_letter":
         db_item = db.query(CompensationLetterDB).filter(CompensationLetterDB.id == request.entity_id, CompensationLetterDB.is_deleted == False).first()
+    elif request.entity_type == "important_reminder":
+        db_item = db.query(ImportantReminderDB).filter(ImportantReminderDB.id == request.entity_id, ImportantReminderDB.is_deleted == False).first()
     else:
         raise HTTPException(status_code=400, detail="Invalid entity type")
     

@@ -9,12 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast'
 import { api, Case, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
+import { CASE_STATUS_OPTIONS, KANUN_YOLU_OPTIONS, toTurkishUpper } from '@/lib/case-options'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
 import { useDebouncedSearch } from '@/hooks/use-debounced-search'
 
 export default function Cases() {
-  const [cases, setCases] = useState<Case[]>([])
-  const [loading, setLoading] = useState(true)
+  const [cases, setCases] = useState<Case[]>(() => api.cases.peekAll() ?? [])
+  const [loading, setLoading] = useState(() => !api.cases.peekAll())
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('')
@@ -150,20 +151,9 @@ export default function Cases() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Durumlar</SelectItem>
-            <SelectItem value="Beraat">Beraat</SelectItem>
-            <SelectItem value="Ceza">Ceza</SelectItem>
-            <SelectItem value="Kısmen Kabul Kısmen Red">Kısmen Kabul Kısmen Red</SelectItem>
-            <SelectItem value="Kabul">Kabul</SelectItem>
-            <SelectItem value="Red">Red</SelectItem>
-            <SelectItem value="Derdest">Derdest</SelectItem>
-            <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-            <SelectItem value="Gerekli Karar Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-            <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
-            <SelectItem value="Konkordato">Konkordato</SelectItem>
-            <SelectItem value="Derdest/Bilirkişi">Derdest/Bilirkişi</SelectItem>
-            <SelectItem value="Derdest/Gerekli Karar Bekleniyor">Derdest/Gerekli Karar Bekleniyor</SelectItem>
-            <SelectItem value="İşlemden kaldırma">İşlemden kaldırma</SelectItem>
-            <SelectItem value="Karar verilmesine yer olmadığına karar verilmiştir">Karar verilmesine yer olmadığına karar verilmiştir</SelectItem>
+            {CASE_STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={kanunYoluFilter} onValueChange={setKanunYoluFilter}>
@@ -173,8 +163,9 @@ export default function Cases() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Kanun Yolları</SelectItem>
-            <SelectItem value="İstinaf">İstinaf</SelectItem>
-            <SelectItem value="Temyiz">Temyiz</SelectItem>
+            {KANUN_YOLU_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={responsiblePersonFilter} onValueChange={setResponsiblePersonFilter}>
