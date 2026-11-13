@@ -12,7 +12,7 @@ export const CASE_STATUS_OPTIONS = [
   'Derdest/Gerekçeli Karar Bekleniyor',
   'İşlemden kaldırma',
   'Karar Verilmesine Yer Olmadığına',
-  'Açıklanmamış Sayılma',
+  'Açılmamış Sayılma',
   'Yetkisizlik Kararı',
   'Görevsizlik Kararı',
 ]
@@ -22,6 +22,7 @@ export const LEGACY_CASE_STATUS_ALIASES: Record<string, string> = {
   'Derdest/Gerekli Karar Bekleniyor': 'Derdest/Gerekçeli Karar Bekleniyor',
   'Karar verilmesine yer olmadığına karar verilmiştir': 'Karar Verilmesine Yer Olmadığına',
   'Kısmen Kabul Kısmen Red': 'Kısmen kabul Kısmen red',
+  'Açıklanmamış Sayılma': 'Açılmamış Sayılma',
 }
 
 export const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz']

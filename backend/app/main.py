@@ -1077,6 +1077,7 @@ CASE_STATUS_ALIASES = {
     "Derdest/Gerekçeli Karar Bekleniyor": ["Derdest/Gerekli Karar Bekleniyor"],
     "Karar Verilmesine Yer Olmadığına": ["Karar verilmesine yer olmadığına karar verilmiştir"],
     "Kısmen kabul Kısmen red": ["Kısmen Kabul Kısmen Red"],
+    "Açılmamış Sayılma": ["Açıklanmamış Sayılma"],
 }
 
 

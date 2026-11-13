@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { api, Client, Case, CaseSearchParams } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { normalizeCaseStatus } from '@/lib/case-options'
 
 export default function CaseSearch() {
   const [loading, setLoading] = useState(false)
@@ -552,7 +553,7 @@ export default function CaseSearch() {
                       </TableCell>
                       <TableCell>
                         <Badge className="text-xs">
-                          {case_.status}
+                          {normalizeCaseStatus(case_.status)}
                         </Badge>
                       </TableCell>
                     </TableRow>

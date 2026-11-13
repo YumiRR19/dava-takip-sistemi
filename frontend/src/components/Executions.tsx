@@ -137,6 +137,12 @@ export default function Executions() {
         return 'bg-yellow-200 text-yellow-900 border-yellow-200'
       case 'Davalı':
         return 'bg-teal-400 text-white border-teal-400'
+      case 'Rehin Açığı':
+        return 'bg-red-600 text-white border-red-600'
+      case 'İade':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'Varlık Satışı':
+        return 'bg-red-950 text-white border-red-950'
       default:
         return 'bg-black text-white border-black'
     }
