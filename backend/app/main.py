@@ -146,13 +146,15 @@ async def startup_event():
                 kind = classify_legacy_haciz_reminder(legacy_text)
                 if not kind:
                     continue
-                conn.execute(text_mk(
+                result = conn.execute(text_mk(
                     f"UPDATE executions SET {kind}_reminder_date = haciz_reminder_date, "
                     f"{kind}_reminder_text = haciz_reminder_text, "
                     "haciz_reminder_date = NULL, haciz_reminder_text = NULL, "
-                    "version = COALESCE(version, 1) + 1 WHERE id = :id"
-                ), {"id": row_id})
-                moved[kind] += 1
+                    "version = COALESCE(version, 1) + 1 WHERE id = :id "
+                    "AND haciz_reminder_text = :legacy_text "
+                    f"AND {kind}_reminder_date IS NULL AND {kind}_reminder_text IS NULL"
+                ), {"id": row_id, "legacy_text": legacy_text})
+                moved[kind] += result.rowcount
             print(f"Legacy M.K/Haciz Koruma reminders moved: {moved}")
     except Exception as mk_migration_error:
         print(f"M.K/Haciz Koruma migration error: {mk_migration_error}")
