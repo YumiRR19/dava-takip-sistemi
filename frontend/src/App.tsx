@@ -26,7 +26,7 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex flex-col lg:flex-row h-screen bg-gray-100">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
