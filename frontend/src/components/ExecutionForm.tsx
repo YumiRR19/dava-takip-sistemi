@@ -15,6 +15,17 @@ import { useFormAutosave } from '@/hooks/use-form-autosave'
 import { cn } from '@/lib/utils'
 import { EmojiTextarea } from '@/components/EmojiTextarea'
 
+const EXECUTION_REMINDER_TEXT_PRESETS = [
+  'Ödeme emri /İcra emri hazırlandı mı?',
+  'Tebligat gönderildi mi?',
+  'Tebligat kontrol',
+  'Kesinleştirme talebi gönder',
+  'Kesinleştirme sonrası sorgu yap',
+  'Tebligat iade yeni tebligat gönder',
+  'Taktiyat talebi gönder',
+  'Banka haczi gönder',
+]
+
 export default function ExecutionForm() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -491,41 +502,22 @@ export default function ExecutionForm() {
             {/* Full-width: İşlem Hatırlatma Metni (preset selection + free text) */}
             <div className="space-y-2">
               <Label htmlFor="reminder_text">İşlem Hatırlatma Metni</Label>
-              <div className="border rounded-md p-3 space-y-2 bg-white dark:bg-gray-950">
-                {[
-                  'Ödeme emri /İcra emri hazırlandı mı?',
-                  'Tebligat gönderildi mi?',
-                  'Tebligat kontrol',
-                  'Kesinleştirme talebi gönder',
-                  'Kesinleştirme sonrası sorgu yap',
-                  'Tebligat iade yeni tebligat gönder',
-                  'Taktiyat talebi gönder',
-                  'Banka haczi gönder',
-                ].map((option) => {
-                  const lines = (formData.reminder_text || '').split('\n').map(l => l.trim()).filter(Boolean)
-                  const isChecked = lines.includes(option)
-                  return (
-                    <label key={option} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 rounded p-1">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          const currentLines = (formData.reminder_text || '').split('\n').map(l => l.trim()).filter(Boolean)
-                          let newLines: string[]
-                          if (isChecked) {
-                            newLines = currentLines.filter(l => l !== option)
-                          } else {
-                            newLines = [...currentLines, option]
-                          }
-                          handleChange('reminder_text', newLines.join('\n'))
-                        }}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <span className="text-sm">{option}</span>
-                    </label>
-                  )
-                })}
-              </div>
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  const current = formData.reminder_text || ''
+                  handleChange('reminder_text', current.trim() ? `${current.replace(/\s+$/, '')}\n${value}` : value)
+                }}
+              >
+                <SelectTrigger aria-label="Hazır işlem hatırlatma metni">
+                  <SelectValue placeholder="Hazır hatırlatma metni seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXECUTION_REMINDER_TEXT_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>{preset}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <EmojiTextarea
                 id="reminder_text"
                 name="reminder_text"

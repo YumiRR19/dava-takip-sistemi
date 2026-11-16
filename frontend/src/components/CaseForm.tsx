@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { EmojiTextarea } from '@/components/EmojiTextarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
@@ -501,11 +501,11 @@ export default function CaseForm() {
                   ))}
                 </SelectContent>
               </Select>
-              <Textarea
+              <EmojiTextarea
                 id="description"
                 name="description"
                 value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
+                onValueChange={(value) => handleChange('description', value)}
                 placeholder="Dava hakkında detaylı açıklama girin"
                 rows={4}
               />
@@ -513,11 +513,11 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="icra_dosya_numarasi">Dava ile ilgili icra dosya numarası</Label>
-              <Textarea
+              <EmojiTextarea
                 id="icra_dosya_numarasi"
                 name="icra_dosya_numarasi"
                 value={formData.icra_dosya_numarasi}
-                onChange={(e) => handleChange('icra_dosya_numarasi', e.target.value)}
+                onValueChange={(value) => handleChange('icra_dosya_numarasi', value)}
                 placeholder="İlgili icra dosya numarasını girin (her satıra bir numara yazabilirsiniz)"
                 rows={3}
               />
@@ -525,11 +525,11 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="notes">Özel Not</Label>
-              <Textarea
+              <EmojiTextarea
                 id="notes"
                 name="notes"
                 value={formData.notes}
-                onChange={(e) => handleChange('notes', e.target.value)}
+                onValueChange={(value) => handleChange('notes', value)}
                 placeholder="Dava ile ilgili özel notlarınızı buraya yazabilirsiniz"
                 rows={3}
               />

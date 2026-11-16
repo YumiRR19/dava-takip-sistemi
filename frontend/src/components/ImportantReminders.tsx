@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { EmojiTextarea } from '@/components/EmojiTextarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, ApiError, ImportantReminder, SettingsOption } from '@/lib/api'
@@ -277,10 +277,10 @@ export default function ImportantReminders() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="important_reminder_text">Önemli Hatırlatma Metni</Label>
-              <Textarea
+              <EmojiTextarea
                 id="important_reminder_text"
                 value={formData.reminder_text}
-                onChange={(e) => setFormData(prev => ({ ...prev, reminder_text: e.target.value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, reminder_text: value }))}
                 placeholder="Önemli hatırlatma metnini girin"
                 rows={4}
               />

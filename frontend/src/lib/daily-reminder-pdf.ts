@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { DashboardData } from '@/types'
+import { EMOJI_NAMES } from '@/lib/emojis'
 
 export type DashboardReminder = DashboardData['upcoming_reminders'][number]
 
@@ -17,23 +18,19 @@ const TYPE_ORDER: DashboardReminder['type'][] = [
   'case', 'execution', 'haciz_koruma_reminder', 'mk_reminder', 'haciz_reminder', 'compensation_letter', 'important_reminder',
 ]
 
-const EMOJI_TEXT: Record<string, string> = {
-  '✅': '[Tamam]', '❌': '[Hayır]', '❗': '[!]', '❓': '[?]', '⚠️': '[Dikkat]', '📌': '[Not]', '📍': '[Konum]', '⭐': '[Yıldız]',
-  '📅': '[Takvim]', '⏰': '[Saat]', '⌛': '[Süre]', '🔔': '[Hatırlatma]', '📞': '[Telefon]', '📧': '[E-posta]', '💬': '[Mesaj]', '📝': '[Not]',
-  '📄': '[Belge]', '📁': '[Dosya]', '📎': '[Ek]', '🔍': '[İncele]', '⚖️': '[Hukuk]', '🏛️': '[Mahkeme]', '🏦': '[Banka]', '💰': '[Para]',
-  '🚗': '[Araç]', '🏠': '[Ev]', '🔴': '[Kırmızı]', '🟠': '[Turuncu]', '🟡': '[Sarı]', '🟢': '[Yeşil]', '🔵': '[Mavi]', '➡️': '->',
-  '👍': '[Olumlu]', '👎': '[Olumsuz]', '🙂': ':)', '😊': ':)', '🙏': '[Rica]', '👏': '[Tebrik]', '🔥': '[Acil]', '💡': '[Fikir]',
-}
+const EMOJI_TEXT: Record<string, string> = Object.fromEntries(
+  Object.entries(EMOJI_NAMES).map(([emoji, name]) => [emoji, /^[\p{L}]/u.test(name) ? `[${name}]` : name])
+)
 
 // The embedded font has no color-emoji glyphs; picker emojis become readable words, other emojis are dropped.
 function toPdfText(value: string): string {
   let out = value
-  for (const [emoji, text] of Object.entries(EMOJI_TEXT)) {
+  for (const [emoji, text] of Object.entries(EMOJI_TEXT).sort((x, y) => y[0].length - x[0].length)) {
     out = out.split(emoji).join(text)
     const bare = emoji.replace('\uFE0F', '')
     if (bare !== emoji) out = out.split(bare).join(text)
   }
-  return out.replace(/[\u{1F000}-\u{1FFFF}]|\uFE0F|\u200D/gu, '')
+  return out.replace(/[\u{1F000}-\u{1FFFF}]|[\u2600-\u27BF]|[\u2B00-\u2BFF]|\uFE0F|\u200D/gu, '')
 }
 
 let fontPromise: Promise<{ regular: string; bold: string }> | null = null
