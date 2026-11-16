@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { EmojiTextarea } from '@/components/EmojiTextarea'
 import { api, ClientCreate, ClientUpdate } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
@@ -193,10 +193,10 @@ export default function ClientForm() {
 
             <div className="space-y-2">
               <Label htmlFor="address">Adres *</Label>
-              <Textarea
+              <EmojiTextarea
                 id="address"
                 value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
+                onValueChange={(value) => handleChange('address', value)}
                 placeholder="Müvekkil adresini girin"
                 rows={3}
                 required
