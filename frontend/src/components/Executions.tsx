@@ -142,7 +142,7 @@ export default function Executions() {
       case 'İade':
         return 'bg-red-100 text-red-800 border-red-200'
       case 'Varlık Satışı':
-        return 'bg-red-950 text-white border-red-950'
+        return 'bg-[#EB5406] text-black border-[#EB5406]'
       default:
         return 'bg-black text-white border-black'
     }

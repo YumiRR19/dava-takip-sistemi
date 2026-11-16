@@ -217,7 +217,7 @@ export default function Cases() {
                     <TableHead>Mahkeme</TableHead>
                     <TableHead>Dosya No</TableHead>
                     <TableHead>Davacı/Müşteki</TableHead>
-                    <TableHead>Davalı/Sanık</TableHead>
+                    <TableHead>Davalı/Sanık/İlgili</TableHead>
                     <TableHead>Dava Adı</TableHead>
                     <TableHead>Hatırlatma Tarihi</TableHead>
                     <TableHead>Hatırlatma Metni</TableHead>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star, CalendarIcon } from 'lucide-react'
+import { FileText, Users, Wifi, WifiOff, Database, Server, Filter, Star, CalendarIcon, FileDown } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,22 @@ import { api, DashboardData, SettingsOption, request } from '@/lib/api'
 import { mergePersons } from '@/lib/responsible-persons'
 import { useToast } from '@/hooks/use-toast'
 import { useRealTimeData } from '@/hooks/use-real-time-data'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { saveDailyRemindersPdf } from '@/lib/daily-reminder-pdf'
+
+type ReminderFilter = 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'haciz_koruma_reminder' | 'mk_reminder' | 'important_reminder'
+
+const EXECUTION_EXTRA_REMINDER_LABELS: Record<string, string> = {
+  haciz_koruma_reminder: 'HACİZ KORUMA HATIRLATMA',
+  mk_reminder: 'M.K HATIRLATMA',
+  haciz_reminder: 'M.K / HACİZ KORUMA (ESKİ ORTAK) HATIRLATMA',
+}
+
+const todayIso = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(() => api.dashboard.peekData() ?? null)
@@ -19,7 +35,11 @@ export default function Dashboard() {
     websocket: false,
     database: true
   })
-  const [reminderFilter, setReminderFilter] = useState<'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder'>('all')
+  const [reminderFilter, setReminderFilter] = useState<ReminderFilter>('all')
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
+  const [pdfDate, setPdfDate] = useState<string>(todayIso)
+  const [pdfPerson, setPdfPerson] = useState<string>('')
+  const [pdfGenerating, setPdfGenerating] = useState(false)
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all')
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>(() => api.settingsOptions.peekAll('ilgili_sorumlu') ?? [])
@@ -120,6 +140,8 @@ export default function Dashboard() {
     if (reminder.type === 'case') return `case-${reminder.case_id}`
     if (reminder.type === 'execution') return `execution-${reminder.execution_id}`
     if (reminder.type === 'haciz_reminder') return `haciz_reminder-${reminder.execution_id}`
+    if (reminder.type === 'haciz_koruma_reminder') return `haciz_koruma_reminder-${reminder.execution_id}`
+    if (reminder.type === 'mk_reminder') return `mk_reminder-${reminder.execution_id}`
     if (reminder.type === 'important_reminder') return `important_reminder-${reminder.important_reminder_id}`
     return `compensation_letter-${reminder.compensation_letter_id}`
   }, [])
@@ -129,8 +151,8 @@ export default function Dashboard() {
     if (reminderKey.startsWith('compensation_letter-')) {
       return { entityType: 'compensation_letter', entityId: parts.slice(1).join('-') }
     }
-    if (reminderKey.startsWith('haciz_reminder-')) {
-      return { entityType: 'execution', entityId: parts.slice(1).join('-') }
+    if (reminderKey.startsWith('haciz_reminder-') || reminderKey.startsWith('haciz_koruma_reminder-') || reminderKey.startsWith('mk_reminder-')) {
+      return { entityType: 'execution', entityId: reminderKey.slice(reminderKey.indexOf('-') + 1) }
     }
     return { entityType: parts[0], entityId: parts.slice(1).join('-') }
   }, [])
@@ -348,7 +370,7 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={reminderFilter} onValueChange={(value: 'all' | 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder') => setReminderFilter(value)}>
+                <Select value={reminderFilter} onValueChange={(value: ReminderFilter) => setReminderFilter(value)}>
                   <SelectTrigger className="w-[200px]">
                     <Filter className="h-4 w-4 text-gray-500 mr-1" />
                     <SelectValue placeholder="Filtre" />
@@ -357,11 +379,26 @@ export default function Dashboard() {
                     <SelectItem value="all">Tümü</SelectItem>
                     <SelectItem value="case">Dava Dosyaları</SelectItem>
                     <SelectItem value="execution">İcra Takipleri</SelectItem>
-                    <SelectItem value="haciz_reminder">Haciz Hatırlatma</SelectItem>
+                    <SelectItem value="haciz_koruma_reminder">Haciz Koruma Hatırlatma</SelectItem>
+                    <SelectItem value="mk_reminder">M.K Hatırlatma</SelectItem>
+                    <SelectItem value="haciz_reminder">M.K / Haciz Koruma (Eski Ortak)</SelectItem>
                     <SelectItem value="compensation_letter">Teminat Mektupları</SelectItem>
                     <SelectItem value="important_reminder">Önemli Hatırlatmalar</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9"
+                  onClick={() => {
+                    setPdfDate(todayIso())
+                    setPdfPerson(responsibleFilter !== 'all' ? responsibleFilter : '')
+                    setPdfDialogOpen(true)
+                  }}
+                >
+                  <FileDown className="h-4 w-4 mr-1" />
+                  PDF’ye Kaydet
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -377,7 +414,7 @@ export default function Dashboard() {
                   onDoubleClick={() => {
                     if (reminder.type === 'case') {
                       navigate(`/cases/${reminder.case_id}/edit`)
-                    } else if (reminder.type === 'execution' || reminder.type === 'haciz_reminder') {
+                    } else if (reminder.type === 'execution' || reminder.type === 'haciz_reminder' || reminder.type === 'haciz_koruma_reminder' || reminder.type === 'mk_reminder') {
                       navigate(`/executions/${reminder.execution_id}/edit`)
                     } else if (reminder.type === 'compensation_letter') {
                       navigate(`/compensation-letters/${reminder.compensation_letter_id}/edit`)
@@ -423,16 +460,16 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-500 mt-1">İşlem Hatırlatma: {reminder.reminder_text}</p>
                         )}
                       </>
-                    ) : reminder.type === 'haciz_reminder' ? (
+                    ) : reminder.type in EXECUTION_EXTRA_REMINDER_LABELS ? (
                       <>
-                        <p className="text-sm font-medium text-orange-600">HACİZ HATIRLATMA - İCRA NO: {reminder.execution_number}</p>
+                        <p className="text-sm font-medium text-orange-600">{EXECUTION_EXTRA_REMINDER_LABELS[reminder.type]} - İCRA NO: {reminder.execution_number}</p>
                         <p className="text-xs text-gray-700 font-medium">İcra: {reminder.execution_office}</p>
                         <p className="text-xs text-gray-600">Borçlu: {reminder.defendant}</p>
                         {reminder.haciz_durumu && (
                           <p className="text-xs text-gray-600">Haciz Durumu: {reminder.haciz_durumu}</p>
                         )}
                         {reminder.reminder_text && (
-                          <p className="text-xs text-gray-500 mt-1">Haciz Hatırlatma: {reminder.reminder_text}</p>
+                          <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">Hatırlatma: {reminder.reminder_text}</p>
                         )}
                       </>
                     ) : reminder.type === 'important_reminder' ? (
@@ -496,6 +533,59 @@ export default function Dashboard() {
         </Card>
 
       </div>
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Günlük Hatırlatmaları PDF’ye Kaydet</DialogTitle>
+            <DialogDescription>Seçilen gün ve kişi için tüm hatırlatmalar tek bir listeye aktarılır.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pdf_date">Tarih</Label>
+              <Input id="pdf_date" type="date" value={pdfDate} onChange={(e) => setPdfDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pdf_person">İlgili / Sorumlu</Label>
+              <Select value={pdfPerson} onValueChange={setPdfPerson}>
+                <SelectTrigger id="pdf_person">
+                  <SelectValue placeholder="Kişi seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsiblePersons.map((person) => (
+                    <SelectItem key={person} value={person}>{person}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPdfDialogOpen(false)}>İptal</Button>
+            <Button
+              type="button"
+              disabled={!pdfDate || !pdfPerson || pdfGenerating}
+              onClick={async () => {
+                setPdfGenerating(true)
+                try {
+                  const dayData = await api.dashboard.getData({ reminder_date: pdfDate })
+                  const reminders = (dayData.upcoming_reminders || []).filter(
+                    (r) => r.reminder_date?.slice(0, 10) === pdfDate && r.responsible_person === pdfPerson
+                  )
+                  await saveDailyRemindersPdf({ date: pdfDate, person: pdfPerson, reminders })
+                  setPdfDialogOpen(false)
+                } catch (error) {
+                  console.error('Daily reminder PDF error:', error)
+                  toast({ title: 'Hata', description: 'PDF oluşturulurken bir hata oluştu.', variant: 'destructive' })
+                } finally {
+                  setPdfGenerating(false)
+                }
+              }}
+            >
+              <FileDown className="h-4 w-4 mr-1" />
+              {pdfGenerating ? 'Hazırlanıyor...' : 'PDF’ye Kaydet'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

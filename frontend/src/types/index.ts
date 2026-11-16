@@ -129,7 +129,7 @@ export interface DashboardData {
     defendant: string
   }>
   upcoming_reminders: Array<{
-    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'important_reminder'
+    type: 'case' | 'execution' | 'compensation_letter' | 'haciz_reminder' | 'haciz_koruma_reminder' | 'mk_reminder' | 'important_reminder'
     important_reminder_id?: string
     case_id?: string
     case_title?: string
@@ -232,6 +232,10 @@ export interface Execution {
   haciz_durumu?: string
   haciz_reminder_date?: string
   haciz_reminder_text?: string
+  haciz_koruma_reminder_date?: string
+  haciz_koruma_reminder_text?: string
+  mk_reminder_date?: string
+  mk_reminder_text?: string
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
   responsible_person?: string
@@ -257,7 +261,11 @@ export interface ExecutionCreate {
   notes?: string
   haciz_durumu?: string
   haciz_reminder_date?: string | null
-  haciz_reminder_text?: string
+  haciz_reminder_text?: string | null
+  haciz_koruma_reminder_date?: string | null
+  haciz_koruma_reminder_text?: string | null
+  mk_reminder_date?: string | null
+  mk_reminder_text?: string | null
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
   responsible_person?: string
@@ -279,7 +287,11 @@ export interface ExecutionUpdate {
   notes?: string
   haciz_durumu?: string
   haciz_reminder_date?: string | null
-  haciz_reminder_text?: string
+  haciz_reminder_text?: string | null
+  haciz_koruma_reminder_date?: string | null
+  haciz_koruma_reminder_text?: string | null
+  mk_reminder_date?: string | null
+  mk_reminder_text?: string | null
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
   responsible_person?: string

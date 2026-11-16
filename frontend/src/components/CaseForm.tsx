@@ -300,13 +300,13 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="defendant">Davalı/Sanık *</Label>
+                <Label htmlFor="defendant">Davalı/Sanık/İlgili *</Label>
                 <Input
                   id="defendant"
                   name="defendant"
                   value={formData.defendant}
                   onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Davalı/Sanık adını girin"
+                  placeholder="Davalı/Sanık/İlgili adını girin"
                   required
                 />
               </div>

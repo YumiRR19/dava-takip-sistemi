@@ -116,7 +116,7 @@ async def startup_event():
         from sqlalchemy import text as text3
         SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
         with SL3() as db:
-            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR')]:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR'), ('haciz_koruma_reminder_date', 'DATE'), ('haciz_koruma_reminder_text', 'TEXT'), ('mk_reminder_date', 'DATE'), ('mk_reminder_text', 'TEXT')]:
                 try:
                     db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
                     print(f"Column {col_name} already exists in executions")
@@ -128,6 +128,34 @@ async def startup_event():
                     print(f"Successfully added {col_name} column to executions")
     except Exception as haciz_migration_error:
         print(f"haciz migration error: {haciz_migration_error}")
+
+    # Migration: move old shared M.K / Haciz Koruma reminders whose type is unambiguous
+    # into their own field pair; ambiguous ones stay in haciz_reminder_* as a shared reminder.
+    try:
+        from app.database import engine as eng_mk
+        from sqlalchemy import text as text_mk
+        with eng_mk.begin() as conn:
+            rows = conn.execute(text_mk(
+                "SELECT id, haciz_reminder_text FROM executions "
+                "WHERE haciz_reminder_text IS NOT NULL AND haciz_reminder_text <> '' "
+                "AND haciz_koruma_reminder_date IS NULL AND haciz_koruma_reminder_text IS NULL "
+                "AND mk_reminder_date IS NULL AND mk_reminder_text IS NULL"
+            )).fetchall()
+            moved = {"mk": 0, "haciz_koruma": 0}
+            for row_id, legacy_text in rows:
+                kind = classify_legacy_haciz_reminder(legacy_text)
+                if not kind:
+                    continue
+                conn.execute(text_mk(
+                    f"UPDATE executions SET {kind}_reminder_date = haciz_reminder_date, "
+                    f"{kind}_reminder_text = haciz_reminder_text, "
+                    "haciz_reminder_date = NULL, haciz_reminder_text = NULL, "
+                    "version = COALESCE(version, 1) + 1 WHERE id = :id"
+                ), {"id": row_id})
+                moved[kind] += 1
+            print(f"Legacy M.K/Haciz Koruma reminders moved: {moved}")
+    except Exception as mk_migration_error:
+        print(f"M.K/Haciz Koruma migration error: {mk_migration_error}")
     
     # Migration: make client_id nullable in cases table
     try:
@@ -384,6 +412,10 @@ class Execution(BaseModel):
     haciz_durumu: Optional[str] = None
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
+    haciz_koruma_reminder_date: Optional[date] = None
+    haciz_koruma_reminder_text: Optional[str] = None
+    mk_reminder_date: Optional[date] = None
+    mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
@@ -409,6 +441,10 @@ class ExecutionCreate(BaseModel):
     haciz_durumu: Optional[str] = None
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
+    haciz_koruma_reminder_date: Optional[date] = None
+    haciz_koruma_reminder_text: Optional[str] = None
+    mk_reminder_date: Optional[date] = None
+    mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
@@ -431,6 +467,10 @@ class ExecutionUpdate(BaseModel):
     haciz_durumu: Optional[str] = None
     haciz_reminder_date: Optional[date] = None
     haciz_reminder_text: Optional[str] = None
+    haciz_koruma_reminder_date: Optional[date] = None
+    haciz_koruma_reminder_text: Optional[str] = None
+    mk_reminder_date: Optional[date] = None
+    mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
     responsible_person: Optional[str] = None
@@ -628,6 +668,10 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         haciz_durumu=db_execution.haciz_durumu,
         haciz_reminder_date=db_execution.haciz_reminder_date,
         haciz_reminder_text=db_execution.haciz_reminder_text,
+        haciz_koruma_reminder_date=db_execution.haciz_koruma_reminder_date,
+        haciz_koruma_reminder_text=db_execution.haciz_koruma_reminder_text,
+        mk_reminder_date=db_execution.mk_reminder_date,
+        mk_reminder_text=db_execution.mk_reminder_text,
         related_case_id=db_execution.related_case_id,
         talimat_icra_dosya_no=db_execution.talimat_icra_dosya_no,
         responsible_person=db_execution.responsible_person,
@@ -913,8 +957,9 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     execution_data["start_date"] = date.fromisoformat(execution_data["start_date"])
                     if execution_data.get("reminder_date"):
                         execution_data["reminder_date"] = date.fromisoformat(execution_data["reminder_date"])
-                    if execution_data.get("haciz_reminder_date"):
-                        execution_data["haciz_reminder_date"] = date.fromisoformat(execution_data["haciz_reminder_date"])
+                    for date_field in ("haciz_reminder_date", "haciz_koruma_reminder_date", "mk_reminder_date"):
+                        if execution_data.get(date_field):
+                            execution_data[date_field] = date.fromisoformat(execution_data[date_field])
                     execution_data["is_deleted"] = False
                     
                     db.merge(ExecutionDB(**execution_data))
@@ -1071,6 +1116,25 @@ async def delete_client(client_id: str, db: Session = Depends(get_db), token: st
     await manager.broadcast_data_change("delete", "client", client_id, {})
     
     return {"message": "Client deleted successfully"}
+
+
+_MK_PATTERN = re.compile(r"(?<![A-ZÇĞİÖŞÜ])M\s*\.?\s*K(?![A-ZÇĞİÖŞÜ])")
+_HACIZ_KORUMA_PATTERN = re.compile(r"HAC(İZ|Z[İI]|ZİN[İI])\s+KORU")
+_SHARED_FILE_PATTERN = re.compile(r"DOSYA|DERDEST|USULEN|İŞLEM|DÜŞ")
+
+
+def classify_legacy_haciz_reminder(text_value: Optional[str]) -> Optional[str]:
+    """Return 'mk' or 'haciz_koruma' only when an old shared reminder text names exactly one type."""
+    if not text_value:
+        return None
+    upper = " ".join(text_value.replace("i", "İ").replace("ı", "I").upper().split())
+    has_mk = bool(_MK_PATTERN.search(upper))
+    has_haciz_koruma = bool(_HACIZ_KORUMA_PATTERN.search(upper))
+    if has_mk and not has_haciz_koruma and "HAC" not in upper:
+        return "mk"
+    if has_haciz_koruma and not has_mk and not _SHARED_FILE_PATTERN.search(upper):
+        return "haciz_koruma"
+    return None
 
 
 CASE_STATUS_ALIASES = {
@@ -1488,34 +1552,40 @@ async def get_dashboard(db: Session = Depends(get_db), token: str = Depends(veri
             })
         logger.info(f"Execution reminders: {len(db_executions)} rows in {time.time()-t2:.3f}s")
         
-        # ── 5. Haciz reminders (filter in SQL) ──
+        # ── 5. Haciz Koruma, M.K and old shared reminders of executions (filter in SQL) ──
         t3 = time.time()
-        haciz_query = db.query(ExecutionDB).filter(
-            ExecutionDB.is_deleted == False,
-            ExecutionDB.haciz_reminder_date.isnot(None),
-            ExecutionDB.haciz_reminder_date >= date_range_start,
-            ExecutionDB.haciz_reminder_date <= date_range_end,
-        )
-        db_haciz_executions = haciz_query.all()
-        for execution in db_haciz_executions:
-            r_date = execution.haciz_reminder_date
-            days_until = (r_date - today).days
-            upcoming_reminders.append({
-                "type": "haciz_reminder",
-                "execution_id": execution.id,
-                "execution_number": execution.execution_number,
-                "execution_office": execution.execution_office,
-                "client_name": execution.client_name,
-                "defendant": execution.defendant,
-                "reminder_date": r_date.isoformat(),
-                "reminder_text": execution.haciz_reminder_text,
-                "haciz_durumu": execution.haciz_durumu,
-                "responsible_person": execution.responsible_person,
-                "görevlendiren": execution.görevlendiren,
-                "is_starred": execution.is_starred if execution.is_starred is not None else False,
-                "days_until": days_until
-            })
-        logger.info(f"Haciz reminders: {len(db_haciz_executions)} rows in {time.time()-t3:.3f}s")
+        execution_reminder_kinds = [
+            ("haciz_koruma_reminder", ExecutionDB.haciz_koruma_reminder_date, "haciz_koruma_reminder_text"),
+            ("mk_reminder", ExecutionDB.mk_reminder_date, "mk_reminder_text"),
+            ("haciz_reminder", ExecutionDB.haciz_reminder_date, "haciz_reminder_text"),
+        ]
+        extra_count = 0
+        for reminder_type, date_column, text_attr in execution_reminder_kinds:
+            kind_rows = db.query(ExecutionDB).filter(
+                ExecutionDB.is_deleted == False,
+                date_column.isnot(None),
+                date_column >= date_range_start,
+                date_column <= date_range_end,
+            ).all()
+            extra_count += len(kind_rows)
+            for execution in kind_rows:
+                r_date = getattr(execution, date_column.key)
+                upcoming_reminders.append({
+                    "type": reminder_type,
+                    "execution_id": execution.id,
+                    "execution_number": execution.execution_number,
+                    "execution_office": execution.execution_office,
+                    "client_name": execution.client_name,
+                    "defendant": execution.defendant,
+                    "reminder_date": r_date.isoformat(),
+                    "reminder_text": getattr(execution, text_attr),
+                    "haciz_durumu": execution.haciz_durumu,
+                    "responsible_person": execution.responsible_person,
+                    "görevlendiren": execution.görevlendiren,
+                    "is_starred": execution.is_starred if execution.is_starred is not None else False,
+                    "days_until": (r_date - today).days
+                })
+        logger.info(f"Haciz Koruma/M.K reminders: {extra_count} rows in {time.time()-t3:.3f}s")
         
         # ── 6. Compensation letter reminders (filter in SQL) ──
         t4 = time.time()
@@ -1768,6 +1838,10 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         haciz_durumu=execution.haciz_durumu,
         haciz_reminder_date=execution.haciz_reminder_date,
         haciz_reminder_text=execution.haciz_reminder_text,
+        haciz_koruma_reminder_date=execution.haciz_koruma_reminder_date,
+        haciz_koruma_reminder_text=execution.haciz_koruma_reminder_text,
+        mk_reminder_date=execution.mk_reminder_date,
+        mk_reminder_text=execution.mk_reminder_text,
         related_case_id=execution.related_case_id,
         talimat_icra_dosya_no=execution.talimat_icra_dosya_no,
         responsible_person=execution.responsible_person,
