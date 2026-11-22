@@ -962,7 +962,7 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     if case_data.get("reminder_date"):
                         case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
                     case_data["is_deleted"] = False
-                    if not case_data.get("kanun_yolu") and case_data.get("status") in ("İstinaf", "Temyiz", "Kesinleştirme"):
+                    if "kanun_yolu" not in case_data and case_data.get("status") in ("İstinaf", "Temyiz", "Kesinleştirme"):
                         case_data["kanun_yolu"] = case_data["status"]
                     
                     db.merge(CaseDB(**case_data))
