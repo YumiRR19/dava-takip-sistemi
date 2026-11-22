@@ -98,6 +98,8 @@ export default function Executions() {
       filtered = filtered.filter(execution => execution.iletisim_acik === true)
     } else if (iletisimFilter === 'kapali') {
       filtered = filtered.filter(execution => execution.iletisim_acik === false)
+    } else if (iletisimFilter === 'belirtilmemis') {
+      filtered = filtered.filter(execution => execution.iletisim_acik === null || execution.iletisim_acik === undefined)
     }
 
     setFilteredExecutions(filtered)
@@ -283,6 +285,7 @@ export default function Executions() {
                 <SelectItem value="all">İletişim Durumu: Tümü</SelectItem>
                 <SelectItem value="acik">İletişim: Açık</SelectItem>
                 <SelectItem value="kapali">İletişim: Kapalı</SelectItem>
+                <SelectItem value="belirtilmemis">İletişim: Belirtilmemiş</SelectItem>
               </SelectContent>
             </Select>
           </div>

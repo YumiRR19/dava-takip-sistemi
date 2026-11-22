@@ -156,6 +156,15 @@ export default function ExecutionForm() {
       return
     }
 
+    if (formData.iletisim_acik === null) {
+      toast({
+        title: "Hata",
+        description: "Lütfen İletişim durumunu seçin (Açık veya Kapalı).",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     const submissionData = {
@@ -707,6 +716,9 @@ export default function ExecutionForm() {
                   )
                 })}
               </div>
+              {formData.iletisim_acik === null && (
+                <p className="text-sm text-amber-700">Belirtilmemiş — lütfen Açık veya Kapalı seçin.</p>
+              )}
             </div>
 
             <div className="flex justify-end space-x-4">
