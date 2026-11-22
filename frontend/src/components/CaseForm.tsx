@@ -9,7 +9,7 @@ import { EmojiTextarea } from '@/components/EmojiTextarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
-import { CASE_STATUS_OPTIONS, KANUN_YOLU_OPTIONS, normalizeCaseStatus, toTurkishUpper } from '@/lib/case-options'
+import { CASE_STATUS_OPTIONS, KANUN_YOLU_OPTIONS, LEGACY_KANUN_YOLU_STATUSES, normalizeCaseStatus, toTurkishUpper } from '@/lib/case-options'
 import { useToast } from '@/hooks/use-toast'
 
 const REMINDER_TEXT_PRESETS = [
@@ -113,7 +113,7 @@ export default function CaseForm() {
   const loadCase = async (caseId: string) => {
     try {
       const caseData = await api.cases.getById(caseId)
-      const isLegacyStatus = KANUN_YOLU_OPTIONS.includes(caseData.status)
+      const isLegacyStatus = LEGACY_KANUN_YOLU_STATUSES.includes(caseData.status)
       setLegacyStatus(caseData.status)
       setFormData({
         description: caseData.description || '',
