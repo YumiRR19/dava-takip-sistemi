@@ -21,6 +21,7 @@ export default function Executions() {
   const [responsiblePersonFilter, setResponsiblePersonFilter] = useState<string>('all')
   const [görevlendirenFilter, setGörevlendirenFilter] = useState<string>('all')
   const [executionTypeFilter, setExecutionTypeFilter] = useState<string>('all')
+  const [iletisimFilter, setIletisimFilter] = useState<string>('all')
   const [customGorevlendiren, setCustomGorevlendiren] = useState<SettingsOption[]>([])
   const [customIlgiliSorumlu, setCustomIlgiliSorumlu] = useState<SettingsOption[]>([])
   const { toast } = useToast()
@@ -45,7 +46,7 @@ export default function Executions() {
 
   useEffect(() => {
     filterExecutions()
-  }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter])
+  }, [executions, searchTerm, statusFilter, hacizFilter, responsiblePersonFilter, görevlendirenFilter, executionTypeFilter, iletisimFilter])
 
   const loadExecutions = async () => {
     try {
@@ -91,6 +92,12 @@ export default function Executions() {
 
     if (executionTypeFilter !== 'all') {
       filtered = filtered.filter(execution => execution.execution_type === executionTypeFilter)
+    }
+
+    if (iletisimFilter === 'acik') {
+      filtered = filtered.filter(execution => execution.iletisim_acik === true)
+    } else if (iletisimFilter === 'kapali') {
+      filtered = filtered.filter(execution => execution.iletisim_acik === false)
     }
 
     setFilteredExecutions(filtered)
@@ -204,6 +211,8 @@ export default function Executions() {
                 <SelectItem value="Rehin Açığı">Rehin Açığı</SelectItem>
                 <SelectItem value="İade">İade</SelectItem>
                 <SelectItem value="Varlık Satışı">Varlık Satışı</SelectItem>
+                <SelectItem value="Feragat">Feragat</SelectItem>
+                <SelectItem value="Vazgeçme">Vazgeçme</SelectItem>
               </SelectContent>
             </Select>
 
@@ -266,6 +275,16 @@ export default function Executions() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={iletisimFilter} onValueChange={setIletisimFilter}>
+              <SelectTrigger className="w-full sm:w-48" aria-label="İletişim Durumu filtrele">
+                <SelectValue placeholder="İletişim Durumu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">İletişim Durumu: Tümü</SelectItem>
+                <SelectItem value="acik">İletişim: Açık</SelectItem>
+                <SelectItem value="kapali">İletişim: Kapalı</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="overflow-x-auto">
@@ -288,7 +307,7 @@ export default function Executions() {
                 {filteredExecutions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      {statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' || executionTypeFilter !== 'all' ? 'Filtreleme kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
+                      {statusFilter !== 'all' || hacizFilter !== 'all' || responsiblePersonFilter !== 'all' || görevlendirenFilter !== 'all' || executionTypeFilter !== 'all' || iletisimFilter !== 'all' ? 'Filtreleme kriterlerinize uygun icra bulunamadı.' : 'Henüz icra kaydı bulunmuyor.'}
                     </TableCell>
                   </TableRow>
                 ) : (

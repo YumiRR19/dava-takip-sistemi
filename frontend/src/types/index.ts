@@ -238,6 +238,10 @@ export interface Execution {
   mk_reminder_text?: string
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
+  iletisim_numarasi?: string | null
+  teblig_durumu?: string | null
+  tahsilat?: string | null
+  iletisim_acik?: boolean | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -268,6 +272,10 @@ export interface ExecutionCreate {
   mk_reminder_text?: string | null
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
+  iletisim_numarasi?: string | null
+  teblig_durumu?: string | null
+  tahsilat?: string | null
+  iletisim_acik?: boolean | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean
@@ -294,6 +302,10 @@ export interface ExecutionUpdate {
   mk_reminder_text?: string | null
   related_case_id?: string
   talimat_icra_dosya_no?: string | null
+  iletisim_numarasi?: string | null
+  teblig_durumu?: string | null
+  tahsilat?: string | null
+  iletisim_acik?: boolean | null
   responsible_person?: string
   görevlendiren?: string
   is_starred?: boolean

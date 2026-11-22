@@ -159,10 +159,10 @@ export default function Cases() {
         <Select value={kanunYoluFilter} onValueChange={setKanunYoluFilter}>
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Kanun Yolu filtrele" />
+            <SelectValue placeholder="Kanun Yolu/Kesinleştirme filtrele" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tüm Kanun Yolları</SelectItem>
+            <SelectItem value="all">Tüm Kanun Yolu/Kesinleştirme</SelectItem>
             {KANUN_YOLU_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
             ))}

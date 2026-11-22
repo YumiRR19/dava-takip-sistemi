@@ -54,6 +54,10 @@ export default function ExecutionForm() {
     mk_reminder_text: '',
     related_case_id: '',
     talimat_icra_dosya_no: '',
+    iletisim_numarasi: '',
+    teblig_durumu: '',
+    tahsilat: '',
+    iletisim_acik: null as boolean | null,
     responsible_person: '',
     görevlendiren: '',
     is_starred: false
@@ -121,6 +125,10 @@ export default function ExecutionForm() {
         mk_reminder_text: executionData.mk_reminder_text || '',
         related_case_id: executionData.related_case_id || '',
         talimat_icra_dosya_no: executionData.talimat_icra_dosya_no || '',
+        iletisim_numarasi: executionData.iletisim_numarasi || '',
+        teblig_durumu: executionData.teblig_durumu || '',
+        tahsilat: executionData.tahsilat || '',
+        iletisim_acik: executionData.iletisim_acik ?? null,
         responsible_person: executionData.responsible_person || '',
         görevlendiren: executionData.görevlendiren || '',
         is_starred: executionData.is_starred || false
@@ -171,6 +179,10 @@ export default function ExecutionForm() {
       mk_reminder_text: formData.mk_reminder_text || null,
       related_case_id: formData.related_case_id || undefined,
       talimat_icra_dosya_no: formData.talimat_icra_dosya_no || null,
+      iletisim_numarasi: formData.iletisim_numarasi || null,
+      teblig_durumu: formData.teblig_durumu || null,
+      tahsilat: formData.tahsilat || null,
+      iletisim_acik: formData.iletisim_acik,
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred
@@ -390,6 +402,8 @@ export default function ExecutionForm() {
                     <SelectItem value="Rehin Açığı">Rehin Açığı</SelectItem>
                     <SelectItem value="İade">İade</SelectItem>
                     <SelectItem value="Varlık Satışı">Varlık Satışı</SelectItem>
+                    <SelectItem value="Feragat">Feragat</SelectItem>
+                    <SelectItem value="Vazgeçme">Vazgeçme</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -499,33 +513,73 @@ export default function ExecutionForm() {
               </div>
             </div>
 
-            {/* Full-width: İşlem Hatırlatma Metni (preset selection + free text) */}
-            <div className="space-y-2">
-              <Label htmlFor="reminder_text">İşlem Hatırlatma Metni</Label>
-              <Select
-                value=""
-                onValueChange={(value) => {
-                  const current = formData.reminder_text || ''
-                  handleChange('reminder_text', current.trim() ? `${current.replace(/\s+$/, '')}\n${value}` : value)
-                }}
-              >
-                <SelectTrigger aria-label="Hazır işlem hatırlatma metni">
-                  <SelectValue placeholder="Hazır hatırlatma metni seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXECUTION_REMINDER_TEXT_PRESETS.map((preset) => (
-                    <SelectItem key={preset} value={preset}>{preset}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <EmojiTextarea
-                id="reminder_text"
-                name="reminder_text"
-                value={formData.reminder_text}
-                onValueChange={(value) => handleChange('reminder_text', value)}
-                placeholder="Seçeneklerden seçin veya kendi metninizi yazın"
-                rows={3}
-              />
+            {/* İşlem Hatırlatma Metni (preset selection + free text) / İletişim Numarası */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="reminder_text">İşlem Hatırlatma Metni</Label>
+                <Select
+                  value=""
+                  onValueChange={(value) => {
+                    const current = formData.reminder_text || ''
+                    handleChange('reminder_text', current.trim() ? `${current.replace(/\s+$/, '')}\n${value}` : value)
+                  }}
+                >
+                  <SelectTrigger aria-label="Hazır işlem hatırlatma metni">
+                    <SelectValue placeholder="Hazır hatırlatma metni seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXECUTION_REMINDER_TEXT_PRESETS.map((preset) => (
+                      <SelectItem key={preset} value={preset}>{preset}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <EmojiTextarea
+                  id="reminder_text"
+                  name="reminder_text"
+                  value={formData.reminder_text}
+                  onValueChange={(value) => handleChange('reminder_text', value)}
+                  placeholder="Seçeneklerden seçin veya kendi metninizi yazın"
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="iletisim_numarasi">İletişim Numarası</Label>
+                <Input
+                  id="iletisim_numarasi"
+                  name="iletisim_numarasi"
+                  type="text"
+                  inputMode="tel"
+                  value={formData.iletisim_numarasi}
+                  onChange={(e) => handleChange('iletisim_numarasi', e.target.value)}
+                  placeholder="Örn. 0532 123 45 67 veya +90 532 123 45 67"
+                />
+              </div>
+            </div>
+
+            {/* Tebliğ Durumu / Tahsilat */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="teblig_durumu">Tebliğ Durumu</Label>
+                <EmojiTextarea
+                  id="teblig_durumu"
+                  name="teblig_durumu"
+                  value={formData.teblig_durumu}
+                  onValueChange={(value) => handleChange('teblig_durumu', value)}
+                  placeholder="Tebliğ durumunu yazın"
+                  rows={5}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tahsilat">Tahsilat</Label>
+                <EmojiTextarea
+                  id="tahsilat"
+                  name="tahsilat"
+                  value={formData.tahsilat}
+                  onValueChange={(value) => handleChange('tahsilat', value)}
+                  placeholder="Tahsilat bilgilerini yazın"
+                  rows={5}
+                />
+              </div>
             </div>
 
             {/* Haciz Koruma / M.K reminders */}
@@ -627,6 +681,32 @@ export default function ExecutionForm() {
                 placeholder="İlgili dava ID'sini girin (her satıra bir numara yazabilirsiniz)"
                 rows={3}
               />
+            </div>
+
+            {/* İletişim Açık / Kapalı */}
+            <div className="space-y-2">
+              <Label id="iletisim_acik_label">İletişim</Label>
+              <div role="radiogroup" aria-labelledby="iletisim_acik_label" className="inline-flex rounded-md border overflow-hidden">
+                {([[true, 'Açık'], [false, 'Kapalı']] as const).map(([optionValue, optionLabel]) => {
+                  const selected = formData.iletisim_acik === optionValue
+                  return (
+                    <button
+                      key={optionLabel}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setFormData(prev => ({ ...prev, iletisim_acik: optionValue }))}
+                      className={`px-5 py-2 text-sm font-medium transition-colors ${
+                        selected
+                          ? optionValue ? 'bg-green-600 text-white' : 'bg-gray-700 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {optionLabel}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="flex justify-end space-x-4">

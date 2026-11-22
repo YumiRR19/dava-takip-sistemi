@@ -116,7 +116,7 @@ async def startup_event():
         from sqlalchemy import text as text3
         SL3 = sm3(autocommit=False, autoflush=False, bind=eng3)
         with SL3() as db:
-            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR'), ('haciz_koruma_reminder_date', 'DATE'), ('haciz_koruma_reminder_text', 'TEXT'), ('mk_reminder_date', 'DATE'), ('mk_reminder_text', 'TEXT')]:
+            for col_name, col_type in [('haciz_reminder_date', 'DATE'), ('haciz_reminder_text', 'TEXT'), ('related_case_id', 'VARCHAR'), ('talimat_icra_dosya_no', 'VARCHAR'), ('haciz_koruma_reminder_date', 'DATE'), ('haciz_koruma_reminder_text', 'TEXT'), ('mk_reminder_date', 'DATE'), ('mk_reminder_text', 'TEXT'), ('iletisim_numarasi', 'VARCHAR'), ('teblig_durumu', 'TEXT'), ('tahsilat', 'TEXT'), ('iletisim_acik', 'BOOLEAN')]:
                 try:
                     db.execute(text3(f"SELECT {col_name} FROM executions LIMIT 1"))
                     print(f"Column {col_name} already exists in executions")
@@ -420,6 +420,10 @@ class Execution(BaseModel):
     mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
+    iletisim_numarasi: Optional[str] = None
+    teblig_durumu: Optional[str] = None
+    tahsilat: Optional[str] = None
+    iletisim_acik: Optional[bool] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -449,6 +453,10 @@ class ExecutionCreate(BaseModel):
     mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
+    iletisim_numarasi: Optional[str] = None
+    teblig_durumu: Optional[str] = None
+    tahsilat: Optional[str] = None
+    iletisim_acik: Optional[bool] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: bool = False
@@ -475,6 +483,10 @@ class ExecutionUpdate(BaseModel):
     mk_reminder_text: Optional[str] = None
     related_case_id: Optional[str] = None
     talimat_icra_dosya_no: Optional[str] = None
+    iletisim_numarasi: Optional[str] = None
+    teblig_durumu: Optional[str] = None
+    tahsilat: Optional[str] = None
+    iletisim_acik: Optional[bool] = None
     responsible_person: Optional[str] = None
     görevlendiren: Optional[str] = None
     is_starred: Optional[bool] = None
@@ -676,6 +688,10 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
         mk_reminder_text=db_execution.mk_reminder_text,
         related_case_id=db_execution.related_case_id,
         talimat_icra_dosya_no=db_execution.talimat_icra_dosya_no,
+        iletisim_numarasi=db_execution.iletisim_numarasi,
+        teblig_durumu=db_execution.teblig_durumu,
+        tahsilat=db_execution.tahsilat,
+        iletisim_acik=db_execution.iletisim_acik,
         responsible_person=db_execution.responsible_person,
         görevlendiren=db_execution.görevlendiren,
         is_starred=db_execution.is_starred if db_execution.is_starred is not None else False,
@@ -1846,6 +1862,10 @@ async def create_execution(execution: ExecutionCreate, db: Session = Depends(get
         mk_reminder_text=execution.mk_reminder_text,
         related_case_id=execution.related_case_id,
         talimat_icra_dosya_no=execution.talimat_icra_dosya_no,
+        iletisim_numarasi=execution.iletisim_numarasi,
+        teblig_durumu=execution.teblig_durumu,
+        tahsilat=execution.tahsilat,
+        iletisim_acik=execution.iletisim_acik,
         responsible_person=execution.responsible_person,
         görevlendiren=execution.görevlendiren,
         is_starred=execution.is_starred,

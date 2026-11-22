@@ -15,6 +15,7 @@ export const CASE_STATUS_OPTIONS = [
   'Açılmamış Sayılma',
   'Yetkisizlik Kararı',
   'Görevsizlik Kararı',
+  'Birleştirme Kararı',
 ]
 
 // Older spellings of renamed statuses, mapped to the current option value.
@@ -25,7 +26,7 @@ export const LEGACY_CASE_STATUS_ALIASES: Record<string, string> = {
   'Açıklanmamış Sayılma': 'Açılmamış Sayılma',
 }
 
-export const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz']
+export const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz', 'Kesinleştirme']
 
 export const toTurkishUpper = (value: string) => value.toLocaleUpperCase('tr-TR')
 

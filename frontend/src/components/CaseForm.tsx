@@ -350,14 +350,14 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="kanun_yolu">Kanun Yolu</Label>
+                <Label htmlFor="kanun_yolu">Kanun Yolu/Kesinleştirme</Label>
                 <Select
                   value={formData.kanun_yolu}
                   onValueChange={(value) => handleChange('kanun_yolu', value === KANUN_YOLU_NONE ? '' : value)}
                   name="kanun_yolu"
                 >
                   <SelectTrigger id="kanun_yolu">
-                    <SelectValue placeholder="Kanun yolu seçin (isteğe bağlı)" />
+                    <SelectValue placeholder="Kanun yolu/kesinleştirme seçin (isteğe bağlı)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={KANUN_YOLU_NONE}>Seçimi temizle</SelectItem>
