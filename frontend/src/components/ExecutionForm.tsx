@@ -156,15 +156,6 @@ export default function ExecutionForm() {
       return
     }
 
-    if (formData.iletisim_acik === null) {
-      toast({
-        title: "Hata",
-        description: "Lütfen İletişim durumunu seçin (Açık veya Kapalı).",
-        variant: "destructive",
-      })
-      return
-    }
-
     setLoading(true)
 
     const submissionData = {
@@ -553,14 +544,14 @@ export default function ExecutionForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="iletisim_numarasi">İletişim Numarası</Label>
-                <Input
+                <EmojiTextarea
                   id="iletisim_numarasi"
                   name="iletisim_numarasi"
-                  type="text"
                   inputMode="tel"
                   value={formData.iletisim_numarasi}
-                  onChange={(e) => handleChange('iletisim_numarasi', e.target.value)}
+                  onValueChange={(value) => handleChange('iletisim_numarasi', value)}
                   placeholder="Örn. 0532 123 45 67 veya +90 532 123 45 67"
+                  rows={5}
                 />
               </div>
             </div>
@@ -717,7 +708,7 @@ export default function ExecutionForm() {
                 })}
               </div>
               {formData.iletisim_acik === null && (
-                <p className="text-sm text-amber-700">Belirtilmemiş — lütfen Açık veya Kapalı seçin.</p>
+                <p className="text-sm text-muted-foreground">Belirtilmemiş</p>
               )}
             </div>
 
