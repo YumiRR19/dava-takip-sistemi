@@ -159,6 +159,15 @@ export default function CaseForm() {
       return
     }
 
+    if (!formData.status && !formData.kanun_yolu && LEGACY_KANUN_YOLU_STATUSES.includes(legacyStatus)) {
+      toast({
+        title: "Hata",
+        description: "Kanun Yolu/Kesinleştirme temizlendiğinde lütfen bir Durum seçin.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     const submissionData = {
