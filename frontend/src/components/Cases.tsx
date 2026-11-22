@@ -225,11 +225,13 @@ export default function Cases() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCases.map((caseItem) => (
+                  {filteredCases.map((caseItem) => {
+                    const isKesinlestirme = caseItem.kanun_yolu === 'Kesinleştirme' || caseItem.status === 'Kesinleştirme'
+                    return (
                     <TableRow 
                       key={caseItem.id}
-                      className={caseItem.status === 'Kesinleştirme' ? 'bg-red-100 hover:bg-red-200' : ''}
-                      style={caseItem.status === 'Kesinleştirme' ? { color: 'black' } : undefined}
+                      className={isKesinlestirme ? 'bg-red-100 hover:bg-red-200' : ''}
+                      style={isKesinlestirme ? { color: 'black' } : undefined}
                     >
                       <TableCell className="font-medium">{caseItem.court}</TableCell>
                       <TableCell>{caseItem.case_number}</TableCell>
@@ -261,7 +263,8 @@ export default function Cases() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

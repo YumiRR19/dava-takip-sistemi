@@ -218,6 +218,23 @@ async def startup_event():
                 print(f"Successfully added kanun_yolu column to cases (backfilled {result.rowcount} rows)")
     except Exception as kanun_yolu_migration_error:
         print(f"kanun_yolu migration error: {kanun_yolu_migration_error}")
+
+    # Migration: Kesinleştirme moved from status options to Kanun Yolu/Kesinleştirme.
+    # Status values are kept as-is; an existing kanun_yolu value is never overwritten.
+    try:
+        from app.database import engine as eng6b
+        from sqlalchemy import text as text6b
+        with eng6b.begin() as conn:
+            result = conn.execute(
+                text6b(
+                    "UPDATE cases SET kanun_yolu = :k, version = COALESCE(version, 1) + 1 "
+                    "WHERE status = :k AND kanun_yolu IS NULL"
+                ),
+                {"k": "Kesinleştirme"}
+            )
+            print(f"Kesinleştirme kanun_yolu backfill: {result.rowcount} rows")
+    except Exception as kesinlestirme_migration_error:
+        print(f"Kesinleştirme kanun_yolu migration error: {kesinlestirme_migration_error}")
     
     print("✅ Backend startup completed - table creation and migration completed")
     
@@ -945,7 +962,7 @@ async def restore_data(backup: dict, db: Session = Depends(get_db), token: str =
                     if case_data.get("reminder_date"):
                         case_data["reminder_date"] = date.fromisoformat(case_data["reminder_date"])
                     case_data["is_deleted"] = False
-                    if "kanun_yolu" not in case_data and case_data.get("status") in ("İstinaf", "Temyiz"):
+                    if not case_data.get("kanun_yolu") and case_data.get("status") in ("İstinaf", "Temyiz", "Kesinleştirme"):
                         case_data["kanun_yolu"] = case_data["status"]
                     
                     db.merge(CaseDB(**case_data))

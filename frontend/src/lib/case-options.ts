@@ -5,7 +5,6 @@ export const CASE_STATUS_OPTIONS = [
   'Kabul',
   'Red',
   'Derdest',
-  'Kesinleştirme',
   'Bilirkişi',
   'Konkordato',
   'Derdest/Bilirkişi',
@@ -28,8 +27,8 @@ export const LEGACY_CASE_STATUS_ALIASES: Record<string, string> = {
 
 export const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz', 'Kesinleştirme']
 
-// Statuses that were stored in the status field before Kanun Yolu became its own field.
-export const LEGACY_KANUN_YOLU_STATUSES = ['İstinaf', 'Temyiz']
+// Former status values that now belong to the Kanun Yolu/Kesinleştirme field.
+export const LEGACY_KANUN_YOLU_STATUSES = ['İstinaf', 'Temyiz', 'Kesinleştirme']
 
 export const toTurkishUpper = (value: string) => value.toLocaleUpperCase('tr-TR')
 
