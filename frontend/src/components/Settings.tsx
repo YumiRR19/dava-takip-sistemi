@@ -16,7 +16,7 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [darkMode, setDarkMode] = useState(true)
   const [loading, setLoading] = useState(false)
-  const { logout } = useAuth()
+  const { logout, account } = useAuth()
   const { toast } = useToast()
 
   // Settings options state
@@ -114,10 +114,10 @@ export default function Settings() {
       return
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast({
         title: "Hata", 
-        description: "Yeni şifre en az 6 karakter olmalıdır.",
+        description: "Yeni şifre en az 8 karakter olmalıdır.",
         variant: "destructive",
       })
       return
@@ -136,7 +136,7 @@ export default function Settings() {
     } catch (error) {
       toast({
         title: "Hata",
-        description: "Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.",
+        description: error instanceof Error && error.message ? error.message : "Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.",
         variant: "destructive",
       })
     } finally {
@@ -424,9 +424,20 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Şifre Değiştir</CardTitle>
+            <CardTitle>Hesabım</CardTitle>
+            <CardDescription>Ortak giriş ekranında bu Kullanıcı No ve şifrenizle giriş yapabilirsiniz</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-gray-600">Kullanıcı No</div>
+            <div className="font-mono text-lg tracking-wider">{account?.userNo ?? '—'}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Hesabım → Şifre Değiştir</CardTitle>
             <CardDescription>
-              Hesap güvenliğiniz için şifrenizi düzenli olarak değiştirin
+              Hesap güvenliğiniz için şifrenizi düzenli olarak değiştirin. Şifre değişince diğer cihazlardaki oturumlar kapatılır
             </CardDescription>
           </CardHeader>
           <CardContent>

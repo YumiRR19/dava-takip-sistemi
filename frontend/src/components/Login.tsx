@@ -9,6 +9,7 @@ import { translations, langLabels, langFlags, type Lang } from './login-translat
 import { ExpandableTextarea } from '@/components/EmojiTextarea'
 
 export default function Login() {
+  const [userNo, setUserNo] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -47,11 +48,11 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const success = await login(password)
-    if (!success) {
+    const result = await login(userNo, password)
+    if (!result.ok) {
       toast({
         title: t.errorTitle,
-        description: t.errorWrongPassword,
+        description: result.status === 429 ? t.errorTooManyAttempts : t.errorWrongPassword,
         variant: "destructive",
       })
       setPassword('')
@@ -157,10 +158,21 @@ export default function Login() {
         <div className="hidden md:flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-5 py-3">
           <Lock className="h-4 w-4 text-blue-300 flex-shrink-0" />
           <form onSubmit={handleSubmit} className="flex items-center gap-3">
+            <Input
+              id="user-no"
+              type="text"
+              inputMode="numeric"
+              autoComplete="username"
+              value={userNo}
+              onChange={(e) => setUserNo(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder={t.userNoPlaceholder}
+              className="w-36 h-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 text-sm focus:bg-white/20 focus:border-blue-400"
+            />
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t.passwordPlaceholder}
@@ -223,9 +235,20 @@ export default function Login() {
                 <h3 className="text-white font-semibold">{t.loginTitle}</h3>
               </div>
               <form onSubmit={handleSubmit} className="space-y-3">
+                <Input
+                  id="user-no-mobile"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="username"
+                  value={userNo}
+                  onChange={(e) => setUserNo(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  placeholder={t.userNoPlaceholder}
+                  className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20 focus:border-blue-400"
+                />
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={t.passwordPlaceholder}

@@ -17,6 +17,7 @@ export const langFlags: Record<Lang, string> = {
 export interface Translations {
   // Nav & Login
   passwordPlaceholder: string
+  userNoPlaceholder: string
   loginButton: string
   loggingIn: string
   memberButton: string
@@ -56,6 +57,7 @@ export interface Translations {
   // Login error
   errorTitle: string
   errorWrongPassword: string
+  errorTooManyAttempts: string
 
   // Membership modal
   membershipTitle: string
@@ -91,6 +93,7 @@ export interface Translations {
 export const translations: Record<Lang, Translations> = {
   tr: {
     passwordPlaceholder: 'Şifrenizi girin',
+    userNoPlaceholder: 'Kullanıcı No',
     loginButton: 'Giriş Yap',
     loggingIn: 'Giriş...',
     memberButton: 'Üye Ol',
@@ -124,7 +127,8 @@ export const translations: Record<Lang, Translations> = {
     footerText: 'LexCloud — Hukuk Ofisi Yönetim Platformu',
 
     errorTitle: 'Hata',
-    errorWrongPassword: 'Şifre yanlış. Lütfen tekrar deneyin.',
+    errorWrongPassword: 'Kullanıcı No veya şifre hatalı. Lütfen tekrar deneyin.',
+    errorTooManyAttempts: 'Çok fazla hatalı deneme. Lütfen 15 dakika sonra tekrar deneyin.',
 
     membershipTitle: 'Üye Ol',
     membershipDescription: 'LexCloud sistemine üyelik talebinde bulunmak için aşağıdaki formu doldurun.',
@@ -157,6 +161,7 @@ export const translations: Record<Lang, Translations> = {
 
   en: {
     passwordPlaceholder: 'Enter your password',
+    userNoPlaceholder: 'User No',
     loginButton: 'Sign In',
     loggingIn: 'Signing in...',
     memberButton: 'Register',
@@ -190,7 +195,8 @@ export const translations: Record<Lang, Translations> = {
     footerText: 'LexCloud — Law Firm Management Platform',
 
     errorTitle: 'Error',
-    errorWrongPassword: 'Incorrect password. Please try again.',
+    errorWrongPassword: 'Incorrect User No or password. Please try again.',
+    errorTooManyAttempts: 'Too many failed attempts. Please try again in 15 minutes.',
 
     membershipTitle: 'Register',
     membershipDescription: 'Fill out the form below to request membership to the LexCloud system.',
@@ -223,6 +229,7 @@ export const translations: Record<Lang, Translations> = {
 
   zh: {
     passwordPlaceholder: '请输入密码',
+    userNoPlaceholder: '用户编号',
     loginButton: '登录',
     loggingIn: '登录中...',
     memberButton: '注册',
@@ -256,7 +263,8 @@ export const translations: Record<Lang, Translations> = {
     footerText: 'LexCloud — 律师事务所管理平台',
 
     errorTitle: '错误',
-    errorWrongPassword: '密码错误，请重试。',
+    errorWrongPassword: '用户编号或密码错误，请重试。',
+    errorTooManyAttempts: '失败次数过多，请15分钟后重试。',
 
     membershipTitle: '注册',
     membershipDescription: '请填写以下表格以申请加入 LexCloud 系统。',
@@ -289,6 +297,7 @@ export const translations: Record<Lang, Translations> = {
 
   es: {
     passwordPlaceholder: 'Ingrese su contraseña',
+    userNoPlaceholder: 'N.º de usuario',
     loginButton: 'Iniciar Sesión',
     loggingIn: 'Iniciando...',
     memberButton: 'Registrarse',
@@ -322,7 +331,8 @@ export const translations: Record<Lang, Translations> = {
     footerText: 'LexCloud — Plataforma de Gestión para Bufetes de Abogados',
 
     errorTitle: 'Error',
-    errorWrongPassword: 'Contraseña incorrecta. Por favor, inténtelo de nuevo.',
+    errorWrongPassword: 'N.º de usuario o contraseña incorrectos. Por favor, inténtelo de nuevo.',
+    errorTooManyAttempts: 'Demasiados intentos fallidos. Inténtelo de nuevo en 15 minutos.',
 
     membershipTitle: 'Registrarse',
     membershipDescription: 'Complete el formulario a continuación para solicitar la membresía en el sistema LexCloud.',

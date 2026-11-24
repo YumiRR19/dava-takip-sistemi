@@ -44,6 +44,7 @@ class ClientDB(Base):
     __tablename__ = "clients"
     
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
@@ -59,6 +60,7 @@ class CaseDB(Base):
     __tablename__ = "cases"
     
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     title = Column(String, nullable=False)
     case_name = Column(String, nullable=True)
     description = Column(Text, nullable=True)
@@ -88,6 +90,7 @@ class CompensationLetterDB(Base):
     __tablename__ = "compensation_letters"
     
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     title = Column(String, nullable=False)
     client_id = Column(String, nullable=False)
     client_name = Column(String, nullable=False)
@@ -113,6 +116,7 @@ class ExecutionDB(Base):
     __tablename__ = "executions"
     
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     client_id = Column(String, nullable=False)
     client_name = Column(String, nullable=False)
     defendant = Column(String, nullable=False)
@@ -150,6 +154,7 @@ class ImportantReminderDB(Base):
     __tablename__ = "important_reminders"
 
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     responsible_person = Column(String, nullable=True)
     görevlendiren = Column("gorevlendiren", String, nullable=True)
     reminder_date = Column(Date, nullable=True)
@@ -164,13 +169,54 @@ class SettingsOptionDB(Base):
     __tablename__ = "settings_options"
     
     id = Column(String, primary_key=True)
+    owner_id = Column(String, nullable=True, index=True)
     category = Column(String, nullable=False)  # 'bank', 'gorevlendiren', 'ilgili_sorumlu'
     value = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
     
     __table_args__ = (
-        UniqueConstraint('category', 'value', name='uq_settings_category_value'),
+        UniqueConstraint('owner_id', 'category', 'value', name='uq_settings_owner_category_value'),
     )
+
+class AccountDB(Base):
+    __tablename__ = "accounts"
+
+    id = Column(String, primary_key=True)
+    user_no = Column(String(11), nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
+    is_admin = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_legacy = Column(Boolean, nullable=False, default=False, server_default="false")
+    label = Column(String, nullable=True)
+    must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
+    temp_password_expires_at = Column(DateTime, nullable=True)
+    password_changed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+class AccountSessionDB(Base):
+    __tablename__ = "account_sessions"
+
+    id = Column(String, primary_key=True)
+    account_id = Column(String, nullable=False, index=True)
+    device_id = Column(String, nullable=False)
+    user_agent = Column(Text, nullable=True)
+    ip_address = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False)
+    last_seen_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    end_reason = Column(String, nullable=True)
+
+class AdminAuditLogDB(Base):
+    __tablename__ = "admin_audit_log"
+
+    id = Column(String, primary_key=True)
+    admin_account_id = Column(String, nullable=False, index=True)
+    action = Column(String, nullable=False)
+    target_account_id = Column(String, nullable=True)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False)
+
+OWNED_MODELS = (ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, ImportantReminderDB, SettingsOptionDB)
 
 def get_db():
     db = SessionLocal()
