@@ -65,8 +65,8 @@ def _assign_owner(session, flush_context, instances):
     owner = session.info.get("owner_id")
     if owner is None:
         return
-    for obj in session.new:
-        if isinstance(obj, OWNED_MODELS) and obj.owner_id is None:
+    for obj in list(session.new) + list(session.dirty):
+        if isinstance(obj, OWNED_MODELS) and obj.owner_id != owner:
             obj.owner_id = owner
 
 
@@ -176,14 +176,25 @@ def run_account_migration(engine, legacy_password: str) -> None:
 
 
 def ensure_admin_account(db: Session):
-    """Create the single admin account once. Returns (user_no, temp_password);
-    temp_password is None when the admin already existed."""
+    """Create the single admin account once. Returns (user_no, temp_password).
+    temp_password is None when the admin already set their own password; while
+    the first password is still pending, a rerun issues a fresh temporary one
+    (same Kullanıcı No) so an expired or lost bootstrap password is recoverable."""
     db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _MIGRATION_LOCK_KEY})
     existing = db.query(AccountDB).filter(AccountDB.is_admin == True).first()
     if existing:
         user_no = existing.user_no
-        db.rollback()
-        return user_no, None
+        if not existing.must_change_password:
+            db.rollback()
+            return user_no, None
+        temp = generate_temp_password()
+        existing.password_hash = hash_password(temp)
+        existing.temp_password_expires_at = datetime.utcnow() + timedelta(hours=TEMP_PASSWORD_HOURS)
+        ended = end_sessions(db, _active_filter(db.query(AccountSessionDB), datetime.utcnow()).filter(
+            AccountSessionDB.account_id == existing.id).all(), "password_reset")
+        db.commit()
+        notify_sessions_ended(ended)
+        return user_no, temp
     temp = generate_temp_password()
     account = _create_account(
         db, password_hash=hash_password(temp), is_admin=True, is_legacy=False, label="Yönetici",
@@ -277,12 +288,12 @@ def notify_sessions_ended(session_ids: List[str]):
 
 
 def _issue_token(session: AccountSessionDB) -> str:
-    return jwt.encode({"sid": session.id, "exp": int(session.expires_at.timestamp())}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode({"sid": session.id, "exp": int(session.expires_at.timestamp())}, os.getenv("JWT_SECRET"), algorithm=JWT_ALGORITHM)
 
 
 def resolve_session(db: Session, token: str) -> AuthContext:
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, os.getenv("JWT_SECRET"), algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -361,9 +372,10 @@ class ChangePasswordRequest(BaseModel):
 async def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
     ip = client_ip(request)
     user_no = re.sub(r"\D", "", body.user_no or "")
-    ip_key, user_key = f"ip:{ip}", f"user:{user_no or 'legacy'}"
-    if login_limiter.blocked(ip_key, IP_LIMIT, WINDOW) or login_limiter.blocked(user_key, USER_LIMIT, WINDOW):
-        raise HTTPException(status_code=429, detail="Çok fazla hatalı deneme. Lütfen 15 dakika sonra tekrar deneyin.")
+    ip_key = f"ip:{ip}"
+    too_many = HTTPException(status_code=429, detail="Çok fazla hatalı deneme. Lütfen 15 dakika sonra tekrar deneyin.")
+    if login_limiter.blocked(ip_key, IP_LIMIT, WINDOW):
+        raise too_many
 
     if user_no:
         account = db.query(AccountDB).filter(AccountDB.user_no == user_no).first()
@@ -371,6 +383,9 @@ async def login(body: LoginRequest, request: Request, db: Session = Depends(get_
         account = db.query(AccountDB).filter(AccountDB.is_legacy == True).first()
     else:
         account = None
+    user_key = f"acct:{account.id}" if account else f"user:{user_no or 'legacy'}"
+    if login_limiter.blocked(user_key, USER_LIMIT, WINDOW):
+        raise too_many
     now = datetime.utcnow()
     ok = verify_password(body.password, account.password_hash if account else _DUMMY_HASH) and account is not None
     if ok and account.must_change_password and account.temp_password_expires_at and account.temp_password_expires_at <= now:
@@ -436,6 +451,8 @@ async def change_password(body: ChangePasswordRequest, ctx: AuthContext = Depend
     account = ctx.account
     if not verify_password(body.current_password, account.password_hash):
         raise HTTPException(status_code=400, detail="Mevcut şifre hatalı")
+    if account.must_change_password and account.temp_password_expires_at and account.temp_password_expires_at <= datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Geçici şifrenin süresi doldu. Yeni geçici şifre isteyin.")
     problem = password_problem(body.new_password)
     if problem:
         raise HTTPException(status_code=400, detail=problem)
