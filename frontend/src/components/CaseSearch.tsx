@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { api, Client, Case, CaseSearchParams } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { normalizeCaseStatus } from '@/lib/case-options'
 
 export default function CaseSearch() {
   const [loading, setLoading] = useState(false)
@@ -114,7 +115,7 @@ export default function CaseSearch() {
       'Mahkeme/İcra',
       'Dosya No',
       'Davacı/Müşteki',
-      'Davalı/Sanık',
+      'Davalı/Sanık/İlgili',
       'Hatırlatma Tarihi',
       'Hatırlatma Metni',
       'Durum',
@@ -457,10 +458,10 @@ export default function CaseSearch() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="defendant">Davalı/Sanık</Label>
+              <Label htmlFor="defendant">Davalı/Sanık/İlgili</Label>
               <Input
                 id="defendant"
-                placeholder="Davalı/Sanık adı ara..."
+                placeholder="Davalı/Sanık/İlgili adı ara..."
                 value={searchParams.defendant || ''}
                 onChange={(e) => handleParamChange('defendant', e.target.value)}
               />
@@ -510,7 +511,7 @@ export default function CaseSearch() {
                     <TableHead className="w-[200px]">Mahkeme</TableHead>
                     <TableHead className="w-[120px]">Dosya No</TableHead>
                     <TableHead className="w-[150px]">Davacı/Müşteki</TableHead>
-                    <TableHead className="w-[150px]">Davalı/Sanık</TableHead>
+                    <TableHead className="w-[150px]">Davalı/Sanık/İlgili</TableHead>
                     <TableHead className="w-[120px]">Hatırlatma Tarihi</TableHead>
                     <TableHead className="w-[200px]">Hatırlatma Metni</TableHead>
                     <TableHead className="w-[100px]">Durum</TableHead>
@@ -552,7 +553,7 @@ export default function CaseSearch() {
                       </TableCell>
                       <TableCell>
                         <Badge className="text-xs">
-                          {case_.status}
+                          {normalizeCaseStatus(case_.status)}
                         </Badge>
                       </TableCell>
                     </TableRow>

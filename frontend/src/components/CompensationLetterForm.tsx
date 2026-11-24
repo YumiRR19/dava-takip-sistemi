@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { EmojiInput, EmojiTextarea } from '@/components/EmojiTextarea'
 import { useToast } from '@/hooks/use-toast'
 import { api, CompensationLetterCreate, CompensationLetterUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
@@ -354,21 +355,20 @@ export default function CompensationLetterForm() {
 
             <div className="space-y-2">
               <Label htmlFor="reminder_text">Hatırlatma Metni</Label>
-              <Input
+              <EmojiInput
                 id="reminder_text"
                 value={formData.reminder_text}
-                onChange={(e) => setFormData({ ...formData, reminder_text: e.target.value })}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, reminder_text: value }))}
                 placeholder="Hatırlatma metni girin"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="description_text">Açıklama Metni</Label>
-              <textarea
+              <EmojiTextarea
                 id="description_text"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formData.description_text}
-                onChange={(e) => setFormData({ ...formData, description_text: e.target.value })}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, description_text: value }))}
                 placeholder="Açıklama metni girin"
                 rows={3}
               />

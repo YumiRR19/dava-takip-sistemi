@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { EmojiTextarea } from '@/components/EmojiTextarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, CaseCreate, CaseUpdate, SettingsOption } from '@/lib/api'
 import { DEFAULT_PERSONS } from '@/lib/responsible-persons'
+import { CASE_STATUS_OPTIONS, KANUN_YOLU_OPTIONS, LEGACY_KANUN_YOLU_STATUSES, normalizeCaseStatus, toTurkishUpper } from '@/lib/case-options'
 import { useToast } from '@/hooks/use-toast'
 
 const REMINDER_TEXT_PRESETS = [
@@ -25,7 +26,6 @@ const REMINDER_TEXT_PRESETS = [
   'Kesinleşme istenilsin.',
 ]
 
-const KANUN_YOLU_OPTIONS = ['İstinaf', 'Temyiz']
 const KANUN_YOLU_NONE = '__none__'
 
 export default function CaseForm() {
@@ -60,6 +60,35 @@ export default function CaseForm() {
   })
   const [currentVersion, setCurrentVersion] = useState<number>(1)
   const [legacyStatus, setLegacyStatus] = useState<string>('')
+  const [archiveNoTouched, setArchiveNoTouched] = useState(false)
+  const [archiveSuggestion, setArchiveSuggestion] = useState<string | null>(null)
+  const statusOptions = formData.status && !CASE_STATUS_OPTIONS.includes(formData.status)
+    ? [...CASE_STATUS_OPTIONS, formData.status]
+    : CASE_STATUS_OPTIONS
+
+  useEffect(() => {
+    if (isEdit || archiveNoTouched) return
+    const court = formData.court.trim()
+    if (!court) {
+      setArchiveSuggestion(null)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const result = await api.archiveSuggestion(court)
+        if (cancelled) return
+        setArchiveSuggestion(result.suggestion)
+        setFormData(prev => ({ ...prev, office_archive_no: result.suggestion ?? '' }))
+      } catch (error) {
+        console.error('Error loading archive number suggestion:', error)
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [formData.court, isEdit, archiveNoTouched])
 
   useEffect(() => {
     loadCustomOptions()
@@ -84,15 +113,15 @@ export default function CaseForm() {
   const loadCase = async (caseId: string) => {
     try {
       const caseData = await api.cases.getById(caseId)
-      const isLegacyStatus = KANUN_YOLU_OPTIONS.includes(caseData.status)
-      setLegacyStatus(isLegacyStatus ? caseData.status : '')
+      const isLegacyStatus = LEGACY_KANUN_YOLU_STATUSES.includes(caseData.status)
+      setLegacyStatus(caseData.status)
       setFormData({
         description: caseData.description || '',
         client_id: caseData.client_id,
         client_name: caseData.client_name || '',
         case_name: caseData.case_name || '',
         case_type: caseData.case_type,
-        status: isLegacyStatus ? '' : caseData.status,
+        status: isLegacyStatus ? '' : normalizeCaseStatus(caseData.status),
         court: caseData.court,
         case_number: caseData.case_number,
         defendant: caseData.defendant,
@@ -130,6 +159,15 @@ export default function CaseForm() {
       return
     }
 
+    if (!formData.status && !formData.kanun_yolu && LEGACY_KANUN_YOLU_STATUSES.includes(legacyStatus)) {
+      toast({
+        title: "Hata",
+        description: "Kanun Yolu/Kesinleştirme temizlendiğinde lütfen bir Durum seçin.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     const submissionData = {
@@ -148,6 +186,7 @@ export default function CaseForm() {
       next_hearing_date: formData.next_hearing_date,
       reminder_date: formData.reminder_date,
       office_archive_no: formData.office_archive_no,
+      ...(!isEdit && { office_archive_no_auto: !archiveNoTouched && archiveSuggestion !== null && formData.office_archive_no === archiveSuggestion }),
       responsible_person: formData.responsible_person || undefined,
       görevlendiren: formData.görevlendiren || undefined,
       is_starred: formData.is_starred,
@@ -184,10 +223,12 @@ export default function CaseForm() {
           reminder_date: submissionData.reminder_date || undefined,
         }
         console.log('Create data:', createData)
-        await api.cases.create(createData)
+        const created = await api.cases.create(createData)
         toast({
           title: "Başarılı",
-          description: "Dava başarıyla oluşturuldu.",
+          description: createData.office_archive_no_auto && created.office_archive_no !== createData.office_archive_no
+            ? `Dava başarıyla oluşturuldu. Önerilen arşiv numarası bu arada kullanıldığı için ${created.office_archive_no} verildi.`
+            : "Dava başarıyla oluşturuldu.",
         })
       }
       navigate('/cases')
@@ -268,13 +309,13 @@ export default function CaseForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="defendant">Davalı/Sanık *</Label>
+                <Label htmlFor="defendant">Davalı/Sanık/İlgili *</Label>
                 <Input
                   id="defendant"
                   name="defendant"
                   value={formData.defendant}
                   onChange={(e) => handleChange('defendant', e.target.value)}
-                  placeholder="Davalı/Sanık adını girin"
+                  placeholder="Davalı/Sanık/İlgili adını girin"
                   required
                 />
               </div>
@@ -305,43 +346,32 @@ export default function CaseForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">Durum *</Label>
-                <Select value={formData.status} onValueChange={(value) => handleChange('status', value)} name="status">
+                <Select value={formData.status} onValueChange={(value) => { if (value) handleChange('status', value) }} name="status">
                   <SelectTrigger>
                     <SelectValue placeholder="Durum seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Beraat">Beraat</SelectItem>
-                    <SelectItem value="Ceza">Ceza</SelectItem>
-                    <SelectItem value="Kısmen kabul Kısmen red">Kısmen kabul Kısmen red</SelectItem>
-                    <SelectItem value="Kabul">Kabul</SelectItem>
-                    <SelectItem value="Red">Red</SelectItem>
-                    <SelectItem value="Derdest">Derdest</SelectItem>
-                    <SelectItem value="Kesinleştirme">Kesinleştirme</SelectItem>
-                    <SelectItem value="G.K. Bekleniyor">Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="Bilirkişi">Bilirkişi</SelectItem>
-                    <SelectItem value="Konkordato">Konkordato</SelectItem>
-                    <SelectItem value="Derdest/Bilirkişi">Derdest/Bilirkişi</SelectItem>
-                    <SelectItem value="Derdest/Gerekli Karar Bekleniyor">Derdest/Gerekli Karar Bekleniyor</SelectItem>
-                    <SelectItem value="İşlemden kaldırma">İşlemden kaldırma</SelectItem>
-                    <SelectItem value="Karar verilmesine yer olmadığına karar verilmiştir">Karar verilmesine yer olmadığına karar verilmiştir</SelectItem>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="kanun_yolu">Kanun Yolu</Label>
+                <Label htmlFor="kanun_yolu">Kanun Yolu/Kesinleştirme</Label>
                 <Select
                   value={formData.kanun_yolu}
                   onValueChange={(value) => handleChange('kanun_yolu', value === KANUN_YOLU_NONE ? '' : value)}
                   name="kanun_yolu"
                 >
                   <SelectTrigger id="kanun_yolu">
-                    <SelectValue placeholder="Kanun yolu seçin (isteğe bağlı)" />
+                    <SelectValue placeholder="Kanun yolu/kesinleştirme seçin (isteğe bağlı)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={KANUN_YOLU_NONE}>Seçimi temizle</SelectItem>
                     {KANUN_YOLU_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option} value={option}>{toTurkishUpper(option)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -406,7 +436,10 @@ export default function CaseForm() {
                   id="office_archive_no"
                   name="office_archive_no"
                   value={formData.office_archive_no}
-                  onChange={(e) => handleChange('office_archive_no', e.target.value)}
+                  onChange={(e) => {
+                    setArchiveNoTouched(true)
+                    handleChange('office_archive_no', e.target.value)
+                  }}
                   placeholder="Ofis arşiv numarasını girin"
                 />
               </div>
@@ -477,11 +510,11 @@ export default function CaseForm() {
                   ))}
                 </SelectContent>
               </Select>
-              <Textarea
+              <EmojiTextarea
                 id="description"
                 name="description"
                 value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
+                onValueChange={(value) => handleChange('description', value)}
                 placeholder="Dava hakkında detaylı açıklama girin"
                 rows={4}
               />
@@ -489,11 +522,11 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="icra_dosya_numarasi">Dava ile ilgili icra dosya numarası</Label>
-              <Textarea
+              <EmojiTextarea
                 id="icra_dosya_numarasi"
                 name="icra_dosya_numarasi"
                 value={formData.icra_dosya_numarasi}
-                onChange={(e) => handleChange('icra_dosya_numarasi', e.target.value)}
+                onValueChange={(value) => handleChange('icra_dosya_numarasi', value)}
                 placeholder="İlgili icra dosya numarasını girin (her satıra bir numara yazabilirsiniz)"
                 rows={3}
               />
@@ -501,11 +534,11 @@ export default function CaseForm() {
 
             <div className="space-y-2">
               <Label htmlFor="notes">Özel Not</Label>
-              <Textarea
+              <EmojiTextarea
                 id="notes"
                 name="notes"
                 value={formData.notes}
-                onChange={(e) => handleChange('notes', e.target.value)}
+                onValueChange={(value) => handleChange('notes', value)}
                 placeholder="Dava ile ilgili özel notlarınızı buraya yazabilirsiniz"
                 rows={3}
               />
