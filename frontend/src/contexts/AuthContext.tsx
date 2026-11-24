@@ -39,10 +39,14 @@ function getDeviceId(): string {
 
 const ACCOUNT_CACHE_KEYS = ['dashboard_data', 'cases_cache', 'clients_cache', 'executions_cache', 'compensation_letters_cache']
 
-function clearAccountLocalData() {
+const DRAFT_OWNER_KEY = 'form_draft_owner'
+
+function clearAccountLocalData(nextUserNo?: string) {
+  const clearDrafts = nextUserNo !== undefined && localStorage.getItem(DRAFT_OWNER_KEY) !== nextUserNo
   Object.keys(localStorage)
-    .filter((key) => key.startsWith('form_draft_') || ACCOUNT_CACHE_KEYS.includes(key))
+    .filter((key) => ACCOUNT_CACHE_KEYS.includes(key) || (clearDrafts && key.startsWith('form_draft_')))
     .forEach((key) => localStorage.removeItem(key))
+  if (nextUserNo !== undefined) localStorage.setItem(DRAFT_OWNER_KEY, nextUserNo)
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -119,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         clearApiCache()
-        clearAccountLocalData()
+        clearAccountLocalData(data.user_no)
         setAccount({ accountType: data.account_type, mustChangePassword: data.must_change_password, userNo: data.user_no })
         setToken(data.token)
         localStorage.setItem('auth_token', data.token)
