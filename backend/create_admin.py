@@ -4,7 +4,8 @@ Usage: DATABASE_URL=... JWT_SECRET=... python create_admin.py <temp-password-fil
 
 Prints only the admin Kullanıcı No. On first creation the temporary password is
 written to <temp-password-file> (mode 0600) and never printed. Running it again
-creates nothing and keeps the existing number.
+never creates a second admin and keeps the existing number; while the admin has
+not yet set their own password it writes a fresh temporary password instead.
 """
 import os
 import sys
@@ -27,9 +28,10 @@ def main():
         print(f"Admin already exists; Kullanıcı No unchanged: {user_no}")
         return
     fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(temp)
-    print(f"Admin created. Kullanıcı No: {user_no}. Temporary password written to {out_path}")
+    print(f"Admin Kullanıcı No: {user_no}. Temporary password written to {out_path}")
 
 
 if __name__ == "__main__":
