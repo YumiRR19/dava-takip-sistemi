@@ -48,7 +48,7 @@ function useEmojiInsert<T extends TextElement>(value: string, onValueChange: (va
   return { ref, insertEmoji, handlers, rememberSelection }
 }
 
-function EmojiPickerButton({ onPick }: { onPick: (emoji: string) => void }) {
+function EmojiPickerButton({ onPick, container }: { onPick: (emoji: string) => void; container?: HTMLElement | null }) {
   const [open, setOpen] = React.useState(false)
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -58,7 +58,7 @@ function EmojiPickerButton({ onPick }: { onPick: (emoji: string) => void }) {
           Emoji ekle
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-2" align="start">
+      <PopoverContent className="w-80 p-2" align="start" container={container}>
         <div className="max-h-72 overflow-y-auto space-y-2">
           {EMOJI_GROUPS.map((group) => (
             <div key={group.title}>
@@ -133,11 +133,13 @@ function TextExpandDialog({
   maxLength,
 }: TextExpandDialogProps) {
   const { ref, insertEmoji, handlers, rememberSelection } = useEmojiInsert<HTMLTextAreaElement>(value, onValueChange)
+  const [contentEl, setContentEl] = React.useState<HTMLDivElement | null>(null)
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
+          ref={setContentEl}
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => {
             e.preventDefault()
@@ -193,7 +195,7 @@ function TextExpandDialog({
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 sm:px-6 dark:border-zinc-800">
             <div className="flex min-w-0 items-center gap-3">
-              {withEmoji && !readOnly && <EmojiPickerButton onPick={insertEmoji} />}
+              {withEmoji && !readOnly && <EmojiPickerButton onPick={insertEmoji} container={contentEl} />}
               <span className="text-xs text-gray-400">{value.length} karakter</span>
             </div>
             <DialogPrimitive.Close asChild>
