@@ -243,6 +243,7 @@ async def startup_event():
         print("✅ Account migration completed")
     except Exception as account_migration_error:
         print(f"Account migration error: {account_migration_error}")
+        raise
 
     print("✅ Backend startup completed - table creation and migration completed")
     
@@ -541,11 +542,14 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, Set[WebSocket]] = {}
         self.socket_sessions: Dict[WebSocket, Optional[str]] = {}
+        self.socket_expiry: Dict[WebSocket, datetime] = {}
         self.connection_lock = threading.Lock()
 
-    def connect(self, websocket: WebSocket, user_token: str, session_id: Optional[str] = None):
+    def connect(self, websocket: WebSocket, user_token: str, session_id: Optional[str] = None, expires_at: Optional[datetime] = None):
         with self.connection_lock:
             self.socket_sessions[websocket] = session_id
+            if expires_at is not None:
+                self.socket_expiry[websocket] = expires_at
             if user_token not in self.active_connections:
                 self.active_connections[user_token] = set()
             self.active_connections[user_token].add(websocket)
@@ -559,6 +563,7 @@ class ConnectionManager:
                 if not self.active_connections[user_token]:
                     del self.active_connections[user_token]
             self.socket_sessions.pop(websocket, None)
+            self.socket_expiry.pop(websocket, None)
         total = self.get_connection_count()
         logger.info(f"WebSocket disconnected. Total active: {total}")
 
@@ -615,12 +620,14 @@ class ConnectionManager:
         # This prevents deadlock: await inside a threading.Lock blocks the event loop
         # thread, preventing the lock holder from ever releasing it.
         owner = current_owner_id.get()
+        now = datetime.utcnow()
         with self.connection_lock:
             all_connections = [
                 (conn, token)
                 for token, conns in self.active_connections.items()
                 if token == owner
                 for conn in conns.copy()
+                if self.socket_expiry.get(conn, now) >= now
             ]
         
         disconnected_connections = []
@@ -762,19 +769,22 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
             ctx = resolve_session(ws_db, token)
             if ctx.account.is_admin or ctx.account.must_change_password:
                 raise jwt.InvalidTokenError()
-            owner_key, session_id = ctx.account.id, ctx.session.id
+            owner_key, session_id, session_expires = ctx.account.id, ctx.session.id, ctx.session.expires_at
         except HTTPException:
             raise jwt.InvalidTokenError()
         finally:
             ws_db.close()
         await websocket.accept()
         accepted = True
-        manager.connect(websocket, owner_key, session_id)
+        manager.connect(websocket, owner_key, session_id, session_expires)
         
         async def ping_task():
             while True:
                 try:
                     await asyncio.sleep(25)
+                    if datetime.utcnow() >= session_expires:
+                        await websocket.close(code=1008)
+                        break
                     if websocket.client_state.name == "CONNECTED":
                         await websocket.ping()
                     else:
