@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
 from sqlalchemy import text, Index, ForeignKey, or_, func as sql_func
 import logging
 from app.database import get_db, create_tables, ClientDB, CaseDB, CompensationLetterDB, ExecutionDB, SettingsOptionDB, ImportantReminderDB, engine
+from app.accounts import router as accounts_router, verify_token, current_owner_id, sessions_ended_hooks, resolve_session, run_account_migration
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,6 +43,7 @@ app.add_middleware(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.include_router(accounts_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -236,6 +238,12 @@ async def startup_event():
     except Exception as kesinlestirme_migration_error:
         print(f"Kesinleştirme kanun_yolu migration error: {kesinlestirme_migration_error}")
     
+    try:
+        run_account_migration(engine, ADMIN_PASSWORD)
+        print("✅ Account migration completed")
+    except Exception as account_migration_error:
+        print(f"Account migration error: {account_migration_error}")
+
     print("✅ Backend startup completed - table creation and migration completed")
     
     # Start periodic background task to clean up stale WebSocket connections
@@ -532,10 +540,12 @@ JWT_EXPIRATION_HOURS = 24
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, Set[WebSocket]] = {}
+        self.socket_sessions: Dict[WebSocket, Optional[str]] = {}
         self.connection_lock = threading.Lock()
 
-    def connect(self, websocket: WebSocket, user_token: str):
+    def connect(self, websocket: WebSocket, user_token: str, session_id: Optional[str] = None):
         with self.connection_lock:
+            self.socket_sessions[websocket] = session_id
             if user_token not in self.active_connections:
                 self.active_connections[user_token] = set()
             self.active_connections[user_token].add(websocket)
@@ -548,8 +558,26 @@ class ConnectionManager:
                 self.active_connections[user_token].discard(websocket)
                 if not self.active_connections[user_token]:
                     del self.active_connections[user_token]
+            self.socket_sessions.pop(websocket, None)
         total = self.get_connection_count()
         logger.info(f"WebSocket disconnected. Total active: {total}")
+
+    def close_sessions(self, session_ids):
+        ended = set(session_ids)
+        with self.connection_lock:
+            sockets = [ws for ws, sid in self.socket_sessions.items() if sid in ended]
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        for ws in sockets:
+            loop.create_task(self._close_quietly(ws))
+
+    async def _close_quietly(self, websocket: WebSocket):
+        try:
+            await websocket.close(code=1008)
+        except Exception:
+            pass
 
     def get_connection_count(self) -> int:
         with self.connection_lock:
@@ -586,10 +614,12 @@ class ConnectionManager:
         # Collect snapshot of connections under the lock, then send outside the lock.
         # This prevents deadlock: await inside a threading.Lock blocks the event loop
         # thread, preventing the lock holder from ever releasing it.
+        owner = current_owner_id.get()
         with self.connection_lock:
             all_connections = [
                 (conn, token)
                 for token, conns in self.active_connections.items()
+                if token == owner
                 for conn in conns.copy()
             ]
         
@@ -718,34 +748,28 @@ def db_to_pydantic_execution(db_execution: ExecutionDB) -> Execution:
     )
 
 manager = ConnectionManager()
-
-class LoginRequest(BaseModel):
-    password: str
-
-class LoginResponse(BaseModel):
-    token: str
-
-class PasswordChangeRequest(BaseModel):
-    new_password: str
-
-def verify_token(token: str = Depends(HTTPBearer())):
-    try:
-        payload = jwt.decode(token.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+sessions_ended_hooks.append(manager.close_sessions)
 
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
     accepted = False
+    owner_key = None
     ping_coroutine = None
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        from app.database import SessionLocal
+        ws_db = SessionLocal()
+        try:
+            ctx = resolve_session(ws_db, token)
+            if ctx.account.is_admin or ctx.account.must_change_password:
+                raise jwt.InvalidTokenError()
+            owner_key, session_id = ctx.account.id, ctx.session.id
+        except HTTPException:
+            raise jwt.InvalidTokenError()
+        finally:
+            ws_db.close()
         await websocket.accept()
         accepted = True
-        manager.connect(websocket, token)
+        manager.connect(websocket, owner_key, session_id)
         
         async def ping_task():
             while True:
@@ -776,7 +800,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         if ping_coroutine is not None:
             ping_coroutine.cancel()
         if accepted:
-            manager.disconnect(websocket, token)
+            manager.disconnect(websocket, owner_key)
 
 @app.get("/healthz")
 async def healthz():
@@ -862,27 +886,6 @@ async def database_health(db: Session = Depends(get_db)):
         return {"status": "ok", "database": "connected"}
     except Exception as e:
         return {"status": "error", "database": "disconnected", "error": str(e)}
-
-@app.post("/api/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    if request.password == ADMIN_PASSWORD:
-        token = jwt.encode(
-            {"exp": datetime.utcnow().timestamp() + (JWT_EXPIRATION_HOURS * 3600)},
-            JWT_SECRET,
-            algorithm=JWT_ALGORITHM
-        )
-        return LoginResponse(token=token)
-    raise HTTPException(status_code=401, detail="Invalid password")
-
-@app.post("/api/logout")
-async def logout():
-    return {"message": "Logged out successfully"}
-
-@app.post("/api/change-password")
-async def change_password(request: PasswordChangeRequest, token: str = Depends(verify_token)):
-    global ADMIN_PASSWORD
-    ADMIN_PASSWORD = request.new_password
-    return {"message": "Password changed successfully"}
 
 @app.get("/api/backup")
 async def backup_data(db: Session = Depends(get_db), token: str = Depends(verify_token)):

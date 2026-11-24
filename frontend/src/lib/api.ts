@@ -10,6 +10,11 @@ export class ApiError extends Error {
 const responseCache = new Map<string, unknown>()
 const inFlightRequests = new Map<string, Promise<unknown>>()
 
+export function clearApiCache() {
+  responseCache.clear()
+  inFlightRequests.clear()
+}
+
 // Last successful GET response for an endpoint; used to render instantly while fresh data loads.
 export function peekCache<T>(endpoint: string): T | undefined {
   return responseCache.get(endpoint) as T | undefined
@@ -54,6 +59,8 @@ async function rawApiRequest<T>(endpoint: string, options: RequestInit = {}): Pr
       if (response.status === 401) {
         localStorage.removeItem('auth_token')
         window.location.href = '/login'
+      } else if (response.status === 403 && errorText.includes('password_change_required')) {
+        window.location.reload()
       }
       let errorMessage = response.statusText
       try {
@@ -170,6 +177,19 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       }),
+  },
+
+  admin: {
+    listAccounts: () => rawApiRequest<AdminAccount[]>('/api/admin/accounts'),
+    createAccount: (label: string) =>
+      rawApiRequest<IssuedCredentials & { id: string }>('/api/admin/accounts', { method: 'POST', body: JSON.stringify({ label }) }),
+    resetPassword: (accountId: string) =>
+      rawApiRequest<IssuedCredentials>(`/api/admin/accounts/${accountId}/reset-password`, { method: 'POST' }),
+    revokeSession: (sessionId: string) =>
+      rawApiRequest<{ closed_sessions: number }>(`/api/admin/sessions/${sessionId}/revoke`, { method: 'POST' }),
+    revokeAllSessions: (accountId: string) =>
+      rawApiRequest<{ closed_sessions: number }>(`/api/admin/accounts/${accountId}/revoke-sessions`, { method: 'POST' }),
+    auditLog: () => rawApiRequest<AdminAuditEntry[]>('/api/admin/audit-log'),
   },
   
   backup: {
@@ -306,4 +326,44 @@ export interface ImportantReminderCreate {
 
 export interface ImportantReminderUpdate extends ImportantReminderCreate {
   version?: number
+}
+
+export interface AdminSession {
+  id: string
+  device_id: string
+  device: string
+  ip_address: string | null
+  created_at: string
+  last_seen_at: string
+  expires_at: string
+  ended_at: string | null
+  status: string
+}
+
+export interface AdminAccount {
+  id: string
+  user_no: string
+  label: string | null
+  account_type: 'admin' | 'standard'
+  is_legacy: boolean
+  created_at: string | null
+  temp_password: 'pending' | 'expired' | null
+  temp_password_expires_at: string | null
+  active_device_count: number
+  active_session_count: number
+  sessions: AdminSession[]
+}
+
+export interface IssuedCredentials {
+  user_no: string
+  temp_password: string
+  temp_password_expires_at: string
+}
+
+export interface AdminAuditEntry {
+  id: string
+  action: string
+  target_account_id: string | null
+  details: Record<string, unknown>
+  created_at: string
 }

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { useState, lazy, Suspense } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Sidebar from './components/Sidebar'
@@ -16,14 +16,49 @@ import Login from './components/Login'
 import Settings from './components/Settings'
 import ImportantReminders from './components/ImportantReminders'
 import Copyright from './components/Copyright'
+import ForcePasswordChange from './components/ForcePasswordChange'
+
+const AdminPanel = lazy(() => import('./components/AdminPanel'))
 import './App.css'
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, account } = useAuth()
 
   if (!isAuthenticated) {
-    return <Login />
+    return (
+      <>
+        <Login />
+        <Toaster />
+      </>
+    )
+  }
+
+  if (!account) {
+    return <div className="flex h-screen items-center justify-center bg-gray-100 text-sm text-gray-500">Yükleniyor...</div>
+  }
+
+  if (account.mustChangePassword) {
+    return (
+      <>
+        <ForcePasswordChange />
+        <Toaster />
+      </>
+    )
+  }
+
+  if (account.accountType === 'admin') {
+    return (
+      <>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-100 text-sm text-gray-500">Yükleniyor...</div>}>
+          <Routes>
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Routes>
+        </Suspense>
+        <Toaster />
+      </>
+    )
   }
 
   return (
@@ -48,6 +83,8 @@ function AppContent() {
             <Route path="/compensation-letters/:id/edit" element={<CompensationLetterForm />} />
             <Route path="/important-reminders" element={<ImportantReminders />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin/*" element={<Navigate to="/" replace />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
         <footer className="shrink-0 border-t border-gray-200 bg-white lg:hidden">
