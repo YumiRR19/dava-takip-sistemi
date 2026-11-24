@@ -10,7 +10,10 @@ export class ApiError extends Error {
 const responseCache = new Map<string, unknown>()
 const inFlightRequests = new Map<string, Promise<unknown>>()
 
+let cacheGeneration = 0
+
 export function clearApiCache() {
+  cacheGeneration++
   responseCache.clear()
   inFlightRequests.clear()
 }
@@ -30,11 +33,12 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   const canShare = !options.signal
   const pending = canShare ? inFlightRequests.get(endpoint) : undefined
   if (pending) return pending as Promise<T>
+  const generation = cacheGeneration
   const promise = rawApiRequest<T>(endpoint, options).then((data) => {
-    responseCache.set(endpoint, data)
+    if (generation === cacheGeneration) responseCache.set(endpoint, data)
     return data
   }).finally(() => {
-    if (canShare) inFlightRequests.delete(endpoint)
+    if (canShare && generation === cacheGeneration) inFlightRequests.delete(endpoint)
   })
   if (canShare) inFlightRequests.set(endpoint, promise)
   return promise

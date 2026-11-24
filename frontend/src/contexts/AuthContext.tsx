@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { clearApiCache } from '@/lib/api'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -37,6 +37,14 @@ function getDeviceId(): string {
   return id
 }
 
+const ACCOUNT_CACHE_KEYS = ['dashboard_data', 'cases_cache', 'clients_cache', 'executions_cache', 'compensation_letters_cache']
+
+function clearAccountLocalData() {
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith('form_draft_') || ACCOUNT_CACHE_KEYS.includes(key))
+    .forEach((key) => localStorage.removeItem(key))
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [account, setAccount] = useState<AccountInfo | null>(null)
@@ -59,7 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null)
     setAccount(null)
     localStorage.removeItem('auth_token')
+    clearAccountLocalData()
   }
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'auth_token' && e.newValue !== token) window.location.reload()
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [token])
 
   const fetchAccount = async (currentToken: string) => {
     try {
@@ -102,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         clearApiCache()
+        clearAccountLocalData()
         setAccount({ accountType: data.account_type, mustChangePassword: data.must_change_password, userNo: data.user_no })
         setToken(data.token)
         localStorage.setItem('auth_token', data.token)
