@@ -785,9 +785,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                     if datetime.utcnow() >= session_expires:
                         await websocket.close(code=1008)
                         break
-                    if websocket.client_state.name == "CONNECTED":
-                        await websocket.ping()
-                    else:
+                    if websocket.client_state.name != "CONNECTED":
                         break
                 except Exception:
                     break
