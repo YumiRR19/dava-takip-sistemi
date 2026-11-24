@@ -15,6 +15,7 @@ export const CASE_STATUS_OPTIONS = [
   'Yetkisizlik Kararı',
   'Görevsizlik Kararı',
   'Birleştirme Kararı',
+  'KYOK',
 ]
 
 // Older spellings of renamed statuses, mapped to the current option value.

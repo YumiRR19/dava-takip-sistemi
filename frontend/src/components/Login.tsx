@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { translations, langLabels, langFlags, type Lang } from './login-translations'
+import { ExpandableTextarea } from '@/components/EmojiTextarea'
 
 export default function Login() {
   const [password, setPassword] = useState('')
@@ -410,10 +411,10 @@ export default function Login() {
                       <Label htmlFor="reg-message" className="text-sm font-medium text-gray-700">
                         {t.noteLabel}
                       </Label>
-                      <textarea
+                      <ExpandableTextarea
                         id="reg-message"
                         value={registerForm.message}
-                        onChange={(e) => setRegisterForm(prev => ({ ...prev, message: e.target.value }))}
+                        onValueChange={(value) => setRegisterForm(prev => ({ ...prev, message: value }))}
                         placeholder={t.notePlaceholder}
                         rows={3}
                         className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:ring-blue-400 focus:outline-none resize-none"

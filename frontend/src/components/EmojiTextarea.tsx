@@ -1,10 +1,12 @@
 import * as React from 'react'
-import { Smile } from 'lucide-react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { Maximize2, Smile, X } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EMOJI_GROUPS } from '@/lib/emojis'
+import { cn } from '@/lib/utils'
 
 type TextElement = HTMLTextAreaElement | HTMLInputElement
 
@@ -85,26 +87,208 @@ function EmojiPickerButton({ onPick }: { onPick: (emoji: string) => void }) {
   )
 }
 
+function getFieldTitle(id?: string) {
+  if (!id) return 'Metin'
+  const label = document.querySelector(`label[for="${CSS.escape(id)}"]`)
+  return label?.textContent?.replace(/\s*\*\s*$/, '').trim() || 'Metin'
+}
+
+function ExpandButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Metni büyüt"
+      title="Metni büyüt"
+      className="absolute top-1.5 right-5 flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white/90 text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    >
+      <Maximize2 className="h-3.5 w-3.5" />
+    </button>
+  )
+}
+
+type TextExpandDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  value: string
+  onValueChange: (value: string) => void
+  readOnly: boolean
+  returnFocusRef: React.RefObject<HTMLTextAreaElement>
+  withEmoji: boolean
+  placeholder?: string
+  maxLength?: number
+}
+
+function TextExpandDialog({
+  open,
+  onOpenChange,
+  title,
+  value,
+  onValueChange,
+  readOnly,
+  returnFocusRef,
+  withEmoji,
+  placeholder,
+  maxLength,
+}: TextExpandDialogProps) {
+  const { ref, insertEmoji, handlers, rememberSelection } = useEmojiInsert<HTMLTextAreaElement>(value, onValueChange)
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/25 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            const el = ref.current
+            if (el) {
+              el.focus()
+              const end = el.value.length
+              el.setSelectionRange(end, end)
+              el.scrollTop = el.scrollHeight
+              rememberSelection()
+            }
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault()
+            returnFocusRef.current?.focus()
+          }}
+          className="fixed left-1/2 top-1/2 z-50 flex h-[calc(100dvh-2rem)] max-h-[880px] w-[calc(100vw-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:h-[calc(100dvh-6rem)] sm:w-[calc(100vw-6rem)] dark:bg-zinc-900 dark:ring-white/10"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 sm:px-6 dark:border-zinc-800">
+            <div className="flex min-w-0 items-center gap-2">
+              <DialogPrimitive.Title className="truncate text-[17px] font-semibold text-gray-900 dark:text-zinc-100">
+                {title}
+              </DialogPrimitive.Title>
+              {readOnly && (
+                <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-zinc-800 dark:text-zinc-400">Salt okunur</span>
+              )}
+            </div>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                aria-label="Kapat"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogPrimitive.Close>
+          </div>
+          <div className="min-h-0 flex-1 bg-gray-50/70 p-4 sm:p-6 dark:bg-zinc-950/40">
+            <textarea
+              ref={ref}
+              value={value}
+              readOnly={readOnly}
+              placeholder={placeholder}
+              maxLength={maxLength}
+              aria-label={title}
+              onChange={(e) => {
+                onValueChange(e.target.value)
+                rememberSelection()
+              }}
+              {...handlers}
+              className="h-full w-full resize-none overflow-y-auto rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 sm:px-6 dark:border-zinc-800">
+            <div className="flex min-w-0 items-center gap-3">
+              {withEmoji && !readOnly && <EmojiPickerButton onPick={insertEmoji} />}
+              <span className="text-xs text-gray-400">{value.length} karakter</span>
+            </div>
+            <DialogPrimitive.Close asChild>
+              <Button type="button" className="rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700">
+                {readOnly ? 'Kapat' : 'Bitti'}
+              </Button>
+            </DialogPrimitive.Close>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  )
+}
+
+function useTextExpand(id?: string) {
+  const [open, setOpen] = React.useState(false)
+  const [title, setTitle] = React.useState('Metin')
+  const openDialog = () => {
+    setTitle(getFieldTitle(id))
+    setOpen(true)
+  }
+  return { open, setOpen, title, openDialog }
+}
+
 type EmojiTextareaProps = Omit<React.ComponentProps<'textarea'>, 'value' | 'onChange'> & {
   value: string
   onValueChange: (value: string) => void
 }
 
-export function EmojiTextarea({ value, onValueChange, ...props }: EmojiTextareaProps) {
+export function EmojiTextarea({ value, onValueChange, className, ...props }: EmojiTextareaProps) {
   const { ref, insertEmoji, handlers, rememberSelection } = useEmojiInsert<HTMLTextAreaElement>(value, onValueChange)
+  const expand = useTextExpand(props.id)
   return (
     <div className="space-y-1">
-      <Textarea
+      <div className="relative">
+        <Textarea
+          ref={ref}
+          value={value}
+          onChange={(e) => {
+            onValueChange(e.target.value)
+            rememberSelection()
+          }}
+          {...handlers}
+          {...props}
+          className={cn('pr-12', className)}
+        />
+        <ExpandButton onClick={expand.openDialog} />
+      </div>
+      <EmojiPickerButton onPick={insertEmoji} />
+      <TextExpandDialog
+        open={expand.open}
+        onOpenChange={expand.setOpen}
+        title={expand.title}
+        value={value || ''}
+        onValueChange={onValueChange}
+        readOnly={!!(props.readOnly || props.disabled)}
+        returnFocusRef={ref}
+        withEmoji
+        placeholder={props.placeholder}
+        maxLength={props.maxLength}
+      />
+    </div>
+  )
+}
+
+type ExpandableTextareaProps = Omit<React.ComponentProps<'textarea'>, 'value' | 'onChange'> & {
+  value: string
+  onValueChange: (value: string) => void
+}
+
+export function ExpandableTextarea({ value, onValueChange, className, ...props }: ExpandableTextareaProps) {
+  const ref = React.useRef<HTMLTextAreaElement>(null)
+  const expand = useTextExpand(props.id)
+  return (
+    <div className="relative">
+      <textarea
         ref={ref}
         value={value}
-        onChange={(e) => {
-          onValueChange(e.target.value)
-          rememberSelection()
-        }}
-        {...handlers}
+        onChange={(e) => onValueChange(e.target.value)}
         {...props}
+        className={cn(className, 'pr-12')}
       />
-      <EmojiPickerButton onPick={insertEmoji} />
+      <ExpandButton onClick={expand.openDialog} />
+      <TextExpandDialog
+        open={expand.open}
+        onOpenChange={expand.setOpen}
+        title={expand.title}
+        value={value || ''}
+        onValueChange={onValueChange}
+        readOnly={!!(props.readOnly || props.disabled)}
+        returnFocusRef={ref}
+        withEmoji={false}
+        placeholder={props.placeholder}
+        maxLength={props.maxLength}
+      />
     </div>
   )
 }

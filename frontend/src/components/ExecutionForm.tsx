@@ -404,6 +404,7 @@ export default function ExecutionForm() {
                     <SelectItem value="Varlık Satışı">Varlık Satışı</SelectItem>
                     <SelectItem value="Feragat">Feragat</SelectItem>
                     <SelectItem value="Vazgeçme">Vazgeçme</SelectItem>
+                    <SelectItem value="İptal">İptal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -455,6 +456,7 @@ export default function ExecutionForm() {
                     <SelectItem value="Yakalamalı / Şatış">Yakalamalı / Şatış</SelectItem>
                     <SelectItem value="İpotekli / Gayrimenkul">İpotekli / Gayrimenkul</SelectItem>
                     <SelectItem value="Hacizli / Gayrimenkul">Hacizli / Gayrimenkul</SelectItem>
+                    <SelectItem value="Hacizli Motorsiklet">Hacizli Motorsiklet</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

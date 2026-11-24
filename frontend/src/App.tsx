@@ -15,6 +15,7 @@ import ExecutionForm from './components/ExecutionForm'
 import Login from './components/Login'
 import Settings from './components/Settings'
 import ImportantReminders from './components/ImportantReminders'
+import Copyright from './components/Copyright'
 import './App.css'
 
 function AppContent() {
@@ -49,6 +50,9 @@ function AppContent() {
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
+        <footer className="shrink-0 border-t border-gray-200 bg-white lg:hidden">
+          <Copyright compact />
+        </footer>
       </div>
       
       <Toaster />
